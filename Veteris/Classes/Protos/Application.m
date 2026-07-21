@@ -23,6 +23,20 @@
         self.iconurl = [Application stringFromProtoArg:app.iconurl.arg];
         self.fallback_iconurl = [Application stringFromProtoArg:app.fallback_iconurl.arg];
         self.app_description = [Application stringFromProtoArg:app.description.arg];
+        self.category = [Application stringFromProtoArg:app.category.arg];
+        self.requiredOS = [Application stringFromProtoArg:app.minIOS.arg];
+        self.deviceFamily = [Application stringFromProtoArg:app.deviceFamily.arg];
+        self.archFlags = [Application stringFromProtoArg:app.archFlags.arg];
+        self.backgroundModes = [Application stringFromProtoArg:app.backgroundModes.arg];
+        self.executable = [Application stringFromProtoArg:app.executable.arg];
+        self.releaseDate = [Application stringFromProtoArg:app.releaseDate.arg];
+        self.contentRating = [Application stringFromProtoArg:app.contentRating.arg];
+        self.price = [Application stringFromProtoArg:app.price.arg];
+        self.subgenres = [Application stringFromProtoArg:app.subgenres.arg];
+        self.copyrightText = [Application stringFromProtoArg:app.copyrightText.arg];
+        self.gameCenter = [Application stringFromProtoArg:app.gameCenter.arg];
+        self.newsstand = [Application stringFromProtoArg:app.newsstand.arg];
+        self.requiredCapabilities = [Application stringFromProtoArg:app.requiredCapabilities.arg];
         self.nilIcon = NO;
         self.isVTableEntry = NO;
     }
@@ -38,6 +52,7 @@
         self.iconurl = [Application stringFromProtoArg:entry.iconurl.arg];
         self.fallback_iconurl = [Application stringFromProtoArg:entry.fallback_iconurl.arg];
         self.version = [Application stringFromProtoArg:entry.version.arg];
+        self.versionCount = entry.version_count;
         self.nilIcon = NO;
         self.isVTableEntry = YES;
     }

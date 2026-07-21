@@ -22,6 +22,17 @@
 	<string>????</string>
 	<key>CFBundleVersion</key>
 	<string>%BUILD_VERSION%</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.victorlobe.veteris</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>veteris</string>
+			</array>
+		</dict>
+	</array>
 	<key>LSApplicationCategoryType</key>
 	<string></string>
 	<key>LSRequiresIPhoneOS</key>
@@ -105,7 +116,20 @@
 	<key>CFBundleLocalizations</key>
 	<array>
 		<string>en</string>
+		<string>de</string>
+		<string>uk</string>
+		<string>vi</string>
 		<string>ru</string>
+		<string>pt</string>
+		<string>ar</string>
+		<string>tr</string>
+		<string>es</string>
+		<string>fr</string>
+		<string>zh-Hans</string>
+		<string>ja</string>
+		<string>it</string>
+		<string>pl</string>
+		<string>he</string>
 	</array>
 </dict>
 </plist>

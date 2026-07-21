@@ -6,6 +6,22 @@
     <array>
         <dict>
             <key>Title</key>
+            <string>Info</string>
+            <key>Type</key>
+            <string>PSGroupSpecifier</string>
+        </dict>
+        <dict>
+            <key>Type</key>
+            <string>PSTitleValueSpecifier</string>
+            <key>Title</key>
+            <string>Version</string>
+            <key>Key</key>
+            <string>version_preference</string>
+            <key>DefaultValue</key>
+            <string>%BUILD_VERSION%</string>
+        </dict>
+        <dict>
+            <key>Title</key>
             <string>Customization</string>
             <key>Type</key>
             <string>PSGroupSpecifier</string>
@@ -24,6 +40,7 @@
             <key>Titles</key>
             <array>
                 <string>Midnight (Standard)</string>
+                <string>Stock iOS</string>
                 <string>Ruby</string>
                 <string>Strawberry</string>
 				<string>Cherry Blossom</string>
@@ -56,6 +73,7 @@
             <key>ShortTitles</key>
             <array>
                 <string>Midnight</string>
+                <string>Stock iOS</string>
                 <string>Ruby</string>
                 <string>Strawberry</string>
 				<string>Cherry Blossom</string>
@@ -88,6 +106,7 @@
             <key>Values</key>
             <array>
                 <string>Default</string>
+                <string>StockIOS</string>
                 <string>Ruby</string>
                 <string>Strawberry</string>
 				<string>Cherry</string>
@@ -119,20 +138,32 @@
             </array>
         </dict>
         <dict>
+            <key>Type</key>
+            <string>PSChildPaneSpecifier</string>
             <key>Title</key>
-            <string>Info</string>
+            <string>App Subtitles</string>
+            <key>IASKViewControllerClass</key>
+            <string>AppCellSubtitleSettingsViewController</string>
+            <key>IASKViewControllerSelector</key>
+            <string>initWithFile:withKey:</string>
+        </dict>
+        <dict>
+            <key>Title</key>
+            <string>Privacy</string>
             <key>Type</key>
             <string>PSGroupSpecifier</string>
+            <key>FooterText</key>
+            <string>Download starts and app requests are counted without storing IP addresses.</string>
         </dict>
         <dict>
             <key>Type</key>
-            <string>PSTitleValueSpecifier</string>
+            <string>PSToggleSwitchSpecifier</string>
             <key>Title</key>
-            <string>Version</string>
+            <string>Share Analytics</string>
             <key>Key</key>
-            <string>version_preference</string>
+            <string>veteris_analytics_enabled</string>
             <key>DefaultValue</key>
-            <string>%BUILD_VERSION%</string>
+            <true/>
         </dict>
         <dict>
             <key>Title</key>
@@ -261,24 +292,6 @@
             <string>pdyq</string>
         </dict>
         <dict>
-            <key>Key</key>
-            <string>dev_settings_title</string>
-            <key>Title</key>
-            <string>Developer</string>
-            <key>Type</key>
-            <string>PSGroupSpecifier</string>
-        </dict>
-        <dict>
-            <key>Type</key>
-            <string>PSChildPaneSpecifier</string>
-            <key>Title</key>
-            <string>Dev Menu</string>
-            <key>Key</key>
-            <string>dev_settings_menu</string>
-            <key>File</key>
-            <string>Dev</string>
-        </dict>
-        <dict>
             <key>Title</key>
             <string>Licenses</string>
             <key>Type</key>
@@ -323,6 +336,46 @@
             <string>BBHTTP</string>
             <key>File</key>
             <string>BBHTTP</string>
+        </dict>
+        <dict>
+            <key>Key</key>
+            <string>dev_settings_title</string>
+            <key>Title</key>
+            <string>Developer</string>
+            <key>Type</key>
+            <string>PSGroupSpecifier</string>
+        </dict>
+        <dict>
+            <key>Type</key>
+            <string>PSChildPaneSpecifier</string>
+            <key>Title</key>
+            <string>Dev Menu</string>
+            <key>Key</key>
+            <string>dev_settings_menu</string>
+            <key>File</key>
+            <string>Dev</string>
+        </dict>
+        <dict>
+            <key>Title</key>
+            <string>Reset</string>
+            <key>Type</key>
+            <string>PSGroupSpecifier</string>
+            <key>FooterText</key>
+            <string>Deletes all Veteris preferences, search history, crash reports, and caches.</string>
+        </dict>
+        <dict>
+            <key>Type</key>
+            <string>IASKButtonSpecifier</string>
+            <key>Title</key>
+            <string>Reset Veteris</string>
+            <key>Key</key>
+            <string>reset_veteris_all</string>
+            <key>IASKTextAlignment</key>
+            <string>IASKUITextAlignmentLeft</string>
+            <key>IASKButtonClass</key>
+            <string>VeterisResetController</string>
+            <key>IASKButtonAction</key>
+            <string>confirmReset:forKey:</string>
         </dict>
     </array>
     <key>StringsTable</key>

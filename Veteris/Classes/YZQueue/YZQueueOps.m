@@ -190,19 +190,22 @@ static BOOL YZShouldPreservePartialAtPath(NSString *path) {
 }
 
 + (void)downloadFileToPath:(NSString *)urlString pathFromString:(NSString *)str parent:(YZQueueRep *)parent {
+    [self downloadFileToPath:urlString targetPath:downloadPathFor(str) parent:parent];
+}
+
++ (void)downloadFileToPath:(NSString *)urlString targetPath:(NSString *)targetPath parent:(YZQueueRep *)parent {
     NSArray *candidates = YZDownloadCandidates(urlString);
-    YZDownloadLog(@"candidates for %@: %@", str, candidates);
+    YZDownloadLog(@"candidates for %@: %@", targetPath, candidates);
     if (YZCanUseArchiveTLSDownloader(candidates)) {
-        [self downloadFileWithArchiveTLS:urlString candidates:candidates pathFromString:str parent:parent attempt:0];
+        [self downloadFileWithArchiveTLS:urlString candidates:candidates targetPath:targetPath parent:parent attempt:0];
     } else {
-        [self downloadFileViaBBHTTP:urlString candidates:candidates pathFromString:str parent:parent attempt:0];
+        [self downloadFileViaBBHTTP:urlString candidates:candidates targetPath:targetPath parent:parent attempt:0];
     }
 }
 
-+ (void)downloadFileWithArchiveTLS:(NSString *)originalURL candidates:(NSArray *)candidates pathFromString:(NSString *)str parent:(YZQueueRep *)parent attempt:(NSUInteger)attempt {
++ (void)downloadFileWithArchiveTLS:(NSString *)originalURL candidates:(NSArray *)candidates targetPath:(NSString *)filePath parent:(YZQueueRep *)parent attempt:(NSUInteger)attempt {
     NSString *urlString = [candidates objectAtIndex:(attempt % [candidates count])];
-    YZDownloadLog(@"tls start %@ attempt %lu/%lu url=%@", str, (unsigned long)(attempt + 1), (unsigned long)kMaxDownloadAttempts, urlString);
-    NSString *filePath = downloadPathFor(str);
+    YZDownloadLog(@"tls start %@ attempt %lu/%lu url=%@", filePath, (unsigned long)(attempt + 1), (unsigned long)kMaxDownloadAttempts, urlString);
     if (!YZShouldPreservePartialAtPath(filePath)) {
         [self removeFileAt:filePath];
     }
@@ -232,15 +235,15 @@ static BOOL YZShouldPreservePartialAtPath(NSString *path) {
         BOOL validIPA = httpOK && complete && [YZQueueOps isValidIPAAtPath:filePath];
 
         if (cancelled) {
-            YZDownloadLog(@"tls cancelled %@ url=%@", str, urlString);
+            YZDownloadLog(@"tls cancelled %@ url=%@", filePath, urlString);
             [self removeFileAt:filePath];
         } else if (httpStatus == 416 && [YZQueueOps isValidIPAAtPath:filePath]) {
-            YZDownloadLog(@"tls success %@ existing file complete status=416", str);
+            YZDownloadLog(@"tls success %@ existing file complete status=416", filePath);
             parent.state = YZRepStateDownloaded;
             parent.path = filePath;
         } else if (validIPA) {
             YZDownloadLog(@"tls success %@ status=%lu size=%llu expected=%llu finalURL=%@",
-                          str,
+                          filePath,
                           (unsigned long)httpStatus,
                           YZFileSizeAtPath(filePath),
                           expectedTotal,
@@ -250,7 +253,7 @@ static BOOL YZShouldPreservePartialAtPath(NSString *path) {
         } else {
             NSString *location = YZHeaderValue(result.headers, @"Location");
             YZDownloadLog(@"tls failure %@ status=%lu size=%llu expected=%llu error=%@ location=%@ url=%@ finalURL=%@",
-                          str,
+                          filePath,
                           (unsigned long)httpStatus,
                           YZFileSizeAtPath(filePath),
                           expectedTotal,
@@ -266,17 +269,17 @@ static BOOL YZShouldPreservePartialAtPath(NSString *path) {
                 BOOL redirectStopped = (httpStatus >= 300 && httpStatus < 400);
                 NSTimeInterval delay = redirectStopped ? 0.0 : MIN(8.0, 1.0 * (1 << MIN(nextAttempt, 3)));
                 NSString *nextURL = [candidates objectAtIndex:(nextAttempt % [candidates count])];
-                YZDownloadLog(@"tls retry %@ nextAttempt=%lu delay=%.1f nextURL=%@", str, (unsigned long)(nextAttempt + 1), delay, nextURL);
+                YZDownloadLog(@"tls retry %@ nextAttempt=%lu delay=%.1f nextURL=%@", filePath, (unsigned long)(nextAttempt + 1), delay, nextURL);
                 dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delay * NSEC_PER_SEC)),
                                dispatch_get_main_queue(), ^{
                     if (parent.invalid || parent.state == YZRepStateCancelled) {
                         return;
                     }
-                    [self downloadFileWithArchiveTLS:originalURL candidates:candidates pathFromString:str parent:parent attempt:nextAttempt];
+                    [self downloadFileWithArchiveTLS:originalURL candidates:candidates targetPath:filePath parent:parent attempt:nextAttempt];
                 });
             } else {
-                YZDownloadLog(@"tls final failure %@ after %lu attempts; falling back to BBHTTP", str, (unsigned long)kMaxDownloadAttempts);
-                [self downloadFileViaBBHTTP:originalURL candidates:candidates pathFromString:str parent:parent attempt:0];
+                YZDownloadLog(@"tls final failure %@ after %lu attempts; falling back to BBHTTP", filePath, (unsigned long)kMaxDownloadAttempts);
+                [self downloadFileViaBBHTTP:originalURL candidates:candidates targetPath:filePath parent:parent attempt:0];
             }
         }
     }];
@@ -286,10 +289,9 @@ static BOOL YZShouldPreservePartialAtPath(NSString *path) {
     [downloader start];
 }
 
-+ (void)downloadFileViaBBHTTP:(NSString *)originalURL candidates:(NSArray *)candidates pathFromString:(NSString *)str parent:(YZQueueRep *)parent attempt:(NSUInteger)attempt {
++ (void)downloadFileViaBBHTTP:(NSString *)originalURL candidates:(NSArray *)candidates targetPath:(NSString *)filePath parent:(YZQueueRep *)parent attempt:(NSUInteger)attempt {
     NSString *urlString = [candidates objectAtIndex:(attempt % [candidates count])];
-    YZDownloadLog(@"start %@ attempt %lu/%lu url=%@", str, (unsigned long)(attempt + 1), (unsigned long)kMaxDownloadAttempts, urlString);
-    NSString *filePath = downloadPathFor(str);
+    YZDownloadLog(@"start %@ attempt %lu/%lu url=%@", filePath, (unsigned long)(attempt + 1), (unsigned long)kMaxDownloadAttempts, urlString);
     if (!YZShouldPreservePartialAtPath(filePath)) {
         [self removeFileAt:filePath];
     }
@@ -325,7 +327,7 @@ static BOOL YZShouldPreservePartialAtPath(NSString *path) {
             expectedTotal = resumeOffset;
         }
         YZDownloadLog(@"response %@ status=%lu contentLength=%@ contentRange=%@ expectedTotal=%llu",
-                      str,
+                      filePath,
                       (unsigned long)statusCode,
                       YZHeaderValue(headers, @"Content-Length"),
                       YZHeaderValue(headers, @"Content-Range"),
@@ -353,20 +355,20 @@ static BOOL YZShouldPreservePartialAtPath(NSString *path) {
         BOOL validIPA = httpOK && complete && [YZQueueOps isValidIPAAtPath:filePath];
 
         if (cancelled) {
-            YZDownloadLog(@"cancelled %@ url=%@", str, urlString);
+            YZDownloadLog(@"cancelled %@ url=%@", filePath, urlString);
             [self removeFileAt:filePath];
         } else if (httpStatus == 416 && [YZQueueOps isValidIPAAtPath:filePath]) {
-            YZDownloadLog(@"success %@ existing file complete status=416", str);
+            YZDownloadLog(@"success %@ existing file complete status=416", filePath);
             parent.state = YZRepStateDownloaded;
             parent.path = filePath;
         } else if (validIPA) {
-            YZDownloadLog(@"success %@ status=%lu url=%@", str, (unsigned long)httpStatus, urlString);
+            YZDownloadLog(@"success %@ status=%lu url=%@", filePath, (unsigned long)httpStatus, urlString);
             parent.state = YZRepStateDownloaded;
             parent.path = filePath;
         } else {
             NSString *location = YZHeaderValue(request.response.headers, @"Location");
             YZDownloadLog(@"failure %@ status=%lu error=%@ location=%@ url=%@",
-                          str,
+                          filePath,
                           (unsigned long)httpStatus,
                           [request.error localizedDescription],
                           location,
@@ -379,16 +381,16 @@ static BOOL YZShouldPreservePartialAtPath(NSString *path) {
                 BOOL redirectStopped = (httpStatus >= 300 && httpStatus < 400);
                 NSTimeInterval delay = redirectStopped ? 0.0 : MIN(8.0, 1.0 * (1 << MIN(nextAttempt, 3)));
                 NSString *nextURL = [candidates objectAtIndex:(nextAttempt % [candidates count])];
-                YZDownloadLog(@"retry %@ nextAttempt=%lu delay=%.1f nextURL=%@", str, (unsigned long)(nextAttempt + 1), delay, nextURL);
+                YZDownloadLog(@"retry %@ nextAttempt=%lu delay=%.1f nextURL=%@", filePath, (unsigned long)(nextAttempt + 1), delay, nextURL);
                 dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delay * NSEC_PER_SEC)),
                                dispatch_get_main_queue(), ^{
                     if (parent.invalid || parent.state == YZRepStateCancelled) {
                         return;
                     }
-                    [self downloadFileViaBBHTTP:originalURL candidates:candidates pathFromString:str parent:parent attempt:nextAttempt];
+                    [self downloadFileViaBBHTTP:originalURL candidates:candidates targetPath:filePath parent:parent attempt:nextAttempt];
                 });
             } else {
-                YZDownloadLog(@"final failure %@ after %lu attempts", str, (unsigned long)kMaxDownloadAttempts);
+                YZDownloadLog(@"final failure %@ after %lu attempts", filePath, (unsigned long)kMaxDownloadAttempts);
                 [self removeFileAt:filePath];
                 parent.state = YZRepStateFailed;
             }

@@ -26,7 +26,7 @@
 #endif
 
 static const NSUInteger kYZArchiveTLSMaxRedirects = 8;
-static const NSUInteger kYZArchiveTLSBufferSize = 16384;
+static const NSUInteger kYZArchiveTLSBufferSize = 131072;
 
 #ifdef VETERIS_DOWNLOAD_DEBUG
 #define YZTLSLog(...) NSLog(@"[VeterisDownload] %@", [NSString stringWithFormat:__VA_ARGS__])

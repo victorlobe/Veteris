@@ -23,6 +23,7 @@
 #import "../ProtoStack.h"
 #import "../../BBHTTP/Cocoa/BBURLProtocol.h"
 #import "BBHTTP/BBHTTPExecutor.h"
+#import "../YZApplication/YZApplication.h"
 #import <arpa/inet.h>
 #import <netdb.h>
 
@@ -41,9 +42,13 @@ static NSString *const API_DEV_STATIC_URL = @"http://api.victorlobe.me/veteris-d
 static NSString *const API_DEV_BASE_URL = @"http://api.victorlobe.me/veteris-dev/1.1/";
 static NSString *const VAPI_INSTALL_UUID_KEY = @"VAPIInstallUUID";
 static NSString *const VAPI_DEV_MODE_ENABLED_KEY = @"veteris_dev_mode_enabled";
+static NSString *const VAPI_ANALYTICS_ENABLED_KEY = @"veteris_analytics_enabled";
 static NSString *const VAPI_SERVER_ENVIRONMENT_KEY = @"veteris_server_environment";
+static NSString *const VAPI_LANGUAGE_OVERRIDE_KEY = @"veteris_language_override";
+static NSString *const VAPI_LANGUAGE_OVERRIDE_SYSTEM = @"system";
 static NSString *const VAPI_SERVER_ENVIRONMENT_PRODUCTION = @"production";
 static NSString *const VAPI_SERVER_ENVIRONMENT_DEV = @"dev";
+static NSString *const VAPI_ANALYTICS_OPT_OUT_HEADER = @"X-Veteris-Analytics";
 
 + (VAPIHelper*)sharedInstance
 {
@@ -107,11 +112,42 @@ static NSString *const VAPI_SERVER_ENVIRONMENT_DEV = @"dev";
     return [[NSUserDefaults standardUserDefaults] boolForKey:VAPI_DEV_MODE_ENABLED_KEY];
 }
 
++ (BOOL)isAnalyticsEnabled {
+    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+    if ([defaults objectForKey:VAPI_ANALYTICS_ENABLED_KEY] == nil) {
+        return YES;
+    }
+    return [defaults boolForKey:VAPI_ANALYTICS_ENABLED_KEY];
+}
+
 + (void)setDevModeEnabled:(BOOL)enabled {
     NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
     [defaults setBool:enabled forKey:VAPI_DEV_MODE_ENABLED_KEY];
     if ([defaults objectForKey:VAPI_SERVER_ENVIRONMENT_KEY] == nil) {
         [defaults setObject:VAPI_SERVER_ENVIRONMENT_PRODUCTION forKey:VAPI_SERVER_ENVIRONMENT_KEY];
+    }
+    [defaults synchronize];
+}
+
++ (NSSet *)supportedLanguageOverrides {
+    return [NSSet setWithObjects:@"ar", @"de", @"en", @"es", @"fr", @"he", @"it", @"ja", @"pl", @"pt", @"ru", @"tr", @"uk", @"vi", @"zh-Hans", nil];
+}
+
++ (NSString *)getLanguageOverride {
+    NSString *language = [[NSUserDefaults standardUserDefaults] stringForKey:VAPI_LANGUAGE_OVERRIDE_KEY];
+    if ([[VAPIHelper supportedLanguageOverrides] containsObject:language]) {
+        return language;
+    }
+    return VAPI_LANGUAGE_OVERRIDE_SYSTEM;
+}
+
++ (void)applyLanguageOverride {
+    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+    NSString *language = [VAPIHelper getLanguageOverride];
+    if ([language isEqualToString:VAPI_LANGUAGE_OVERRIDE_SYSTEM]) {
+        [defaults removeObjectForKey:@"AppleLanguages"];
+    } else {
+        [defaults setObject:[NSArray arrayWithObject:language] forKey:@"AppleLanguages"];
     }
     [defaults synchronize];
 }
@@ -161,13 +197,59 @@ static NSString *const VAPI_SERVER_ENVIRONMENT_DEV = @"dev";
 
 
 + (NSDictionary *)getHeaders {
-    AppDelegate *delegate = getDelegate();
-    return [@{
+    NSMutableDictionary *headers = [@{
         @"X-Veteris-Device" : [VAPISS VAPIDeviceString],
-        @"X-Veteris-UUID" : [VAPIHelper installUUID],
         @"X-Veteris-Version" : [[[NSBundle mainBundle] infoDictionary] objectForKey:@"CFBundleShortVersionString"],
         @"X-Veteris-Language" : [[NSLocale preferredLanguages] objectAtIndex:0],
     } mutableCopy];
+    if (![VAPIHelper isAnalyticsEnabled]) {
+        [headers setObject:@"0" forKey:VAPI_ANALYTICS_OPT_OUT_HEADER];
+        return headers;
+    }
+    [headers setObject:[VAPIHelper installUUID] forKey:@"X-Veteris-UUID"];
+    return headers;
+}
+
+static NSString *VAPIQueryEscape(NSString *value) {
+    if (value == nil) {
+        return @"";
+    }
+    NSString *escaped = (NSString *)CFBridgingRelease(CFURLCreateStringByAddingPercentEscapes(
+        NULL,
+        (CFStringRef)value,
+        NULL,
+        (CFStringRef)@"!*'();:@&=+$,/?%#[]",
+        kCFStringEncodingUTF8
+    ));
+    return escaped ?: @"";
+}
+
++ (void)trackDownloadStartForApplication:(YZApplication *)application url:(NSString *)url downloadOnly:(BOOL)downloadOnly {
+    if (application == nil || url == nil || [url length] == 0) {
+        return;
+    }
+
+    NSMutableArray *items = [NSMutableArray array];
+    NSDictionary *fields = @{
+        @"bundle_id" : application.bundleID ?: @"",
+        @"app_name" : application.name ?: @"",
+        @"developer" : application.developer ?: @"",
+        @"version" : application.version ?: @"",
+        @"min_ios" : application.minimumOS ?: @"",
+        @"ipa_url" : url ?: @"",
+        @"size_bytes" : [NSString stringWithFormat:@"%llu", application.sizeBytes],
+        @"download_only" : downloadOnly ? @"1" : @"0",
+    };
+    for (NSString *key in fields) {
+        [items addObject:[NSString stringWithFormat:@"%@=%@", key, VAPIQueryEscape([fields objectForKey:key])]];
+    }
+
+    NSString *path = [NSString stringWithFormat:@"analytics/download?%@", [items componentsJoinedByString:@"&"]];
+    [VAPISS getMessage:path completion:^(NSData *data, NSError *error) {
+        if (error != nil) {
+            debugLog(@"Download analytics failed: %@", error.localizedDescription);
+        }
+    }];
 }
 
 #define VAPI_USE_BBHTTP_DIRECT

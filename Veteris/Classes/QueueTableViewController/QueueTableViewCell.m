@@ -1,6 +1,7 @@
 #import "QueueTableViewCell.h"
 #import <QuartzCore/QuartzCore.h>
 #import "../../AppDelegate.h"
+#import "../Convenience/Convenience.h"
 
 @implementation QueueTableViewCell {
     YZQueueRep *_rep;
@@ -113,7 +114,7 @@
 
 - (void)updateFromRep:(YZQueueRep *)rep {
     appNameLabel.text = rep.name;
-    appDeveloperLabel.text = rep.developer;
+    appDeveloperLabel.text = VeterisAppCellSubtitle(rep.developer, rep.bundleID, VeterisAppCellSubtitleAreaQueue);
     if (rep.icon == nil) {
         if (rep.iconurl == nil || ![rep.iconurl isEqualToString:_imageFromURL]) {
             appImageView.image = [VAPISS imageFromCache:rep.iconurl];

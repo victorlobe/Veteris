@@ -3,6 +3,10 @@ syntax = "proto2";
 message SuggestionMsg {
     required string name = 1;
     required string bundleid = 2;
+    optional string developer = 3;
+    optional string iconurl = 4;
+    optional string fallback_iconurl = 5;
+    uint32 version_count = 6;
 }
 
 message SuggestionsMsg {

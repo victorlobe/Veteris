@@ -67,6 +67,7 @@ env.Append(
         "-I./Veteris/Classes/../Clutch",
         "-I./Veteris/Classes/../Clutch/minizip",
         "-I./Veteris/Classes/AppInfo",
+        "-I./Veteris/Classes/AppListTableViewCell",
         "-I./Veteris/Classes/AppsTableViewController",
         "-I./Veteris/Classes/CategoriesTableViewController",
         "-I./Veteris/Classes/CategorySelectedViewController",

@@ -8,7 +8,6 @@
 
 #import "CategoriesTableViewController.h"
 #import "../CategorySelectedViewController/CategorySelectedViewController.h"
-#import "../FeaturedTableViewController/FeaturedTableViewCell.h"
 #import "CategoriesTableViewCell.h"
 #import "../VAPIHelper/VAPIHelper.h"
 #import "InAppSettingsKit/Models/IASKSettingsReader.h"

@@ -3,7 +3,8 @@
 #import <QuartzCore/QuartzCore.h>
 #import "../../AppDelegate.h"
 #import "../AppInfo/AppInfo.h"
-#import "../FeaturedTableViewController/FeaturedTableViewCell.h"
+#import "../AppListTableViewCell/AppListTableViewCell.h"
+#import "../Convenience/Convenience.h"
 #import "../VAPIHelper/VAPIHelper.h"
 #import "InAppSettingsKit/Models/IASKSettingsReader.h"
 #import "../ProtoStack.h"
@@ -12,7 +13,7 @@
 @interface VTableView ()
 - (void)loadIconsForVisibleRowsIfIdle;
 - (void)loadIconForApp:(Application *)app atIndexPath:(NSIndexPath *)indexPath;
-- (void)configureIconForCell:(FeaturedTableViewCell *)cell app:(Application *)app;
+- (void)configureIconForCell:(AppListTableViewCell *)cell app:(Application *)app;
 @end
 
 @implementation VTableView {
@@ -22,6 +23,7 @@
     NSMutableSet *_loadingIconURLs;
     NSUInteger _iconLoadGeneration;
     BOOL _viewIsVisible;
+    BOOL _registeredForThemeNotifications;
     bool inInit;
     int firstAppear;
 }
@@ -36,15 +38,19 @@
     if (_loadingIconURLs == nil) {
         _loadingIconURLs = [[NSMutableSet alloc] init];
     }
-    NSNotificationCenter *center = [NSNotificationCenter defaultCenter];
-    [center addObserver:self selector:@selector(reconfigure:) name:kPleaseReloadThemes object:nil];
+    if (!_registeredForThemeNotifications) {
+        NSNotificationCenter *center = [NSNotificationCenter defaultCenter];
+        [center addObserver:self selector:@selector(reconfigure:) name:kPleaseReloadThemes object:nil];
+        _registeredForThemeNotifications = YES;
+    }
     debugLog(@"Initializing with endpoint: %@", endpoint);
     _endpoint = endpoint;
     self.tableView.separatorStyle = UITableViewCellSeparatorStyleNone;
     self.tableView.backgroundView = [[UIView alloc] initWithFrame:self.tableView.frame];
     self.tableView.backgroundView.backgroundColor = [UIColor whiteColor];
     if (!skipIndicator) {
-        loadingIndicator = [LoadingIndicatorView attachToView:getDelegate().window];
+        NSString *loadingTextKey = ([endpoint hasPrefix:@"listing/random"]) ? @"Shuffling" : @"Loading";
+        loadingIndicator = [LoadingIndicatorView attachToView:getDelegate().window textKey:loadingTextKey];
     }
 
     if (errorLabel == nil) {
@@ -79,6 +85,10 @@
     }];
     inInit = NO;
     firstAppear = NO;
+}
+
+- (void)dealloc {
+    [[NSNotificationCenter defaultCenter] removeObserver:self];
 }
 
 - (void)reconfigure:(NSNotification *)notification {
@@ -124,20 +134,34 @@
 
 #pragma mark - UITableViewDelegate
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
-    static NSString *CellIdentifier = @"FeaturedTableViewCell";
-    FeaturedTableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:CellIdentifier];
+    static NSString *CellIdentifier = @"AppListTableViewCell";
+    AppListTableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:CellIdentifier];
 
     Application *app = [applications objectAtIndex:indexPath.row];
 
     cell.tag = indexPath.row;
     cell.appNameLabel.text = app.name;
-    cell.developerNameLabel.text = app.developer;
-    cell.versionLabel.text = [NSString stringWithFormat:NSLocalizedString(@"Version", nil), app.version];
+    cell.developerNameLabel.text = VeterisAppCellSubtitle(app.developer, app.bundleid, VeterisAppCellSubtitleAreaList);
+    NSUInteger versionCount = app.versionCount;
+    if (versionCount == 0 && [app.versions count] > 0) {
+        versionCount = [app.versions count];
+    }
+    if (versionCount == 0) {
+        cell.versionLabel.text = nil;
+        cell.versionLabel.hidden = YES;
+    } else {
+        NSString *versionWord = (versionCount == 1) ? NSLocalizedString(@"VersionSingular", nil) : NSLocalizedString(@"Versions", nil);
+        cell.versionLabel.text = [NSString stringWithFormat:@"%lu %@", (unsigned long)versionCount, versionWord];
+        cell.versionLabel.hidden = NO;
+    }
     [self configureIconForCell:cell app:app];
     return cell;
 }
 
-- (void)configureIconForCell:(FeaturedTableViewCell *)cell app:(Application *)app {
+- (void)configureIconForCell:(AppListTableViewCell *)cell app:(Application *)app {
+    if (cell == nil) {
+        return;
+    }
     UIImage *cachedIcon = app.icon;
     if (cachedIcon == nil) {
         cachedIcon = [VAPISS imageFromCache:app.iconurl];
@@ -182,7 +206,7 @@
     UIImage *cachedIcon = [VAPISS imageFromCache:app.iconurl];
     if (cachedIcon != nil) {
         app.icon = cachedIcon;
-        FeaturedTableViewCell *cell = (FeaturedTableViewCell *)[self.tableView cellForRowAtIndexPath:indexPath];
+        AppListTableViewCell *cell = (AppListTableViewCell *)[self.tableView cellForRowAtIndexPath:indexPath];
         [self configureIconForCell:cell app:app];
         return;
     }
@@ -209,7 +233,7 @@
             if (indexPath.row >= [applications count] || [applications objectAtIndex:indexPath.row] != app) {
                 return;
             }
-            FeaturedTableViewCell *cell = (FeaturedTableViewCell *)[self.tableView cellForRowAtIndexPath:indexPath];
+            AppListTableViewCell *cell = (AppListTableViewCell *)[self.tableView cellForRowAtIndexPath:indexPath];
             if (cell == nil) {
                 return;
             }
@@ -233,7 +257,7 @@
 
         NSIndexPath *indexPath = [self.tableView indexPathForSelectedRow];
 
-        FeaturedTableViewCell *cell = (FeaturedTableViewCell *)[self.tableView cellForRowAtIndexPath:indexPath];
+        AppListTableViewCell *cell = (AppListTableViewCell *)[self.tableView cellForRowAtIndexPath:indexPath];
 
         AppInfo *appinfo = segue.destinationViewController;
         Application *app = [applications objectAtIndex:indexPath.row];

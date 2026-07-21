@@ -72,6 +72,22 @@ struct StateContext {
     });
 }
 
++ (void)enqueueYZApplicationForDownloadOnly:(YZApplication *)yzApp targetPath:(NSString *)targetPath {
+    dispatch_async([YZQueueManager sharedInstance]->_queue, ^{
+        NSString *downloadURL = yzApp.url;
+        if (![downloadURL hasPrefix:@"http://"] && ![downloadURL hasPrefix:@"https://"]) {
+            downloadURL = [NSString stringWithFormat:@"%@static/%@", [VAPIHelper getApiStaticURL], [downloadURL stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]];
+        }
+        NSString *targetDir = [targetPath stringByDeletingLastPathComponent];
+        NSError *error = nil;
+        if (![[NSFileManager defaultManager] createDirectoryAtPath:targetDir withIntermediateDirectories:YES attributes:nil error:&error]) {
+            debugLog(@"Failed to create download-only directory %@: %@", targetDir, [error localizedDescription]);
+            return;
+        }
+        [YZQueueRep detachDownloadOnlyRepWithYZApp:yzApp andURL:downloadURL targetPath:targetPath];
+    });
+}
+
 + (void)enqueueYZApplicationDownloaded:(YZApplication *)yzApp {
     dispatch_async([YZQueueManager sharedInstance]->_queue, ^{
         [YZQueueRep detachRepWithYZApp:yzApp andURL:nil];
@@ -107,7 +123,9 @@ struct StateContext {
     }
     switch (repState) {
         case YZRepStateDownloaded:
-            [self enqueueAppContainerForInstall:rep];
+            if (rep.installAfterDownload) {
+                [self enqueueAppContainerForInstall:rep];
+            }
             break;
         case YZRepStateQueued:
             dispatch_async(_queue, ^{
@@ -169,6 +187,18 @@ struct StateContext {
         reps = [YZQM->_reps allObjects];
     }
     return reps;
+}
+
++ (NSUInteger)activeDownloadsCount {
+    NSUInteger count = 0;
+    @synchronized ([YZQueueManager sharedInstance]->_repsLock) {
+        for (YZQueueRep *rep in YZQM->_reps) {
+            if (!rep.invalid && rep.state == YZRepStateDownloading) {
+                count++;
+            }
+        }
+    }
+    return count;
 }
 
 + (void)attachProgressBlock:(void (^)(NSUInteger current, NSUInteger total))block toRep:(YZQueueRep *)rep {

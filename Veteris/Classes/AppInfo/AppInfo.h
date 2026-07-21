@@ -8,7 +8,7 @@
 
 #import <UIKit/UIKit.h>
 
-@interface AppInfo : UIViewController <UIActionSheetDelegate>
+@interface AppInfo : UIViewController <UIActionSheetDelegate, UITableViewDataSource, UITableViewDelegate>
 @property (weak, nonatomic) IBOutlet UIButton *getButton;
 @property (weak, nonatomic) IBOutlet UIImageView *appUIImage;
 @property (weak, nonatomic) IBOutlet UILabel *appNameLabel;

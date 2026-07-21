@@ -45,3 +45,25 @@
 "Translation (DE)" = "Çeviri (DE)";
 "Translation (PT)" = "Çeviri (PT)";
 "Translation (ZH)" = "Çeviri (ZH)";
+"Search" = "Arama";
+"Subtitle" = "Alt başlık";
+"Developer Name" = "Geliştirici";
+"Bundle ID" = "Paket ID";
+"Privacy" = "Gizlilik";
+"Share Analytics" = "Analizleri Paylaş";
+"Download starts and app requests are counted without storing IP addresses." = "Başlatılan indirmeler ve uygulama istekleri IP adresleri saklanmadan sayılır.";
+
+"App Subtitles" = "Uygulama Alt Başlıkları";
+"Apply To" = "Uygula";
+"All" = "Tümü";
+"Custom" = "Özel";
+"Browse" = "Göz at";
+"Related" = "İlgili";
+"Queue" = "Sıra";
+"Reset" = "Sıfırla";
+"Reset Veteris" = "Veteris sıfırla";
+"Reset All" = "Tümünü sıfırla";
+"Veteris Reset" = "Veteris sıfırlandı";
+"Deletes all Veteris preferences, search history, crash reports, and caches." = "Tüm Veteris tercihlerini, arama geçmişini, çökme raporlarını ve önbellekleri siler.";
+"This will delete Veteris preferences, search history, crash reports, and caches. Veteris will close afterwards." = "Bu işlem Veteris tercihlerini, arama geçmişini, çökme raporlarını ve önbellekleri siler. Veteris ardından kapanır.";
+"Veteris has been reset and will now close." = "Veteris sıfırlandı ve şimdi kapanacak.";

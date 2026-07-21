@@ -6,16 +6,27 @@
     UILabel *textView;
 }
 + (LoadingIndicatorView*)attachToView:(UIView *)view {
+    return [self attachToView:view textKey:@"Loading"];
+}
+
++ (LoadingIndicatorView*)attachToView:(UIView *)view textKey:(NSString *)textKey {
     LoadingIndicatorView *loadingView = [[LoadingIndicatorView alloc] initWithFrame:CGRectMake(0, 0, 0, 0)];
-    [loadingView constructWithCenter:view.center];
+    [loadingView constructWithCenter:view.center textKey:textKey];
     [view addSubview:loadingView];
     return loadingView;
 }
 
 - (void)constructWithCenter:(CGPoint)center {
+    [self constructWithCenter:center textKey:@"Loading"];
+}
+
+- (void)constructWithCenter:(CGPoint)center textKey:(NSString *)textKey {
     activityIndicator = [[UIActivityIndicatorView alloc] initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleGray];
     textView = [[UILabel alloc] initWithFrame:CGRectMake(activityIndicator.frame.origin.x + activityIndicator.frame.size.width + 8, 0, 0, 0)];
-    textView.text = NSLocalizedString(@"Loading", "loading text");
+    if ([textKey length] == 0) {
+        textKey = @"Loading";
+    }
+    textView.text = NSLocalizedString(textKey, "loading text");
     [textView sizeToFit];
     textView.textColor = [UIColor grayColor];
     textView.backgroundColor = [UIColor clearColor];

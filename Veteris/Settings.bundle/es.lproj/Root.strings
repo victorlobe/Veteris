@@ -45,3 +45,25 @@
 "Translation (DE)" = "Traducción (DE)";
 "Translation (PT)" = "Traducción (PT)";
 "Translation (ZH)" = "Traducción (ZH)";
+"Search" = "Búsqueda";
+"Subtitle" = "Subtítulo";
+"Developer Name" = "Desarrollador";
+"Bundle ID" = "ID del paquete";
+"Privacy" = "Privacidad";
+"Share Analytics" = "Compartir analíticas";
+"Download starts and app requests are counted without storing IP addresses." = "Se cuentan los inicios de descarga y las solicitudes de apps sin almacenar direcciones IP.";
+
+"App Subtitles" = "Subtítulos de apps";
+"Apply To" = "Aplicar a";
+"All" = "Todas";
+"Custom" = "Personalizado";
+"Browse" = "Explorar";
+"Related" = "Relacionadas";
+"Queue" = "Cola";
+"Reset" = "Restablecer";
+"Reset Veteris" = "Restablecer Veteris";
+"Reset All" = "Restablecer todo";
+"Veteris Reset" = "Veteris restablecido";
+"Deletes all Veteris preferences, search history, crash reports, and caches." = "Elimina las preferencias de Veteris, el historial de búsqueda, los informes de fallos y las cachés.";
+"This will delete Veteris preferences, search history, crash reports, and caches. Veteris will close afterwards." = "Esto eliminará las preferencias de Veteris, el historial de búsqueda, los informes de fallos y las cachés. Veteris se cerrará después.";
+"Veteris has been reset and will now close." = "Veteris se ha restablecido y ahora se cerrará.";

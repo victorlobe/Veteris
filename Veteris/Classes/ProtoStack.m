@@ -62,11 +62,17 @@ static bool decode_suggestions(pb_istream_t *stream, const pb_field_t *field, vo
     SuggestionMsg suggestion = SuggestionMsg_init_zero;
     setDecFS(suggestion.name);
     setDecFS(suggestion.bundleid);
+    setDecFS(suggestion.developer);
+    setDecFS(suggestion.iconurl);
+    setDecFS(suggestion.fallback_iconurl);
     if (!pb_decode(stream, SuggestionMsg_fields, &suggestion)) {
         const char *error = PB_GET_ERROR(stream);
         debugLog(@"Error decoding SuggestionMsg: %s — freeing partial allocs", error);
         free(suggestion.name.arg);
         free(suggestion.bundleid.arg);
+        free(suggestion.developer.arg);
+        free(suggestion.iconurl.arg);
+        free(suggestion.fallback_iconurl.arg);
         return false;
     }
     NSMutableArray *suggestionsArray = (__bridge NSMutableArray *)(*arg);
@@ -77,6 +83,9 @@ static bool decode_suggestions(pb_istream_t *stream, const pb_field_t *field, vo
     *arg = (__bridge_retained void *)suggestionsArray;
     free(suggestion.name.arg);
     free(suggestion.bundleid.arg);
+    free(suggestion.developer.arg);
+    free(suggestion.iconurl.arg);
+    free(suggestion.fallback_iconurl.arg);
     return true;
 }
 
@@ -212,6 +221,20 @@ void* decode(const void* data, size_t data_len, ProtoType type) {
             setDecFS(app.iconurl);
             setDecFS(app.fallback_iconurl);
             setDecFS(app.description);
+            setDecFS(app.category);
+            setDecFS(app.minIOS);
+            setDecFS(app.deviceFamily);
+            setDecFS(app.archFlags);
+            setDecFS(app.backgroundModes);
+            setDecFS(app.executable);
+            setDecFS(app.releaseDate);
+            setDecFS(app.contentRating);
+            setDecFS(app.price);
+            setDecFS(app.subgenres);
+            setDecFS(app.copyrightText);
+            setDecFS(app.gameCenter);
+            setDecFS(app.newsstand);
+            setDecFS(app.requiredCapabilities);
             app.versions.funcs.decode = &decode_versions;
             bool success = pb_decode(&stream, AppMsg_fields, &app);
             if (!success) {
@@ -223,6 +246,20 @@ void* decode(const void* data, size_t data_len, ProtoType type) {
                 free(app.iconurl.arg);
                 free(app.fallback_iconurl.arg);
                 free(app.description.arg);
+                free(app.category.arg);
+                free(app.minIOS.arg);
+                free(app.deviceFamily.arg);
+                free(app.archFlags.arg);
+                free(app.backgroundModes.arg);
+                free(app.executable.arg);
+                free(app.releaseDate.arg);
+                free(app.contentRating.arg);
+                free(app.price.arg);
+                free(app.subgenres.arg);
+                free(app.copyrightText.arg);
+                free(app.gameCenter.arg);
+                free(app.newsstand.arg);
+                free(app.requiredCapabilities.arg);
                 return NULL;
             }
             Application *application = [[Application alloc] initFromAppProto:app];

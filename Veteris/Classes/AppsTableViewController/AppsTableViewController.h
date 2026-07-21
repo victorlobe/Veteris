@@ -11,4 +11,8 @@
 
 @interface AppsTableViewController : VTableView
 
+@property (copy, nonatomic) NSString *listingEndpoint;
+@property (copy, nonatomic) NSString *listingTitleKey;
+@property (nonatomic) BOOL showsRefreshButton;
+
 @end

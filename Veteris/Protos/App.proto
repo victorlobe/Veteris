@@ -4,6 +4,7 @@ message VersionMsg {
     required string version = 1;
     required string fileName = 2;
     required string minVersion = 3;
+    optional uint64 sizeBytes = 4;
 }
 
 message AppMsg {
@@ -14,4 +15,18 @@ message AppMsg {
     repeated VersionMsg versions = 5;
     required string iconurl = 6;
     optional string fallback_iconurl = 7;
+    optional string category = 8;
+    optional string minIOS = 9;
+    optional string deviceFamily = 10;
+    optional string archFlags = 11;
+    optional string backgroundModes = 12;
+    optional string executable = 13;
+    optional string releaseDate = 14;
+    optional string contentRating = 15;
+    optional string price = 16;
+    optional string subgenres = 17;
+    optional string copyrightText = 18;
+    optional string gameCenter = 19;
+    optional string newsstand = 20;
+    optional string requiredCapabilities = 21;
 }

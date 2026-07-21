@@ -46,3 +46,25 @@
 "Translation (UA)" = "Dịch (UA)";
 "Translation (ZH)" = "Dịch (ZH)";
 "Translation (PT)" = "Dịch (PT)";
+"Search" = "Tìm kiếm";
+"Subtitle" = "Phụ đề";
+"Developer Name" = "Nhà phát triển";
+"Bundle ID" = "ID gói";
+"Privacy" = "Quyền riêng tư";
+"Share Analytics" = "Chia sẻ phân tích";
+"Download starts and app requests are counted without storing IP addresses." = "Các lượt bắt đầu tải xuống và yêu cầu ứng dụng được đếm mà không lưu địa chỉ IP.";
+
+"App Subtitles" = "Phụ đề ứng dụng";
+"Apply To" = "Áp dụng cho";
+"All" = "Tất cả";
+"Custom" = "Tùy chỉnh";
+"Browse" = "Duyệt";
+"Related" = "Liên quan";
+"Queue" = "Hàng đợi";
+"Reset" = "Đặt lại";
+"Reset Veteris" = "Đặt lại Veteris";
+"Reset All" = "Đặt lại tất cả";
+"Veteris Reset" = "Veteris đã được đặt lại";
+"Deletes all Veteris preferences, search history, crash reports, and caches." = "Xóa tất cả tùy chọn Veteris, lịch sử tìm kiếm, báo cáo sự cố và bộ nhớ đệm.";
+"This will delete Veteris preferences, search history, crash reports, and caches. Veteris will close afterwards." = "Thao tác này sẽ xóa tùy chọn Veteris, lịch sử tìm kiếm, báo cáo sự cố và bộ nhớ đệm. Veteris sẽ đóng sau đó.";
+"Veteris has been reset and will now close." = "Veteris đã được đặt lại và bây giờ sẽ đóng.";

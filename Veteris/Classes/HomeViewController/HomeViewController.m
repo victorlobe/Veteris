@@ -8,16 +8,18 @@
 
 #import "HomeViewController.h"
 #import "../HomeTableViewCell/HomeTableViewCell.h"
+#import "../Convenience/Convenience.h"
 #import "../VAPIHelper/VAPIHelper.h"
 #import "../../AppDelegate.h"
 #import <QuartzCore/QuartzCore.h>
-#import "InAppSettingsKit/Models/IASKSettingsReader.h"
 #import "InAppSettingsKit/Controllers/IASKAppSettingsViewController.h"
 #import "InAppSettingsKit/Models/IASKSpecifier.h"
+#import "InAppSettingsKit/Models/IASKSettingsReader.h"
 #import <SVProgressHUD/SVProgressHUD.h>
 #import "../../Reachability/Reachability.h"
 #import "../YZTabBar/YZTabBar.h"
 #import "../ProtoStack.h"
+#import "../SettingsReset/VeterisResetController.h"
 
 @implementation HomeViewController {
     NSDictionary *apiResponse;
@@ -25,6 +27,7 @@
     UIBarButtonItem *settingsButton;
     IASKAppSettingsViewController *currentSettingsViewController;
     NSUInteger maintainerTapCount;
+    NSString *currentBadgeName;
 }
 @synthesize backgroundImage;
 
@@ -33,6 +36,8 @@
 static NSString *const VeterisMaintainerSettingsKey = @"credits_maintainer";
 static NSString *const VeterisDevSettingsTitleKey = @"dev_settings_title";
 static NSString *const VeterisDevSettingsMenuKey = @"dev_settings_menu";
+static NSString *const VeterisLanguageOverrideKey = @"veteris_language_override";
+static NSString *const VeterisResetSettingsKey = @"reset_veteris_all";
 static NSString *const VeterisDevSecretCode = @"VictorIsKing";
 static NSInteger const VeterisDevCodeAlertTag = 8001;
 
@@ -47,8 +52,21 @@ static NSInteger const VeterisDevCodeAlertTag = 8001;
         @"welcomeBackBadge",
         @"youAreAwesomeBadge",
     ];
-    NSString *badgeName = [badgeNames objectAtIndex:arc4random_uniform((uint32_t)[badgeNames count])];
+    NSString *badgeName = nil;
+    if ([badgeNames count] > 1) {
+        do {
+            badgeName = [badgeNames objectAtIndex:arc4random_uniform((uint32_t)[badgeNames count])];
+        } while ([badgeName isEqualToString:currentBadgeName]);
+    } else {
+        badgeName = [badgeNames lastObject];
+    }
+    currentBadgeName = badgeName;
     self.badgeImageView.image = [UIImage imageNamed:badgeName];
+}
+
+- (void)shuffleBadgeFromHomeIconTap:(UITapGestureRecognizer *)gestureRecognizer
+{
+    [self applyRandomBadgeImage];
 }
 
 - (void)viewDidLoad
@@ -65,6 +83,9 @@ static NSInteger const VeterisDevCodeAlertTag = 8001;
     self.tableView.layer.cornerRadius = 8;
     [self setupBottomBackgroundView];
     entries = nil;
+    self.appIconImageView.userInteractionEnabled = YES;
+    UITapGestureRecognizer *appIconTapRecognizer = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(shuffleBadgeFromHomeIconTap:)];
+    [self.appIconImageView addGestureRecognizer:appIconTapRecognizer];
     [getDelegate().themeManager applyThemeToNavigationBar:self.navigationController.navigationBar];
     // Funny easter egg
     [self becomeFirstResponder];
@@ -73,6 +94,7 @@ static NSInteger const VeterisDevCodeAlertTag = 8001;
     self.navigationItem.leftBarButtonItem = settingsButton;
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(reconfigure:) name:kPleaseReloadThemes object:nil];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(loadNews:) name:UIApplicationWillEnterForegroundNotification object:nil];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(settingChanged:) name:kIASKAppSettingChanged object:nil];
 }
 
 - (void)viewDidLayoutSubviews
@@ -159,6 +181,10 @@ static NSInteger const VeterisDevCodeAlertTag = 8001;
     }
 }
 
+- (void)dealloc {
+    [[NSNotificationCenter defaultCenter] removeObserver:self];
+}
+
 - (NSSet *)hiddenSettingsKeys {
     NSMutableSet *hiddenKeys = [NSMutableSet set];
     if (![getDelegate().themeManager deviceSupportsThemes]) {
@@ -177,6 +203,10 @@ static NSInteger const VeterisDevCodeAlertTag = 8001;
 }
 
 - (void)settingsViewController:(IASKAppSettingsViewController *)sender buttonTappedForSpecifier:(IASKSpecifier *)specifier {
+    if ([[specifier key] isEqualToString:VeterisResetSettingsKey]) {
+        [VeterisResetController confirmReset:sender forKey:[specifier key]];
+        return;
+    }
     if (![[specifier key] isEqualToString:VeterisMaintainerSettingsKey]) {
         return;
     }
@@ -229,6 +259,18 @@ static NSInteger const VeterisDevCodeAlertTag = 8001;
     debugLog(@"Reloading theme for HomeViewController");
     [getDelegate().themeManager applyThemeToNavigationBar:self.navigationController.navigationBar];
     [self setupTopBackgroundView:[getDelegate().themeManager homeShimmerColorForCurrentTheme]];
+}
+
+- (void)settingChanged:(NSNotification *)notification {
+    if (![[notification object] isEqualToString:VeterisLanguageOverrideKey]) {
+        return;
+    }
+    [VAPIHelper applyLanguageOverride];
+    [[[UIAlertView alloc] initWithTitle:@"Language"
+                                message:@"Restart Veteris to reload all localized screens."
+                               delegate:nil
+                      cancelButtonTitle:NSLocalizedString(@"Ok", nil)
+                      otherButtonTitles:nil] show];
 }
 
 - (void)motionBegan:(UIEventSubtype)motion withEvent:(UIEvent *)event

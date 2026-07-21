@@ -47,11 +47,16 @@
 }
 
 - (NSDictionary*)themeInfoWithName:(NSString*)name tintColor:(UIColor*)tintColor gradientColors:(NSArray*)gradientColors tabBarUsesGradient:(BOOL)tabBarUsesGradient {
+    return [self themeInfoWithName:name tintColor:tintColor gradientColors:gradientColors tabBarUsesGradient:tabBarUsesGradient usesSystemAppearance:NO];
+}
+
+- (NSDictionary*)themeInfoWithName:(NSString*)name tintColor:(UIColor*)tintColor gradientColors:(NSArray*)gradientColors tabBarUsesGradient:(BOOL)tabBarUsesGradient usesSystemAppearance:(BOOL)usesSystemAppearance {
     return @{
         @"name": name,
         @"tintColor": tintColor,
         @"gradientColors": gradientColors,
-        @"tabBarUsesGradient": @(tabBarUsesGradient)
+        @"tabBarUsesGradient": @(tabBarUsesGradient),
+        @"usesSystemAppearance": @(usesSystemAppearance)
     };
 }
 
@@ -59,6 +64,7 @@
     if (THEME_KILLSWITCH == 1) {
         return @{};
     }
+    UIColor *stockIOSTint = [UIColor colorWithRed:0.0 green:0.478 blue:1.0 alpha:1.0];
     UIColor *defaultTint = [UIColor darkGrayColor];
     NSArray *defaultGradient = @[
         (id)UIColorFromRGB(0x2C2C2C).CGColor,
@@ -165,6 +171,7 @@
         (id)UIColorFromRGB(0x292941).CGColor
     ];
     return @{
+        @"StockIOS": [self themeInfoWithName:@"Stock iOS" tintColor:stockIOSTint gradientColors:@[] tabBarUsesGradient:NO usesSystemAppearance:YES],
         @"Default": [self themeInfoWithName:@"Midnight (Standard)" tintColor:defaultTint gradientColors:defaultGradient],
         @"Jungle": [self themeInfoWithName:@"Jungle" tintColor:jungleTint gradientColors:jungleGradient],
         @"Frost": [self themeInfoWithName:@"Frost" tintColor:frostTint gradientColors:frostGradient],
@@ -231,14 +238,44 @@
     return [[[themeInfo objectForKey:currentTheme] objectForKey:@"tabBarUsesGradient"] boolValue];
 }
 
+- (BOOL)themeUsesSystemAppearanceForCurrentTheme {
+    return [[[themeInfo objectForKey:currentTheme] objectForKey:@"usesSystemAppearance"] boolValue];
+}
+
 #pragma mark - Theme Application
+- (void)applyTintToTabBar:(UITabBar *)tabBar {
+    if ([self themeUsesSystemAppearanceForCurrentTheme]) {
+        [tabBar setTintColor:nil];
+        [tabBar setSelectedImageTintColor:nil];
+        for (UITabBarItem *item in tabBar.items) {
+            [item setTitleTextAttributes:nil forState:UIControlStateNormal];
+            [item setTitleTextAttributes:nil forState:UIControlStateSelected];
+        }
+        return;
+    }
+    UIColor *tintColor = [self tintColorForCurrentTheme];
+    [tabBar setTintColor:tintColor];
+    [tabBar setSelectedImageTintColor:tintColor];
+    for (UITabBarItem *item in tabBar.items) {
+        [item setTitleTextAttributes:@{UITextAttributeTextColor: tintColor} forState:UIControlStateNormal];
+        [item setTitleTextAttributes:@{UITextAttributeTextColor: [[UIColor whiteColor] tintWithColor:tintColor]} forState:UIControlStateSelected];
+    }
+}
+
 - (void)applyThemeToTabBar:(UITabBar *)tabBar {
     KILL_IF_UNSUPPORTED;
     UIView *bgView = [self findTabBarBackgroundView:tabBar];
+    [self cleanViewOfGradientLayers:bgView];
+    if ([self themeUsesSystemAppearanceForCurrentTheme]) {
+        tabBar.backgroundImage = nil;
+        tabBar.selectionIndicatorImage = nil;
+        [bgView setNeedsDisplay];
+        return;
+    }
+    tabBar.backgroundImage = [UIImage imageNamed:@"UITabBarBG"];
     if (SYSTEM_VERSION_LESS_THAN(@"7.0")) {
         tabBar.selectionIndicatorImage = [[UIImage alloc] init];
     }
-    [self cleanViewOfGradientLayers:bgView];
     if (![self tabBarUsesGradientForCurrentTheme]) {
         [bgView setNeedsDisplay];
         return;
@@ -249,16 +286,42 @@
 
 - (void)applyTintToTabBars {
     KILL_IF_UNSUPPORTED;
+    if ([self themeUsesSystemAppearanceForCurrentTheme]) {
+        [UITabBar.appearance setBackgroundImage:nil];
+        [UITabBar.appearance setTintColor:nil];
+        [UITabBar.appearance setSelectedImageTintColor:nil];
+        [UITabBarItem.appearance setTitleTextAttributes:nil forState:UIControlStateNormal];
+        [UITabBarItem.appearance setTitleTextAttributes:nil forState:UIControlStateSelected];
+        UITabBarController *tabBarController = (UITabBarController *)getDelegate().window.rootViewController;
+        if ([tabBarController isKindOfClass:[UITabBarController class]]) {
+            [self applyTintToTabBar:tabBarController.tabBar];
+        }
+        return;
+    }
+    [UITabBar.appearance setBackgroundImage:[UIImage imageNamed:@"UITabBarBG"]];
     [UITabBar.appearance setTintColor:[self tintColorForCurrentTheme]];
     [UITabBar.appearance setSelectedImageTintColor:[self tintColorForCurrentTheme]];
     [UITabBarItem.appearance setTitleTextAttributes:@{UITextAttributeTextColor: [self tintColorForCurrentTheme]} forState:UIControlStateNormal];
     [UITabBarItem.appearance setTitleTextAttributes:@{UITextAttributeTextColor: [[UIColor whiteColor] tintWithColor:[self tintColorForCurrentTheme]]} forState:UIControlStateSelected];
+    UITabBarController *tabBarController = (UITabBarController *)getDelegate().window.rootViewController;
+    if ([tabBarController isKindOfClass:[UITabBarController class]]) {
+        [self applyTintToTabBar:tabBarController.tabBar];
+    }
 }
 
 - (void)applyThemeToNavigationBar:(UINavigationBar *)navigationBar {
     KILL_IF_UNSUPPORTED;
     UIView *bgView = [self findNavigationBarBackgroundView:navigationBar];
     [self cleanViewOfGradientLayers:bgView];
+    if ([self themeUsesSystemAppearanceForCurrentTheme]) {
+        [navigationBar setBackgroundImage:nil forBarMetrics:UIBarMetricsDefault];
+        [navigationBar setBarStyle:UIBarStyleDefault];
+        [navigationBar setTintColor:nil];
+        [bgView setNeedsDisplay];
+        return;
+    }
+    [navigationBar setBackgroundImage:[UIImage imageNamed:@"UITitleBarBG"] forBarMetrics:UIBarMetricsDefault];
+    [navigationBar setBarStyle:UIBarStyleBlack];
     CAGradientLayer *gradientLayer = [self createGradientLayerForCurrentThemeWithFrame:navigationBar.bounds];
     [bgView.layer insertSublayer:gradientLayer atIndex:0];
     [bgView setNeedsDisplay];
@@ -268,6 +331,14 @@
 
 - (void)applyTintToNavigationBars {
     KILL_IF_UNSUPPORTED;
+    if ([self themeUsesSystemAppearanceForCurrentTheme]) {
+        [UINavigationBar.appearance setBackgroundImage:nil forBarMetrics:UIBarMetricsDefault];
+        [UINavigationBar.appearance setBarStyle:UIBarStyleDefault];
+        [UINavigationBar.appearance setTintColor:nil];
+        return;
+    }
+    [UINavigationBar.appearance setBackgroundImage:[UIImage imageNamed:@"UITitleBarBG"] forBarMetrics:UIBarMetricsDefault];
+    [UINavigationBar.appearance setBarStyle:UIBarStyleBlack];
     [UINavigationBar.appearance setTintColor:[self tintColorForCurrentTheme]];
 }
 
@@ -322,7 +393,7 @@
 #pragma mark - Misc
 - (void)reconfigure:(NSNotification *)notification {
     debugLog(@"notification: %@", notification);
-    if (![(NSString*)notification.object isEqualToString:@"theme_preference"]) {
+    if (![notification.object isKindOfClass:[NSString class]] || ![(NSString *)notification.object isEqualToString:@"theme_preference"]) {
         debugLog(@"Not a theme change, ignoring");
         return;
     }

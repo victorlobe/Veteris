@@ -12,10 +12,12 @@
 
 // VAPIHelper should not include any classes to avoid circular imports
 @class AppDelegate;
+@class YZApplication;
 
 #define getDelegate() ((AppDelegate*)[[UIApplication sharedApplication]delegate])
 #define downloadPath() @"/var/mobile/Media/Downloads/Veteris"
 #define downloadPathFor(string) [NSString stringWithFormat:@"/var/mobile/Media/Downloads/Veteris/%@.ipa", [string MD5Hash]]
+#define downloadOnlyPath() @"/var/mobile/Media/Downloads/Veteris/Download"
 #define VAPISS [VAPIHelper sharedInstance]
 //#define alert(title,msg,target) [[[UIAlertView alloc] initWithTitle:title message:msg delegate:target cancelButtonTitle:@"OK" otherButtonTitles:nil, nil] show]
 #define alert(title,msg,typ) [YZAlert alert:title message:msg type:typ]
@@ -26,6 +28,8 @@
 + (NSString *)getApiBaseURL;
 + (BOOL)isDevModeEnabled;
 + (void)setDevModeEnabled:(BOOL)enabled;
++ (NSString *)getLanguageOverride;
++ (void)applyLanguageOverride;
 + (NSString *)getServerEnvironment;
 + (void)setServerEnvironment:(NSString *)environment;
 + (void)resetNetworkState;
@@ -36,6 +40,7 @@
 - (UIImage *)imageFromCache:(NSString *)url;
 + (void)checkForUpdates;
 + (NSDictionary *)getHeaders;
++ (void)trackDownloadStartForApplication:(YZApplication *)application url:(NSString *)url downloadOnly:(BOOL)downloadOnly;
 + (void)showWhatsNewIfNeeded;
 @property (strong, nonatomic) NSString *VAPIDeviceString;
 @end

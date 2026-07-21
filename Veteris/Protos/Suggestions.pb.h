@@ -13,6 +13,10 @@
 typedef struct _SuggestionMsg {
     pb_callback_t name;
     pb_callback_t bundleid;
+    pb_callback_t developer;
+    pb_callback_t iconurl;
+    pb_callback_t fallback_iconurl;
+    uint32_t version_count;
 } SuggestionMsg;
 
 typedef struct _SuggestionsMsg {
@@ -25,20 +29,28 @@ extern "C" {
 #endif
 
 /* Initializer values for message structs */
-#define SuggestionMsg_init_default               {{{NULL}, NULL}, {{NULL}, NULL}}
+#define SuggestionMsg_init_default               {{{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, 0}
 #define SuggestionsMsg_init_default              {{{NULL}, NULL}}
-#define SuggestionMsg_init_zero                  {{{NULL}, NULL}, {{NULL}, NULL}}
+#define SuggestionMsg_init_zero                  {{{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, 0}
 #define SuggestionsMsg_init_zero                 {{{NULL}, NULL}}
 
 /* Field tags (for use in manual encoding/decoding) */
 #define SuggestionMsg_name_tag                   1
 #define SuggestionMsg_bundleid_tag               2
+#define SuggestionMsg_developer_tag              3
+#define SuggestionMsg_iconurl_tag                4
+#define SuggestionMsg_fallback_iconurl_tag       5
+#define SuggestionMsg_version_count_tag          6
 #define SuggestionsMsg_suggestions_tag           1
 
 /* Struct field encoding specification for nanopb */
 #define SuggestionMsg_FIELDLIST(X, a) \
 X(a, CALLBACK, REQUIRED, STRING,   name,              1) \
-X(a, CALLBACK, REQUIRED, STRING,   bundleid,          2)
+X(a, CALLBACK, REQUIRED, STRING,   bundleid,          2) \
+X(a, CALLBACK, OPTIONAL, STRING,   developer,         3) \
+X(a, CALLBACK, OPTIONAL, STRING,   iconurl,           4) \
+X(a, CALLBACK, OPTIONAL, STRING,   fallback_iconurl,  5) \
+X(a, STATIC,   SINGULAR, UINT32,   version_count,     6)
 #define SuggestionMsg_CALLBACK pb_default_field_callback
 #define SuggestionMsg_DEFAULT NULL
 

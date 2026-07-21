@@ -1,5 +1,6 @@
 #import "YZQueueRep.h"
 #import "YZQueueOps.h"
+#import "../VAPIHelper/VAPIHelper.h"
 
 @implementation YZQueueRep {
     YZApplication *_app;
@@ -9,9 +10,11 @@
     YZQueueRep *rep = [[YZQueueRep alloc] init];
     rep->_app = yzApp;
     rep->_invalid = NO;
+    rep->_installAfterDownload = YES;
     __typeof__(rep) weakSelf = rep;
     rep->_downloadSelf = ^{
         [weakSelf setState:YZRepStateDownloading];
+        [VAPIHelper trackDownloadStartForApplication:yzApp url:url downloadOnly:NO];
         [YZQueueOps downloadFileToPath:url pathFromString:yzApp.bundleID parent:weakSelf];
     };
     if (url != nil) {
@@ -20,6 +23,21 @@
     } else {
         [rep setState:YZRepStateDownloaded];
     }
+}
+
++ (void)detachDownloadOnlyRepWithYZApp:(YZApplication *)yzApp andURL:(NSString *)url targetPath:(NSString *)targetPath {
+    YZQueueRep *rep = [[YZQueueRep alloc] init];
+    rep->_app = yzApp;
+    rep->_invalid = NO;
+    rep->_installAfterDownload = NO;
+    __typeof__(rep) weakSelf = rep;
+    rep->_downloadSelf = ^{
+        [weakSelf setState:YZRepStateDownloading];
+        [VAPIHelper trackDownloadStartForApplication:yzApp url:url downloadOnly:YES];
+        [YZQueueOps downloadFileToPath:url targetPath:targetPath parent:weakSelf];
+    };
+    rep->_app.path = targetPath;
+    [rep setState:YZRepStateQueued];
 }
 
 - (void)setState:(YZRepState)state {

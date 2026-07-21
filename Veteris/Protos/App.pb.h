@@ -14,6 +14,8 @@ typedef struct _VersionMsg {
     pb_callback_t version;
     pb_callback_t fileName;
     pb_callback_t minVersion;
+    bool has_sizeBytes;
+    uint64_t sizeBytes;
 } VersionMsg;
 
 typedef struct _AppMsg {
@@ -24,6 +26,20 @@ typedef struct _AppMsg {
     pb_callback_t versions;
     pb_callback_t iconurl;
     pb_callback_t fallback_iconurl;
+    pb_callback_t category;
+    pb_callback_t minIOS;
+    pb_callback_t deviceFamily;
+    pb_callback_t archFlags;
+    pb_callback_t backgroundModes;
+    pb_callback_t executable;
+    pb_callback_t releaseDate;
+    pb_callback_t contentRating;
+    pb_callback_t price;
+    pb_callback_t subgenres;
+    pb_callback_t copyrightText;
+    pb_callback_t gameCenter;
+    pb_callback_t newsstand;
+    pb_callback_t requiredCapabilities;
 } AppMsg;
 
 
@@ -32,15 +48,16 @@ extern "C" {
 #endif
 
 /* Initializer values for message structs */
-#define VersionMsg_init_default                  {{{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}}
-#define AppMsg_init_default                      {{{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}}
-#define VersionMsg_init_zero                     {{{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}}
-#define AppMsg_init_zero                         {{{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}}
+#define VersionMsg_init_default                  {{{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, false, 0}
+#define AppMsg_init_default                      {{{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}}
+#define VersionMsg_init_zero                     {{{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, false, 0}
+#define AppMsg_init_zero                         {{{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}}
 
 /* Field tags (for use in manual encoding/decoding) */
 #define VersionMsg_version_tag                   1
 #define VersionMsg_fileName_tag                  2
 #define VersionMsg_minVersion_tag                3
+#define VersionMsg_sizeBytes_tag                 4
 #define AppMsg_name_tag                          1
 #define AppMsg_developer_tag                     2
 #define AppMsg_bundleid_tag                      3
@@ -48,12 +65,27 @@ extern "C" {
 #define AppMsg_versions_tag                      5
 #define AppMsg_iconurl_tag                       6
 #define AppMsg_fallback_iconurl_tag              7
+#define AppMsg_category_tag                      8
+#define AppMsg_minIOS_tag                        9
+#define AppMsg_deviceFamily_tag                  10
+#define AppMsg_archFlags_tag                     11
+#define AppMsg_backgroundModes_tag               12
+#define AppMsg_executable_tag                    13
+#define AppMsg_releaseDate_tag                   14
+#define AppMsg_contentRating_tag                 15
+#define AppMsg_price_tag                         16
+#define AppMsg_subgenres_tag                     17
+#define AppMsg_copyrightText_tag                 18
+#define AppMsg_gameCenter_tag                    19
+#define AppMsg_newsstand_tag                     20
+#define AppMsg_requiredCapabilities_tag          21
 
 /* Struct field encoding specification for nanopb */
 #define VersionMsg_FIELDLIST(X, a) \
 X(a, CALLBACK, REQUIRED, STRING,   version,           1) \
 X(a, CALLBACK, REQUIRED, STRING,   fileName,          2) \
-X(a, CALLBACK, REQUIRED, STRING,   minVersion,        3)
+X(a, CALLBACK, REQUIRED, STRING,   minVersion,        3) \
+X(a, STATIC,   OPTIONAL, UINT64,   sizeBytes,         4)
 #define VersionMsg_CALLBACK pb_default_field_callback
 #define VersionMsg_DEFAULT NULL
 
@@ -64,7 +96,21 @@ X(a, CALLBACK, REQUIRED, STRING,   bundleid,          3) \
 X(a, CALLBACK, REQUIRED, STRING,   description,       4) \
 X(a, CALLBACK, REPEATED, MESSAGE,  versions,          5) \
 X(a, CALLBACK, REQUIRED, STRING,   iconurl,           6) \
-X(a, CALLBACK, OPTIONAL, STRING,   fallback_iconurl,  7)
+X(a, CALLBACK, OPTIONAL, STRING,   fallback_iconurl,  7) \
+X(a, CALLBACK, OPTIONAL, STRING,   category,          8) \
+X(a, CALLBACK, OPTIONAL, STRING,   minIOS,            9) \
+X(a, CALLBACK, OPTIONAL, STRING,   deviceFamily,     10) \
+X(a, CALLBACK, OPTIONAL, STRING,   archFlags,        11) \
+X(a, CALLBACK, OPTIONAL, STRING,   backgroundModes,  12) \
+X(a, CALLBACK, OPTIONAL, STRING,   executable,       13) \
+X(a, CALLBACK, OPTIONAL, STRING,   releaseDate,      14) \
+X(a, CALLBACK, OPTIONAL, STRING,   contentRating,    15) \
+X(a, CALLBACK, OPTIONAL, STRING,   price,            16) \
+X(a, CALLBACK, OPTIONAL, STRING,   subgenres,        17) \
+X(a, CALLBACK, OPTIONAL, STRING,   copyrightText,    18) \
+X(a, CALLBACK, OPTIONAL, STRING,   gameCenter,       19) \
+X(a, CALLBACK, OPTIONAL, STRING,   newsstand,        20) \
+X(a, CALLBACK, OPTIONAL, STRING,   requiredCapabilities, 21)
 #define AppMsg_CALLBACK pb_default_field_callback
 #define AppMsg_DEFAULT NULL
 #define AppMsg_versions_MSGTYPE VersionMsg

@@ -23,6 +23,8 @@
     self->_icon = app.icon;
     self->_version = version.version;
     self->_url = version.fileName;
+    self->_minimumOS = version.minVersion;
+    self->_sizeBytes = version.sizeBytes;
     return self;
 }
 

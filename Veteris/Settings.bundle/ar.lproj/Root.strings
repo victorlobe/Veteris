@@ -45,3 +45,25 @@
 "Translation (DE)" = "ترجمة (DE)";
 "Translation (PT)" = "ترجمة (PT)";
 "Translation (ZH)" = "ترجمة (ZH)";
+"Search" = "البحث";
+"Subtitle" = "العنوان الفرعي";
+"Developer Name" = "اسم المطور";
+"Bundle ID" = "معرف الحزمة";
+"Privacy" = "الخصوصية";
+"Share Analytics" = "مشاركة التحليلات";
+"Download starts and app requests are counted without storing IP addresses." = "يتم احتساب بدء التنزيلات وطلبات التطبيقات بدون تخزين عناوين IP.";
+
+"App Subtitles" = "العناوين الفرعية للتطبيقات";
+"Apply To" = "تطبيق على";
+"All" = "الكل";
+"Custom" = "مخصص";
+"Browse" = "تصفح";
+"Related" = "ذات صلة";
+"Queue" = "قائمة الانتظار";
+"Reset" = "إعادة تعيين";
+"Reset Veteris" = "إعادة تعيين Veteris";
+"Reset All" = "إعادة تعيين الكل";
+"Veteris Reset" = "تمت إعادة تعيين Veteris";
+"Deletes all Veteris preferences, search history, crash reports, and caches." = "يحذف كل تفضيلات Veteris وسجل البحث وتقارير التعطل والذاكرات المؤقتة.";
+"This will delete Veteris preferences, search history, crash reports, and caches. Veteris will close afterwards." = "سيحذف هذا تفضيلات Veteris وسجل البحث وتقارير التعطل والذاكرات المؤقتة. سيغلق Veteris بعد ذلك.";
+"Veteris has been reset and will now close." = "تمت إعادة تعيين Veteris وسيغلق الآن.";

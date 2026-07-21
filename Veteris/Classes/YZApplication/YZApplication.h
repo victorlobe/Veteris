@@ -14,6 +14,7 @@
 @property (strong, nonatomic) NSString *path;
 @property (strong, nonatomic) NSString *iconurl;
 @property (strong, nonatomic) NSString *fallback_iconurl;
+@property (nonatomic, assign) unsigned long long sizeBytes;
 - (YZApplication *)initFromApp:(Application *)app version:(Version *)version;
 + (YZApplication *)open:(NSString *)path;
 - (void)setPath:(NSString *)path;

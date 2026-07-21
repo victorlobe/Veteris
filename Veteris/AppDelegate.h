@@ -16,7 +16,7 @@
 #import "Classes/VAPIHelper/VAPIHelper.h"
 #import "Classes/ThemeManager/ThemeManager.h"
 
-@interface AppDelegate : UIResponder<UIApplicationDelegate,UINavigationControllerDelegate>
+@interface AppDelegate : UIResponder<UIApplicationDelegate,UINavigationControllerDelegate,UITabBarControllerDelegate>
 @property (strong, nonatomic) UIWindow *window;
 #ifdef DEBUG
 #endif

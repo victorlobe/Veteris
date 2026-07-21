@@ -210,6 +210,8 @@
 		57FE6CCA2FDE355F00F68B95 /* AppIcon29x29.png in Resources */ = {isa = PBXBuildFile; fileRef = 57FE6AFC2FDE355D00F68B95 /* AppIcon29x29.png */; };
 		57FE6CCB2FDE355F00F68B95 /* CategoryDisplayTableviewCellBG@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 57FE6AFD2FDE355D00F68B95 /* CategoryDisplayTableviewCellBG@2x.png */; };
 		57FE6CCC2FDE355F00F68B95 /* CrackTabIcon@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 57FE6AFE2FDE355D00F68B95 /* CrackTabIcon@2x.png */; };
+		7C83C1B8749348948554D411 /* RandomAppsTabIcon@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 73B72ACC82944A4583774185 /* RandomAppsTabIcon@2x.png */; };
+		7849FC0D38524E6ABA716A28 /* RandomAppsTabIcon.png in Resources */ = {isa = PBXBuildFile; fileRef = CA47F10B4DF64F7D8EA5A981 /* RandomAppsTabIcon.png */; };
 		57FE6CCD2FDE355F00F68B95 /* thankYouElectimonHeartBadge.png in Resources */ = {isa = PBXBuildFile; fileRef = 57FE6AFF2FDE355D00F68B95 /* thankYouElectimonHeartBadge.png */; };
 		57FE6CCE2FDE355F00F68B95 /* Default@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 57FE6B002FDE355D00F68B95 /* Default@2x.png */; };
 		57FE6CCF2FDE355F00F68B95 /* AppIcon60x60@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 57FE6B012FDE355D00F68B95 /* AppIcon60x60@2x.png */; };
@@ -288,9 +290,9 @@
 		57FE6D182FDE355F00F68B95 /* YZQueueReactor.m in Sources */ = {isa = PBXBuildFile; fileRef = 57FE6B6E2FDE355E00F68B95 /* YZQueueReactor.m */; };
 		57FE6D192FDE355F00F68B95 /* YZQueueManager.m in Sources */ = {isa = PBXBuildFile; fileRef = 57FE6B6F2FDE355E00F68B95 /* YZQueueManager.m */; };
 		57FE6D1A2FDE355F00F68B95 /* YZQueueState.o in Frameworks */ = {isa = PBXBuildFile; fileRef = 57FE6B712FDE355E00F68B95 /* YZQueueState.o */; };
-		57FE6D1B2FDE355F00F68B95 /* FeaturedTableViewCell.o in Frameworks */ = {isa = PBXBuildFile; fileRef = 57FE6B732FDE355E00F68B95 /* FeaturedTableViewCell.o */; };
+		57FE6D1B2FDE355F00F68B95 /* AppListTableViewCell.o in Frameworks */ = {isa = PBXBuildFile; fileRef = 57FE6B732FDE355E00F68B95 /* AppListTableViewCell.o */; };
 		57FE6D1C2FDE355F00F68B95 /* FeaturedTableViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 57FE6B752FDE355E00F68B95 /* FeaturedTableViewController.m */; };
-		57FE6D1D2FDE355F00F68B95 /* FeaturedTableViewCell.m in Sources */ = {isa = PBXBuildFile; fileRef = 57FE6B762FDE355E00F68B95 /* FeaturedTableViewCell.m */; };
+		57FE6D1D2FDE355F00F68B95 /* AppListTableViewCell.m in Sources */ = {isa = PBXBuildFile; fileRef = 57FE6B762FDE355E00F68B95 /* AppListTableViewCell.m */; };
 		57FE6D1E2FDE355F00F68B95 /* FeaturedTableViewController.o in Frameworks */ = {isa = PBXBuildFile; fileRef = 57FE6B772FDE355E00F68B95 /* FeaturedTableViewController.o */; };
 		57FE6D1F2FDE355F00F68B95 /* CrackTableViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 57FE6B7A2FDE355E00F68B95 /* CrackTableViewController.m */; };
 		57FE6D202FDE355F00F68B95 /* CrackTableViewController.o in Frameworks */ = {isa = PBXBuildFile; fileRef = 57FE6B7B2FDE355E00F68B95 /* CrackTableViewController.o */; };
@@ -331,6 +333,8 @@
 		57FE6D432FDE355F00F68B95 /* LoadingIndicatorView.o in Frameworks */ = {isa = PBXBuildFile; fileRef = 57FE6BBA2FDE355E00F68B95 /* LoadingIndicatorView.o */; };
 		57FE6D442FDE355F00F68B95 /* AppInfo.o in Frameworks */ = {isa = PBXBuildFile; fileRef = 57FE6BBE2FDE355E00F68B95 /* AppInfo.o */; };
 		57FE6D452FDE355F00F68B95 /* AppInfo.m in Sources */ = {isa = PBXBuildFile; fileRef = 57FE6BBF2FDE355E00F68B95 /* AppInfo.m */; };
+		C0D3F0010000000000000001 /* FavoritesTableViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = C0D3F0030000000000000001 /* FavoritesTableViewController.m */; };
+		C0D3F0020000000000000001 /* VeterisFavoritesManager.m in Sources */ = {isa = PBXBuildFile; fileRef = C0D3F0050000000000000001 /* VeterisFavoritesManager.m */; };
 		57FE6D462FDE355F00F68B95 /* IASKSettingsStore.o in Frameworks */ = {isa = PBXBuildFile; fileRef = 57FE6BC22FDE355E00F68B95 /* IASKSettingsStore.o */; };
 		57FE6D472FDE355F00F68B95 /* IASKSpecifier.m in Sources */ = {isa = PBXBuildFile; fileRef = 57FE6BC42FDE355E00F68B95 /* IASKSpecifier.m */; };
 		57FE6D482FDE355F00F68B95 /* IASKSettingsStoreFile.o in Frameworks */ = {isa = PBXBuildFile; fileRef = 57FE6BC62FDE355E00F68B95 /* IASKSettingsStoreFile.o */; };
@@ -726,6 +730,8 @@
 		57FE6AFC2FDE355D00F68B95 /* AppIcon29x29.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = AppIcon29x29.png; sourceTree = "<group>"; };
 		57FE6AFD2FDE355D00F68B95 /* CategoryDisplayTableviewCellBG@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "CategoryDisplayTableviewCellBG@2x.png"; sourceTree = "<group>"; };
 		57FE6AFE2FDE355D00F68B95 /* CrackTabIcon@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "CrackTabIcon@2x.png"; sourceTree = "<group>"; };
+		73B72ACC82944A4583774185 /* RandomAppsTabIcon@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "RandomAppsTabIcon@2x.png"; sourceTree = "<group>"; };
+		CA47F10B4DF64F7D8EA5A981 /* RandomAppsTabIcon.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = RandomAppsTabIcon.png; sourceTree = "<group>"; };
 		57FE6AFF2FDE355D00F68B95 /* thankYouElectimonHeartBadge.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = thankYouElectimonHeartBadge.png; sourceTree = "<group>"; };
 		57FE6B002FDE355D00F68B95 /* Default@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Default@2x.png"; sourceTree = "<group>"; };
 		57FE6B012FDE355D00F68B95 /* AppIcon60x60@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "AppIcon60x60@2x.png"; sourceTree = "<group>"; };
@@ -828,10 +834,10 @@
 		57FE6B6F2FDE355E00F68B95 /* YZQueueManager.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = YZQueueManager.m; sourceTree = "<group>"; };
 		57FE6B702FDE355E00F68B95 /* YZQueueState.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = YZQueueState.h; sourceTree = "<group>"; };
 		57FE6B712FDE355E00F68B95 /* YZQueueState.o */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.objfile"; path = YZQueueState.o; sourceTree = "<group>"; };
-		57FE6B732FDE355E00F68B95 /* FeaturedTableViewCell.o */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.objfile"; path = FeaturedTableViewCell.o; sourceTree = "<group>"; };
-		57FE6B742FDE355E00F68B95 /* FeaturedTableViewCell.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = FeaturedTableViewCell.h; sourceTree = "<group>"; };
+		57FE6B732FDE355E00F68B95 /* AppListTableViewCell.o */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.objfile"; path = AppListTableViewCell.o; sourceTree = "<group>"; };
+		57FE6B742FDE355E00F68B95 /* AppListTableViewCell.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AppListTableViewCell.h; sourceTree = "<group>"; };
 		57FE6B752FDE355E00F68B95 /* FeaturedTableViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = FeaturedTableViewController.m; sourceTree = "<group>"; };
-		57FE6B762FDE355E00F68B95 /* FeaturedTableViewCell.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = FeaturedTableViewCell.m; sourceTree = "<group>"; };
+		57FE6B762FDE355E00F68B95 /* AppListTableViewCell.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = AppListTableViewCell.m; sourceTree = "<group>"; };
 		57FE6B772FDE355E00F68B95 /* FeaturedTableViewController.o */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.objfile"; path = FeaturedTableViewController.o; sourceTree = "<group>"; };
 		57FE6B782FDE355E00F68B95 /* FeaturedTableViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = FeaturedTableViewController.h; sourceTree = "<group>"; };
 		57FE6B7A2FDE355E00F68B95 /* CrackTableViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = CrackTableViewController.m; sourceTree = "<group>"; };
@@ -889,6 +895,10 @@
 		57FE6BB92FDE355E00F68B95 /* LoadingIndicatorView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = LoadingIndicatorView.m; sourceTree = "<group>"; };
 		57FE6BBA2FDE355E00F68B95 /* LoadingIndicatorView.o */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.objfile"; path = LoadingIndicatorView.o; sourceTree = "<group>"; };
 		57FE6BBB2FDE355E00F68B95 /* LoadingIndicatorView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LoadingIndicatorView.h; sourceTree = "<group>"; };
+		C0D3F0030000000000000001 /* FavoritesTableViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = FavoritesTableViewController.m; sourceTree = "<group>"; };
+		C0D3F0040000000000000001 /* FavoritesTableViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = FavoritesTableViewController.h; sourceTree = "<group>"; };
+		C0D3F0050000000000000001 /* VeterisFavoritesManager.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = VeterisFavoritesManager.m; sourceTree = "<group>"; };
+		C0D3F0060000000000000001 /* VeterisFavoritesManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = VeterisFavoritesManager.h; sourceTree = "<group>"; };
 		57FE6BBD2FDE355E00F68B95 /* AppInfo.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AppInfo.h; sourceTree = "<group>"; };
 		57FE6BBE2FDE355E00F68B95 /* AppInfo.o */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.objfile"; path = AppInfo.o; sourceTree = "<group>"; };
 		57FE6BBF2FDE355E00F68B95 /* AppInfo.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = AppInfo.m; sourceTree = "<group>"; };
@@ -977,6 +987,24 @@
 		57FE6D262FDE356000F68B95 /* es */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = es; path = es.lproj/Localizable.strings; sourceTree = "<group>"; };
 		57FE6D272FDE356000F68B95 /* es */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = es; path = es.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		57FE6D282FDE356000F68B95 /* es */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = es; path = es.lproj/MainStoryboard.strings; sourceTree = "<group>"; };
+		C0DEF0010000000000000001 /* fr */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = fr; path = fr.lproj/Localizable.strings; sourceTree = "<group>"; };
+		C0DEF0010000000000000002 /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/Localizable.strings"; sourceTree = "<group>"; };
+		C0DEF0010000000000000003 /* ja */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ja; path = ja.lproj/Localizable.strings; sourceTree = "<group>"; };
+		C0DEF0010000000000000004 /* it */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = it; path = it.lproj/Localizable.strings; sourceTree = "<group>"; };
+		C0DEF0010000000000000005 /* pl */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = pl; path = pl.lproj/Localizable.strings; sourceTree = "<group>"; };
+		C0DEF0010000000000000006 /* he */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = he; path = he.lproj/Localizable.strings; sourceTree = "<group>"; };
+		C0DEF0020000000000000001 /* fr */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = fr; path = fr.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+		C0DEF0020000000000000002 /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/InfoPlist.strings"; sourceTree = "<group>"; };
+		C0DEF0020000000000000003 /* ja */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ja; path = ja.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+		C0DEF0020000000000000004 /* it */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = it; path = it.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+		C0DEF0020000000000000005 /* pl */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = pl; path = pl.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+		C0DEF0020000000000000006 /* he */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = he; path = he.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+		C0DEF0030000000000000001 /* fr */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = fr; path = fr.lproj/MainStoryboard.strings; sourceTree = "<group>"; };
+		C0DEF0030000000000000002 /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/MainStoryboard.strings"; sourceTree = "<group>"; };
+		C0DEF0030000000000000003 /* ja */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ja; path = ja.lproj/MainStoryboard.strings; sourceTree = "<group>"; };
+		C0DEF0030000000000000004 /* it */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = it; path = it.lproj/MainStoryboard.strings; sourceTree = "<group>"; };
+		C0DEF0030000000000000005 /* pl */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = pl; path = pl.lproj/MainStoryboard.strings; sourceTree = "<group>"; };
+		C0DEF0030000000000000006 /* he */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = he; path = he.lproj/MainStoryboard.strings; sourceTree = "<group>"; };
 		57FE6C132FDE355F00F68B95 /* Veteris-Prefix.pch */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "Veteris-Prefix.pch"; sourceTree = "<group>"; };
 		57FE6C142FDE355F00F68B95 /* AntiDebug.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AntiDebug.h; sourceTree = "<group>"; };
 		57FE6C152FDE355F00F68B95 /* fmemopen.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = fmemopen.c; sourceTree = "<group>"; };
@@ -1098,7 +1126,7 @@
 				57FE6CAC2FDE355F00F68B95 /* BBHTTPRequest.o in Frameworks */,
 				57FE6D642FDE355F00F68B95 /* SVProgressHUD.o in Frameworks */,
 				57FE6CFF2FDE355F00F68B95 /* Suggestion.o in Frameworks */,
-				57FE6D1B2FDE355F00F68B95 /* FeaturedTableViewCell.o in Frameworks */,
+				57FE6D1B2FDE355F00F68B95 /* AppListTableViewCell.o in Frameworks */,
 				57FE6CB42FDE355F00F68B95 /* BBHTTPReturner.o in Frameworks */,
 				57FE6D092FDE355F00F68B95 /* HomeTableViewCell.o in Frameworks */,
 				57FE6D292FDE355F00F68B95 /* ThemeManager.o in Frameworks */,
@@ -1711,10 +1739,12 @@
 				57FE6AF92FDE355D00F68B95 /* featured.png */,
 				57FE6AFA2FDE355D00F68B95 /* DepthShadow.png */,
 				57FE6AFB2FDE355D00F68B95 /* settings.png */,
-				57FE6AFC2FDE355D00F68B95 /* AppIcon29x29.png */,
-				57FE6AFD2FDE355D00F68B95 /* CategoryDisplayTableviewCellBG@2x.png */,
-				57FE6AFE2FDE355D00F68B95 /* CrackTabIcon@2x.png */,
-				57FE6AFF2FDE355D00F68B95 /* thankYouElectimonHeartBadge.png */,
+					57FE6AFC2FDE355D00F68B95 /* AppIcon29x29.png */,
+					57FE6AFD2FDE355D00F68B95 /* CategoryDisplayTableviewCellBG@2x.png */,
+					57FE6AFE2FDE355D00F68B95 /* CrackTabIcon@2x.png */,
+					73B72ACC82944A4583774185 /* RandomAppsTabIcon@2x.png */,
+					CA47F10B4DF64F7D8EA5A981 /* RandomAppsTabIcon.png */,
+					57FE6AFF2FDE355D00F68B95 /* thankYouElectimonHeartBadge.png */,
 				57FE6B002FDE355D00F68B95 /* Default@2x.png */,
 				57FE6B012FDE355D00F68B95 /* AppIcon60x60@2x.png */,
 				57FE6B022FDE355D00F68B95 /* youAreAwesomeBadge.png */,
@@ -1761,6 +1791,8 @@
 				57FE6B2D2FDE355D00F68B95 /* YZApplication */,
 				57FE6B3E2FDE355E00F68B95 /* Protos */,
 				57FE6B512FDE355E00F68B95 /* HomeTableViewCell */,
+				C0D3A1110000000000000001 /* AppListTableViewCell */,
+				C0D3F0070000000000000001 /* Favorites */,
 				57FE6B552FDE355E00F68B95 /* DebugTextView */,
 				57FE6B582FDE355E00F68B95 /* VAPIHelper */,
 				57FE6B622FDE355E00F68B95 /* YZQueue */,
@@ -1941,14 +1973,21 @@
 		57FE6B722FDE355E00F68B95 /* FeaturedTableViewController */ = {
 			isa = PBXGroup;
 			children = (
-				57FE6B732FDE355E00F68B95 /* FeaturedTableViewCell.o */,
-				57FE6B742FDE355E00F68B95 /* FeaturedTableViewCell.h */,
 				57FE6B752FDE355E00F68B95 /* FeaturedTableViewController.m */,
-				57FE6B762FDE355E00F68B95 /* FeaturedTableViewCell.m */,
 				57FE6B772FDE355E00F68B95 /* FeaturedTableViewController.o */,
 				57FE6B782FDE355E00F68B95 /* FeaturedTableViewController.h */,
 			);
 			path = FeaturedTableViewController;
+			sourceTree = "<group>";
+		};
+		C0D3A1110000000000000001 /* AppListTableViewCell */ = {
+			isa = PBXGroup;
+			children = (
+				57FE6B732FDE355E00F68B95 /* AppListTableViewCell.o */,
+				57FE6B742FDE355E00F68B95 /* AppListTableViewCell.h */,
+				57FE6B762FDE355E00F68B95 /* AppListTableViewCell.m */,
+			);
+			path = AppListTableViewCell;
 			sourceTree = "<group>";
 		};
 		57FE6B792FDE355E00F68B95 /* CrackTableViewController */ = {
@@ -2087,6 +2126,17 @@
 				57FE6BBB2FDE355E00F68B95 /* LoadingIndicatorView.h */,
 			);
 			path = LoadingIndicatorView;
+			sourceTree = "<group>";
+		};
+		C0D3F0070000000000000001 /* Favorites */ = {
+			isa = PBXGroup;
+			children = (
+				C0D3F0040000000000000001 /* FavoritesTableViewController.h */,
+				C0D3F0030000000000000001 /* FavoritesTableViewController.m */,
+				C0D3F0060000000000000001 /* VeterisFavoritesManager.h */,
+				C0D3F0050000000000000001 /* VeterisFavoritesManager.m */,
+			);
+			path = Favorites;
 			sourceTree = "<group>";
 		};
 		57FE6BBC2FDE355E00F68B95 /* AppInfo */ = {
@@ -2347,6 +2397,12 @@
 				ar,
 				tr,
 				es,
+				fr,
+				"zh-Hans",
+				ja,
+				it,
+				pl,
+				he,
 			);
 			mainGroup = 2B1EC2CF22AB178400738022;
 			productRefGroup = 2B1EC2D922AB178400738022 /* Products */;
@@ -2424,6 +2480,8 @@
 				2BDDDBF62921BC690048C4E1 /* Settings.bundle in Resources */,
 				559CA6AA2C882BC600B263CC /* make_vms.com in Resources */,
 				57FE6CC42FDE355F00F68B95 /* QueueTableIcon@2x.png in Resources */,
+				7C83C1B8749348948554D411 /* RandomAppsTabIcon@2x.png in Resources */,
+				7849FC0D38524E6ABA716A28 /* RandomAppsTabIcon.png in Resources */,
 				57FE6C6C2FDE355F00F68B95 /* _opcode.cpython-38-x86_64-linux-gnu.so in Resources */,
 				57FE6C832FDE355F00F68B95 /* libexpat.so.1 in Resources */,
 				2B12CE8F2B481EF300F70B77 /* DownloadButton.png in Resources */,
@@ -2605,7 +2663,7 @@
 				57FE6CF52FDE355F00F68B95 /* zip.c in Sources */,
 				57FE6C982FDE355F00F68B95 /* CrashReq.pb.c in Sources */,
 				57FE6D002FDE355F00F68B95 /* Update.m in Sources */,
-				57FE6D1D2FDE355F00F68B95 /* FeaturedTableViewCell.m in Sources */,
+				57FE6D1D2FDE355F00F68B95 /* AppListTableViewCell.m in Sources */,
 				57FE6D572FDE355F00F68B95 /* IASKPSTitleValueSpecifierViewCell.m in Sources */,
 				57FE6D952FDE355F00F68B95 /* ZipArchive.m in Sources */,
 				57FE6D0B2FDE355F00F68B95 /* VAPIHelper.m in Sources */,
@@ -2656,6 +2714,8 @@
 				559CA6E52C882BD800B263CC /* IASKTextField.m in Sources */,
 				57FE6D312FDE355F00F68B95 /* UIColor+Ext.m in Sources */,
 				57FE6D452FDE355F00F68B95 /* AppInfo.m in Sources */,
+				C0D3F0010000000000000001 /* FavoritesTableViewController.m in Sources */,
+				C0D3F0020000000000000001 /* VeterisFavoritesManager.m in Sources */,
 				57FE6D372FDE355F00F68B95 /* CrackTableViewCell.m in Sources */,
 				57FE6CFD2FDE355F00F68B95 /* Category.m in Sources */,
 				57FE6D282FDE355F00F68B95 /* ThemeManager.m in Sources */,
@@ -2711,6 +2771,12 @@
 				57FE6D202FDE356000F68B95 /* ar */,
 				57FE6D232FDE356000F68B95 /* tr */,
 				57FE6D262FDE356000F68B95 /* es */,
+				C0DEF0010000000000000001 /* fr */,
+				C0DEF0010000000000000002 /* zh-Hans */,
+				C0DEF0010000000000000003 /* ja */,
+				C0DEF0010000000000000004 /* it */,
+				C0DEF0010000000000000005 /* pl */,
+				C0DEF0010000000000000006 /* he */,
 			);
 			name = Localizable.strings;
 			sourceTree = "<group>";
@@ -2727,6 +2793,12 @@
 				57FE6D212FDE356000F68B95 /* ar */,
 				57FE6D242FDE356000F68B95 /* tr */,
 				57FE6D272FDE356000F68B95 /* es */,
+				C0DEF0020000000000000001 /* fr */,
+				C0DEF0020000000000000002 /* zh-Hans */,
+				C0DEF0020000000000000003 /* ja */,
+				C0DEF0020000000000000004 /* it */,
+				C0DEF0020000000000000005 /* pl */,
+				C0DEF0020000000000000006 /* he */,
 			);
 			name = InfoPlist.strings;
 			sourceTree = "<group>";
@@ -2743,6 +2815,12 @@
 				57FE6D222FDE356000F68B95 /* ar */,
 				57FE6D252FDE356000F68B95 /* tr */,
 				57FE6D282FDE356000F68B95 /* es */,
+				C0DEF0030000000000000001 /* fr */,
+				C0DEF0030000000000000002 /* zh-Hans */,
+				C0DEF0030000000000000003 /* ja */,
+				C0DEF0030000000000000004 /* it */,
+				C0DEF0030000000000000005 /* pl */,
+				C0DEF0030000000000000006 /* he */,
 			);
 			name = MainStoryboard.strings;
 			sourceTree = "<group>";
@@ -2864,7 +2942,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos7.1;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				USER_HEADER_SEARCH_PATHS = "Veteris/md5 Veteris \"-I./Veteris/ActionSheetPicker\", Veteris/InAppSettingsKit/Models Veteris/InAppSettingsKit/Controllers Veteris/InAppSettingsKit/Views Veteris/Classes Veteris/Clutch \"-I./Veteris/Classes/../Clutch/minizip\", \"-I./Veteris/Classes/AppInfo\", \"-I./Veteris/Classes/AppsTableViewController\", \"-I./Veteris/Classes/CategoriesTableViewController\", \"-I./Veteris/Classes/CategorySelectedViewController\", \"-I./Veteris/Classes/CrackTableViewCell\", \"-I./Veteris/Classes/CrackTableViewController\", \"-I./Veteris/Classes/CrackViewController\", \"-I./Veteris/Classes/FeaturedTableViewController\", \"-I./Veteris/Classes/SearchViewController\", \"-I./Veteris/Classes/SettingsTableViewController\", \"-I./Veteris/SVProgressHUD\", Veteris/BBHTTP Veteris/BBHTTP/Handlers Veteris/BBHTTP/Internal Veteris/Classes/HomeTableViewCell curl nanopb";
+				USER_HEADER_SEARCH_PATHS = "Veteris/md5 Veteris \"-I./Veteris/ActionSheetPicker\", Veteris/InAppSettingsKit/Models Veteris/InAppSettingsKit/Controllers Veteris/InAppSettingsKit/Views Veteris/Classes Veteris/Clutch \"-I./Veteris/Classes/../Clutch/minizip\", \"-I./Veteris/Classes/AppInfo\", \"-I./Veteris/Classes/AppListTableViewCell\", \"-I./Veteris/Classes/AppsTableViewController\", \"-I./Veteris/Classes/CategoriesTableViewController\", \"-I./Veteris/Classes/CategorySelectedViewController\", \"-I./Veteris/Classes/CrackTableViewCell\", \"-I./Veteris/Classes/CrackTableViewController\", \"-I./Veteris/Classes/CrackViewController\", \"-I./Veteris/Classes/FeaturedTableViewController\", \"-I./Veteris/Classes/SearchViewController\", \"-I./Veteris/Classes/SettingsTableViewController\", \"-I./Veteris/SVProgressHUD\", Veteris/BBHTTP Veteris/BBHTTP/Handlers Veteris/BBHTTP/Internal Veteris/Classes/HomeTableViewCell curl nanopb";
 				VALID_ARCHS = "armv7 armv7s";
 				WRAPPER_EXTENSION = app;
 			};
@@ -2908,7 +2986,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos7.1;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				USER_HEADER_SEARCH_PATHS = "Veteris/md5 Veteris \"-I./Veteris/ActionSheetPicker\", Veteris/InAppSettingsKit/Models Veteris/InAppSettingsKit/Controllers Veteris/InAppSettingsKit/Views Veteris/Classes Veteris/Clutch \"-I./Veteris/Classes/../Clutch/minizip\", \"-I./Veteris/Classes/AppInfo\", \"-I./Veteris/Classes/AppsTableViewController\", \"-I./Veteris/Classes/CategoriesTableViewController\", \"-I./Veteris/Classes/CategorySelectedViewController\", \"-I./Veteris/Classes/CrackTableViewCell\", \"-I./Veteris/Classes/CrackTableViewController\", \"-I./Veteris/Classes/CrackViewController\", \"-I./Veteris/Classes/FeaturedTableViewController\", \"-I./Veteris/Classes/SearchViewController\", \"-I./Veteris/Classes/SettingsTableViewController\", \"-I./Veteris/SVProgressHUD\", Veteris/BBHTTP Veteris/BBHTTP/Handlers Veteris/BBHTTP/Internal Veteris/Classes/HomeTableViewCell curl nanopb";
+				USER_HEADER_SEARCH_PATHS = "Veteris/md5 Veteris \"-I./Veteris/ActionSheetPicker\", Veteris/InAppSettingsKit/Models Veteris/InAppSettingsKit/Controllers Veteris/InAppSettingsKit/Views Veteris/Classes Veteris/Clutch \"-I./Veteris/Classes/../Clutch/minizip\", \"-I./Veteris/Classes/AppInfo\", \"-I./Veteris/Classes/AppListTableViewCell\", \"-I./Veteris/Classes/AppsTableViewController\", \"-I./Veteris/Classes/CategoriesTableViewController\", \"-I./Veteris/Classes/CategorySelectedViewController\", \"-I./Veteris/Classes/CrackTableViewCell\", \"-I./Veteris/Classes/CrackTableViewController\", \"-I./Veteris/Classes/CrackViewController\", \"-I./Veteris/Classes/FeaturedTableViewController\", \"-I./Veteris/Classes/SearchViewController\", \"-I./Veteris/Classes/SettingsTableViewController\", \"-I./Veteris/SVProgressHUD\", Veteris/BBHTTP Veteris/BBHTTP/Handlers Veteris/BBHTTP/Internal Veteris/Classes/HomeTableViewCell curl nanopb";
 				VALID_ARCHS = "armv7 armv7s";
 				WRAPPER_EXTENSION = app;
 			};

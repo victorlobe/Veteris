@@ -7,9 +7,11 @@
 @interface YZQueueManager : NSObject
 + (YZQueueManager *)sharedInstance;
 + (void)enqueueYZApplicationForDownload:(YZApplication *)yzApp;
++ (void)enqueueYZApplicationForDownloadOnly:(YZApplication *)yzApp targetPath:(NSString *)targetPath;
 + (void)enqueueYZApplicationDownloaded:(YZApplication *)yzApp;
 + (bool)markRepAsCancelled:(YZQueueRep *)rep;
 + (bool)retryRep:(YZQueueRep *)rep;
 + (NSArray *)allReps;
++ (NSUInteger)activeDownloadsCount;
 + (void)attachProgressBlock:(void (^)(NSUInteger current, NSUInteger total))block toRep:(YZQueueRep *)rep;
 @end

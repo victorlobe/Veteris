@@ -15,6 +15,7 @@ typedef enum {
 
 @interface YZQueueRep : NSObject
 + (void)detachRepWithYZApp:(YZApplication *)yzApp andURL:(NSString *)url;
++ (void)detachDownloadOnlyRepWithYZApp:(YZApplication *)yzApp andURL:(NSString *)url targetPath:(NSString *)targetPath;
 - (UIImage *)icon;
 - (NSString *)iconurl;
 - (NSString *)fallbackIconurl;
@@ -27,6 +28,7 @@ typedef enum {
 - (NSString *)path;
 - (void)setPath:(NSString *)path;
 @property (nonatomic) bool invalid;
+@property (nonatomic) BOOL installAfterDownload;
 @property (nonatomic, assign) YZRepState state;
 @property (nonatomic, weak) BBHTTPRequest *request;
 @property (nonatomic, strong) id downloadTask;

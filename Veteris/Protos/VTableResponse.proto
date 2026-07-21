@@ -8,6 +8,7 @@ message VTableEntryMsg {
     string iconurl = 4;
     string version = 5;
     string fallback_iconurl = 6;
+    uint32 version_count = 7;
 }
 
 message VTableResponseMsg {

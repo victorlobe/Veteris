@@ -42,3 +42,25 @@
 "Jungle" = "Dschungel";
 "Periwinkle" = "Immergrün";
 Autumn = "Herbst";
+"Search" = "Suchergebnisse";
+"Subtitle" = "Untertitel";
+"Developer Name" = "Entwickler";
+"Bundle ID" = "Bundle-ID";
+"Privacy" = "Privatsphäre";
+"Share Analytics" = "Analytics teilen";
+"Download starts and app requests are counted without storing IP addresses." = "Gestartete Downloads und App Anfragen werden gezählt, ohne IP Adressen zu speichern.";
+"Reset" = "Zurücksetzen";
+"Reset Veteris" = "Veteris zurücksetzen";
+"Reset All" = "Alles zurücksetzen";
+"Veteris Reset" = "Veteris zurückgesetzt";
+"Deletes all Veteris preferences, search history, crash reports, and caches." = "Löscht alle Veteris Einstellungen, Suchverlauf, Crash Reports und Caches.";
+"This will delete Veteris preferences, search history, crash reports, and caches. Veteris will close afterwards." = "Dadurch werden Veteris Einstellungen, Suchverlauf, Crash Reports und Caches gelöscht. Veteris wird danach geschlossen.";
+"Veteris has been reset and will now close." = "Veteris wurde zurückgesetzt und wird jetzt geschlossen.";
+
+"App Subtitles" = "App Untertitel";
+"Apply To" = "Anwenden auf";
+"All" = "Alle";
+"Custom" = "Benutzerdefiniert";
+"Browse" = "Stöbern";
+"Related" = "Ähnliche";
+"Queue" = "Warteschlange";
