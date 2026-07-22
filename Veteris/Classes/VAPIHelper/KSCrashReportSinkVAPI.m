@@ -30,6 +30,11 @@
 }
 
 - (void)filterReports:(NSArray *)reports onCompletion:(KSCrashReportFilterCompletion)onCompletion {
+    if (![VAPIHelper isCrashReportingEnabled]) {
+        debugLog(@"Crash reporting disabled; dropping %d reports", (int)[reports count]);
+        kscrash_i_callCompletion(onCompletion, reports, YES, nil);
+        return;
+    }
     debugLog(@"Reporting %d crashes", (int)[reports count]);
     NSString *url = [NSString stringWithFormat:@"%@crash", [VAPIHelper getApiBaseURL]];
     debugLog(@"URL: %@", url);

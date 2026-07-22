@@ -14,6 +14,7 @@
 #import <MacTypes.h>
 #include <dlfcn.h>
 #import <sys/sysctl.h>
+#include <stdlib.h>
 #import "../../AppDelegate.h"
 #import "../../BBHTTP/BBHTTP.h"
 #import "../../BBHTTP/BBHTTPRequest+Convenience.h"
@@ -41,14 +42,58 @@ static NSString *const API_PRODUCTION_BASE_URL = @"http://api.victorlobe.me/vete
 static NSString *const API_DEV_STATIC_URL = @"http://api.victorlobe.me/veteris-dev/";
 static NSString *const API_DEV_BASE_URL = @"http://api.victorlobe.me/veteris-dev/1.1/";
 static NSString *const VAPI_INSTALL_UUID_KEY = @"VAPIInstallUUID";
+static NSString *const VAPI_ANALYTICS_OPT_OUT_UUID_KEY = @"VAPIAnalyticsOptOutUUID";
+static NSString *const VAPI_CRASH_REPORTING_OPT_OUT_UUID_KEY = @"VAPICrashReportingOptOutUUID";
 static NSString *const VAPI_DEV_MODE_ENABLED_KEY = @"veteris_dev_mode_enabled";
 static NSString *const VAPI_ANALYTICS_ENABLED_KEY = @"veteris_analytics_enabled";
+static NSString *const VAPI_CRASH_REPORTING_ENABLED_KEY = @"veteris_crash_reporting_enabled";
+static NSString *const VAPI_LOW_MEMORY_MODE_ENABLED_KEY = @"veteris_low_memory_mode_enabled";
 static NSString *const VAPI_SERVER_ENVIRONMENT_KEY = @"veteris_server_environment";
 static NSString *const VAPI_LANGUAGE_OVERRIDE_KEY = @"veteris_language_override";
 static NSString *const VAPI_LANGUAGE_OVERRIDE_SYSTEM = @"system";
 static NSString *const VAPI_SERVER_ENVIRONMENT_PRODUCTION = @"production";
 static NSString *const VAPI_SERVER_ENVIRONMENT_DEV = @"dev";
 static NSString *const VAPI_ANALYTICS_OPT_OUT_HEADER = @"X-Veteris-Analytics";
+static NSString *const VAPI_ANALYTICS_OPT_OUT_ID_HEADER = @"X-Veteris-Analytics-Opt-Out-ID";
+static NSString *const VAPI_CRASH_REPORTING_OPT_OUT_HEADER = @"X-Veteris-Crash-Reports";
+static NSString *const VAPI_CRASH_REPORTING_OPT_OUT_ID_HEADER = @"X-Veteris-Crash-Reports-Opt-Out-ID";
+
+static NSString *VAPIHardwareMachine(void) {
+    static NSString *machine = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        size_t size = 0;
+        if (sysctlbyname("hw.machine", NULL, &size, NULL, 0) != 0 || size == 0) {
+            machine = @"";
+            return;
+        }
+        char *buffer = malloc(size);
+        if (buffer == NULL) {
+            machine = @"";
+            return;
+        }
+        if (sysctlbyname("hw.machine", buffer, &size, NULL, 0) == 0) {
+            machine = [[NSString stringWithUTF8String:buffer] copy] ?: @"";
+        } else {
+            machine = @"";
+        }
+        free(buffer);
+    });
+    return machine;
+}
+
+static unsigned long long VAPIMemorySize(void) {
+    static unsigned long long memorySize = 0;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        uint64_t value = 0;
+        size_t size = sizeof(value);
+        if (sysctlbyname("hw.memsize", &value, &size, NULL, 0) == 0) {
+            memorySize = value;
+        }
+    });
+    return memorySize;
+}
 
 + (VAPIHelper*)sharedInstance
 {
@@ -64,13 +109,15 @@ static NSString *const VAPI_ANALYTICS_OPT_OUT_HEADER = @"X-Veteris-Analytics";
 - (void)setup {
     [self setVAPIDeviceString];
     _staticCache = [[NSCache alloc] init];
-    [_staticCache setTotalCostLimit:1024 * 1024 * 50]; // 50MB
     _apiExecutor = [[BBHTTPExecutor alloc] initWithId:@"VAPIHelper-API"];
-    _apiExecutor.maxParallelRequests = 3;
     _apiExecutor.manageNetworkActivityIndicator = true;
     _iconExecutor = [[BBHTTPExecutor alloc] initWithId:@"VAPIHelper-Icons"];
-    _iconExecutor.maxParallelRequests = 4;
     _iconExecutor.manageNetworkActivityIndicator = false;
+    [self applyMemorySettings];
+    [[NSNotificationCenter defaultCenter] addObserver:self
+                                             selector:@selector(userDefaultsDidChange:)
+                                                 name:NSUserDefaultsDidChangeNotification
+                                               object:[NSUserDefaults standardUserDefaults]];
     NSURL *apiURL = [NSURL URLWithString:[VAPIHelper getApiBaseURL]];
     NSString *apiHost = [apiURL host];
     if ([apiHost isEqualToString:@"apis.yzu.moe"]) {
@@ -79,6 +126,54 @@ static NSString *const VAPI_ANALYTICS_OPT_OUT_HEADER = @"X-Veteris-Analytics";
             [BBHTTPExecutor setResolvePolicy:apiHost withIP:host];
         }
     }
+}
+
+- (void)userDefaultsDidChange:(NSNotification *)notification {
+    [self applyMemorySettings];
+}
+
+- (void)applyMemorySettings {
+    BOOL lowMemoryMode = [VAPIHelper isLowMemoryModeEnabled];
+    [_staticCache setTotalCostLimit:1024 * 1024 * (lowMemoryMode ? 5 : 50)];
+    [_staticCache setCountLimit:(lowMemoryMode ? 80 : 0)];
+    _apiExecutor.maxParallelRequests = lowMemoryMode ? 2 : 3;
+    _iconExecutor.maxParallelRequests = lowMemoryMode ? 1 : 4;
+    if (lowMemoryMode) {
+        [_staticCache removeAllObjects];
+    }
+}
+
++ (BOOL)defaultLowMemoryModeEnabled {
+    NSString *machine = VAPIHardwareMachine();
+    if ([machine isEqualToString:@"iPad1,1"] ||
+        [machine isEqualToString:@"iPod3,1"] ||
+        [machine isEqualToString:@"iPod4,1"] ||
+        [machine isEqualToString:@"iPhone2,1"]) {
+        return YES;
+    }
+
+    unsigned long long memorySize = VAPIMemorySize();
+    return memorySize > 0 && memorySize <= 268435456ULL;
+}
+
++ (BOOL)isLowMemoryModeEnabled {
+    id value = [[NSUserDefaults standardUserDefaults] objectForKey:VAPI_LOW_MEMORY_MODE_ENABLED_KEY];
+    if (value != nil) {
+        return [[NSUserDefaults standardUserDefaults] boolForKey:VAPI_LOW_MEMORY_MODE_ENABLED_KEY];
+    }
+    return [VAPIHelper defaultLowMemoryModeEnabled];
+}
+
++ (BOOL)shouldRetainDecodedIcons {
+    return ![VAPIHelper isLowMemoryModeEnabled];
+}
+
++ (BOOL)isCrashReportingEnabled {
+    id value = [[NSUserDefaults standardUserDefaults] objectForKey:VAPI_CRASH_REPORTING_ENABLED_KEY];
+    if (value == nil) {
+        return YES;
+    }
+    return [[NSUserDefaults standardUserDefaults] boolForKey:VAPI_CRASH_REPORTING_ENABLED_KEY];
 }
 
 - (NSString *)resolveHost:(NSString *)host {
@@ -195,6 +290,26 @@ static NSString *const VAPI_ANALYTICS_OPT_OUT_HEADER = @"X-Veteris-Analytics";
     return installUUID;
 }
 
++ (NSString *)uuidForDefaultsKey:(NSString *)key {
+    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+    NSString *uuid = [defaults stringForKey:key];
+    if (uuid == nil || [uuid length] == 0) {
+        CFUUIDRef cfuuid = CFUUIDCreate(NULL);
+        uuid = (NSString *)CFBridgingRelease(CFUUIDCreateString(NULL, cfuuid));
+        CFRelease(cfuuid);
+        [defaults setObject:uuid forKey:key];
+        [defaults synchronize];
+    }
+    return uuid;
+}
+
++ (NSString *)analyticsOptOutUUID {
+    return [VAPIHelper uuidForDefaultsKey:VAPI_ANALYTICS_OPT_OUT_UUID_KEY];
+}
+
++ (NSString *)crashReportingOptOutUUID {
+    return [VAPIHelper uuidForDefaultsKey:VAPI_CRASH_REPORTING_OPT_OUT_UUID_KEY];
+}
 
 + (NSDictionary *)getHeaders {
     NSMutableDictionary *headers = [@{
@@ -204,9 +319,14 @@ static NSString *const VAPI_ANALYTICS_OPT_OUT_HEADER = @"X-Veteris-Analytics";
     } mutableCopy];
     if (![VAPIHelper isAnalyticsEnabled]) {
         [headers setObject:@"0" forKey:VAPI_ANALYTICS_OPT_OUT_HEADER];
-        return headers;
+        [headers setObject:[VAPIHelper analyticsOptOutUUID] forKey:VAPI_ANALYTICS_OPT_OUT_ID_HEADER];
+    } else {
+        [headers setObject:[VAPIHelper installUUID] forKey:@"X-Veteris-UUID"];
     }
-    [headers setObject:[VAPIHelper installUUID] forKey:@"X-Veteris-UUID"];
+    if (![VAPIHelper isCrashReportingEnabled]) {
+        [headers setObject:@"0" forKey:VAPI_CRASH_REPORTING_OPT_OUT_HEADER];
+        [headers setObject:[VAPIHelper crashReportingOptOutUUID] forKey:VAPI_CRASH_REPORTING_OPT_OUT_ID_HEADER];
+    }
     return headers;
 }
 
@@ -324,7 +444,7 @@ static NSString *VAPIQueryEscape(NSString *value) {
     }
     [self get:endpointToUse path:pathToUse iconTraffic:YES completion:^(NSData *data, NSError *error){
         if (data != nil && isImage) {
-            [_staticCache setObject:data forKey:cacheKey];
+            [_staticCache setObject:data forKey:cacheKey cost:[data length]];
         }
         completion(data, error);
     }];
@@ -350,7 +470,7 @@ static NSString *VAPIQueryEscape(NSString *value) {
                 BOOL pathIsAbsoluteURL = [path hasPrefix:@"http://"] || [path hasPrefix:@"https://"];
                 NSString *primaryPathToUse = pathIsAbsoluteURL ? path : [path stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding];
                 NSString *primaryCacheKey = pathIsAbsoluteURL ? primaryPathToUse : [NSString stringWithFormat:@"%@%@", [VAPIHelper getApiStaticURL], primaryPathToUse];
-                [_staticCache setObject:fallbackData forKey:primaryCacheKey];
+                [_staticCache setObject:fallbackData forKey:primaryCacheKey cost:[fallbackData length]];
             }
             completion(fallbackData, fallbackError);
         }];
@@ -370,6 +490,11 @@ static NSString *VAPIQueryEscape(NSString *value) {
         return [UIImage imageWithData:cachedData];
     }
     return nil;
+}
+
+- (void)clearMemoryCaches {
+    [_staticCache removeAllObjects];
+    [[NSURLCache sharedURLCache] removeAllCachedResponses];
 }
 
 - (NSString *)getSysInfoByName:(char *)typeSpecifier {

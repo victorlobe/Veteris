@@ -49,9 +49,13 @@ Midnight = "Полночь";
 "Subtitle" = "Подзаголовок";
 "Developer Name" = "Разработчик";
 "Bundle ID" = "ID пакета";
+"Performance" = "Производительность";
+"Reduces caching and parallel requests on older devices." = "Уменьшает кэширование и параллельные запросы на старых устройствах.";
+"Low Memory Mode" = "Low Memory Mode";
 "Privacy" = "Конфиденциальность";
 "Share Analytics" = "Делиться аналитикой";
-"Download starts and app requests are counted without storing IP addresses." = "Запуски загрузок и запросы приложений учитываются без сохранения IP адресов.";
+"Share Crash Reports" = "Делиться отчетами о сбоях";
+"Analytics uses an anonymous install ID to count app requests, searches, and download starts without storing IP addresses. If disabled, analytics events stop and only a separate anonymous opt out ID is sent to count disabled installs. Crash reports send technical crash details only when enabled." = "Аналитика использует анонимный ID установки для подсчета запросов приложений, поиска и запусков загрузок без сохранения IP адресов. Если отключено, события аналитики не отправляются, отправляется только отдельный анонимный ID opt out для подсчета отключенных установок. Отчеты о сбоях отправляют технические данные только когда включены.";
 
 "App Subtitles" = "Подписи приложений";
 "Apply To" = "Применить к";

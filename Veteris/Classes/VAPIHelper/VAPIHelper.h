@@ -33,11 +33,16 @@
 + (NSString *)getServerEnvironment;
 + (void)setServerEnvironment:(NSString *)environment;
 + (void)resetNetworkState;
++ (BOOL)isLowMemoryModeEnabled;
++ (BOOL)defaultLowMemoryModeEnabled;
++ (BOOL)shouldRetainDecodedIcons;
++ (BOOL)isCrashReportingEnabled;
 - (void)get:(NSString *)endpoint path:(NSString *)path completion:(void (^)(NSData *data, NSError *error))completion;
 - (void)getStatic:(NSString *)path completion:(void (^)(NSData *data, NSError *error))completion;
 - (void)getStatic:(NSString *)path fallbackPath:(NSString *)fallbackPath completion:(void (^)(NSData *data, NSError *error))completion;
 - (void)getMessage:(NSString *)path completion:(void (^)(NSData *data, NSError *error))completion;
 - (UIImage *)imageFromCache:(NSString *)url;
+- (void)clearMemoryCaches;
 + (void)checkForUpdates;
 + (NSDictionary *)getHeaders;
 + (void)trackDownloadStartForApplication:(YZApplication *)application url:(NSString *)url downloadOnly:(BOOL)downloadOnly;

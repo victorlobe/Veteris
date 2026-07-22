@@ -50,9 +50,13 @@
 "Subtitle" = "副标题";
 "Developer Name" = "开发者名称";
 "Bundle ID" = "Bundle ID";
+"Performance" = "性能";
+"Reduces caching and parallel requests on older devices." = "在旧设备上减少缓存和并行请求。";
+"Low Memory Mode" = "Low Memory Mode";
 "Privacy" = "隐私";
 "Share Analytics" = "分享统计";
-"Download starts and app requests are counted without storing IP addresses." = "下载开始和应用请求会被计数，但不会存储 IP 地址。";
+"Share Crash Reports" = "分享崩溃报告";
+"Analytics uses an anonymous install ID to count app requests, searches, and download starts without storing IP addresses. If disabled, analytics events stop and only a separate anonymous opt out ID is sent to count disabled installs. Crash reports send technical crash details only when enabled." = "统计会使用匿名安装 ID 来计算应用请求、搜索和下载开始次数，不会存储 IP 地址。关闭后，统计事件会停止，只会发送单独的匿名 opt out ID 来计算已关闭的安装数。崩溃报告仅在开启时发送技术崩溃详情。";
 "Reset" = "重置";
 "Reset Veteris" = "重置 Veteris";
 "Reset All" = "全部重置";

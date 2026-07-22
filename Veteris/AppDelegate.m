@@ -175,6 +175,15 @@ static NSString *VeterisURLDecodedString(NSString *value) {
         }
     }
 
+    if ([defaults objectForKey:@"veteris_low_memory_mode_enabled"] == nil) {
+        [defaults setBool:[VAPIHelper defaultLowMemoryModeEnabled] forKey:@"veteris_low_memory_mode_enabled"];
+        changed = YES;
+    }
+    if ([defaults objectForKey:@"veteris_crash_reporting_enabled"] == nil) {
+        [defaults setBool:YES forKey:@"veteris_crash_reporting_enabled"];
+        changed = YES;
+    }
+
     if (changed) {
         [defaults synchronize];
     }

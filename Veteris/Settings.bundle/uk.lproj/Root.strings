@@ -49,9 +49,13 @@ Midnight = "Опівніч";
 "Subtitle" = "Підзаголовок";
 "Developer Name" = "Розробник";
 "Bundle ID" = "ID пакета";
+"Performance" = "Продуктивність";
+"Reduces caching and parallel requests on older devices." = "Зменшує кешування і паралельні запити на старих пристроях.";
+"Low Memory Mode" = "Low Memory Mode";
 "Privacy" = "Конфіденційність";
 "Share Analytics" = "Ділитися аналітикою";
-"Download starts and app requests are counted without storing IP addresses." = "Запуски завантажень і запити застосунків рахуються без збереження IP адрес.";
+"Share Crash Reports" = "Ділитися звітами про збої";
+"Analytics uses an anonymous install ID to count app requests, searches, and download starts without storing IP addresses. If disabled, analytics events stop and only a separate anonymous opt out ID is sent to count disabled installs. Crash reports send technical crash details only when enabled." = "Аналітика використовує анонімний ID встановлення для підрахунку запитів застосунків, пошуків і запусків завантажень без збереження IP адрес. Якщо вимкнено, події аналітики не надсилаються, надсилається лише окремий анонімний ID opt out для підрахунку вимкнених встановлень. Звіти про збої надсилають технічні дані лише коли ввімкнені.";
 
 "App Subtitles" = "Підписи застосунків";
 "Apply To" = "Застосувати до";

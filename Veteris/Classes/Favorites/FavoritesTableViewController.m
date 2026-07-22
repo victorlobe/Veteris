@@ -95,7 +95,9 @@
     if (cachedIcon == nil) {
         cachedIcon = [VAPISS imageFromCache:application.iconurl];
         if (cachedIcon != nil) {
-            application.icon = cachedIcon;
+            if ([VAPIHelper shouldRetainDecodedIcons]) {
+                application.icon = cachedIcon;
+            }
         }
     }
     cell.appUIImage.image = cachedIcon;
@@ -129,9 +131,12 @@
 
     UIImage *cachedIcon = [VAPISS imageFromCache:application.iconurl];
     if (cachedIcon != nil) {
-        application.icon = cachedIcon;
+        if ([VAPIHelper shouldRetainDecodedIcons]) {
+            application.icon = cachedIcon;
+        }
         SearchTableViewCell *cell = (SearchTableViewCell *)[self.tableView cellForRowAtIndexPath:indexPath];
-        [self configureIconForCell:cell app:application];
+        cell.appUIImage.image = cachedIcon;
+        [cell.activityIndicator stopAnimating];
         return;
     }
 
@@ -153,7 +158,9 @@
                 application.nilIcon = YES;
                 return;
             }
-            application.icon = image;
+            if ([VAPIHelper shouldRetainDecodedIcons]) {
+                application.icon = image;
+            }
             if (indexPath.row >= [applications count] || [applications objectAtIndex:indexPath.row] != application) {
                 return;
             }
@@ -161,7 +168,8 @@
             if (cell == nil) {
                 return;
             }
-            [self configureIconForCell:cell app:application];
+            cell.appUIImage.image = image;
+            [cell.activityIndicator stopAnimating];
         });
     }];
 }

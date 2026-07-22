@@ -22,7 +22,23 @@ static NSDictionary *YZInstallOptions(void) {
     return [NSDictionary dictionaryWithObject:@"User" forKey:@"ApplicationType"];
 }
 
+static BOOL YZIsNonEmptyString(id value) {
+    return [value isKindOfClass:[NSString class]] && [(NSString *)value length] > 0;
+}
+
+static void YZFailDownload(YZQueueRep *parent, NSString *reason) {
+    YZDownloadLog(@"failed before download: %@", reason);
+    debugLog(@"Download failed before start: %@", reason);
+    if (parent != nil) {
+        parent.downloadTask = nil;
+        parent.state = YZRepStateFailed;
+    }
+}
+
 static NSString *YZSanitizedURLString(NSString *urlString) {
+    if (!YZIsNonEmptyString(urlString)) {
+        return nil;
+    }
     if ([NSURL URLWithString:urlString] != nil) {
         return urlString;
     }
@@ -31,6 +47,9 @@ static NSString *YZSanitizedURLString(NSString *urlString) {
 
 static NSString *YZArchiveFrontURL(NSString *urlString) {
     NSString *clean = YZSanitizedURLString(urlString);
+    if (!YZIsNonEmptyString(clean)) {
+        return nil;
+    }
     NSURL *url = [NSURL URLWithString:clean];
     NSString *host = [[url host] lowercaseString];
     if (host == nil) {
@@ -77,6 +96,9 @@ static NSString *YZArchiveFrontURL(NSString *urlString) {
 
 static NSArray *YZDownloadCandidates(NSString *urlString) {
     NSString *clean = YZSanitizedURLString(urlString);
+    if (!YZIsNonEmptyString(clean)) {
+        return [NSArray array];
+    }
     NSString *front = YZArchiveFrontURL(clean);
     if (front != nil && ![front isEqualToString:clean]) {
         return [NSArray arrayWithObjects:front, clean, nil];
@@ -86,6 +108,9 @@ static NSArray *YZDownloadCandidates(NSString *urlString) {
 
 static BOOL YZCanUseArchiveTLSDownloader(NSArray *candidates) {
     for (NSString *candidate in candidates) {
+        if (!YZIsNonEmptyString(candidate)) {
+            continue;
+        }
         NSURL *url = [NSURL URLWithString:YZSanitizedURLString(candidate)];
         NSString *host = [[url host] lowercaseString];
         if ([host isEqualToString:@"archive.org"] || [host hasSuffix:@".archive.org"]) {
@@ -190,11 +215,27 @@ static BOOL YZShouldPreservePartialAtPath(NSString *path) {
 }
 
 + (void)downloadFileToPath:(NSString *)urlString pathFromString:(NSString *)str parent:(YZQueueRep *)parent {
+    if (!YZIsNonEmptyString(str)) {
+        YZFailDownload(parent, @"missing target bundle identifier");
+        return;
+    }
     [self downloadFileToPath:urlString targetPath:downloadPathFor(str) parent:parent];
 }
 
 + (void)downloadFileToPath:(NSString *)urlString targetPath:(NSString *)targetPath parent:(YZQueueRep *)parent {
+    if (!YZIsNonEmptyString(urlString)) {
+        YZFailDownload(parent, @"missing download URL");
+        return;
+    }
+    if (!YZIsNonEmptyString(targetPath)) {
+        YZFailDownload(parent, @"missing target path");
+        return;
+    }
     NSArray *candidates = YZDownloadCandidates(urlString);
+    if ([candidates count] == 0) {
+        YZFailDownload(parent, @"invalid download URL");
+        return;
+    }
     YZDownloadLog(@"candidates for %@: %@", targetPath, candidates);
     if (YZCanUseArchiveTLSDownloader(candidates)) {
         [self downloadFileWithArchiveTLS:urlString candidates:candidates targetPath:targetPath parent:parent attempt:0];

@@ -79,11 +79,13 @@
     {
       "idiom" : "ipad",
       "size" : "76x76",
+      "filename" : "veteris - 76pt-ipad.png",
       "scale" : "1x"
     },
     {
       "idiom" : "ipad",
       "size" : "76x76",
+      "filename" : "veteris - 152pt-ipad.png",
       "scale" : "2x"
     }
   ],

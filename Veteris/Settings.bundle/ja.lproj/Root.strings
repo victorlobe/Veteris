@@ -50,9 +50,13 @@
 "Subtitle" = "サブタイトル";
 "Developer Name" = "開発者名";
 "Bundle ID" = "Bundle ID";
+"Performance" = "パフォーマンス";
+"Reduces caching and parallel requests on older devices." = "古いデバイスでキャッシュと並列リクエストを減らします。";
+"Low Memory Mode" = "Low Memory Mode";
 "Privacy" = "プライバシー";
 "Share Analytics" = "解析を共有";
-"Download starts and app requests are counted without storing IP addresses." = "ダウンロード開始とアプリのリクエストは、IP アドレスを保存せずに数えられます。";
+"Share Crash Reports" = "クラッシュレポートを共有";
+"Analytics uses an anonymous install ID to count app requests, searches, and download starts without storing IP addresses. If disabled, analytics events stop and only a separate anonymous opt out ID is sent to count disabled installs. Crash reports send technical crash details only when enabled." = "解析は匿名のインストール ID を使い、IP アドレスを保存せずにアプリのリクエスト、検索、ダウンロード開始を数えます。オフにすると解析イベントは停止し、無効なインストール数を数えるための別の匿名 opt out ID だけが送信されます。クラッシュレポートはオンの場合のみ技術的なクラッシュ情報を送信します。";
 "Reset" = "リセット";
 "Reset Veteris" = "Veteris をリセット";
 "Reset All" = "すべてリセット";

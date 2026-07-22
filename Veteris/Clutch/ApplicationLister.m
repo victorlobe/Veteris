@@ -13,29 +13,73 @@
 #import "../../AppDelegate.h"
 #import "LSApplicationProxy.h"
 #import "LSApplicationWorkspace.h"
+#import <dlfcn.h>
 
 #define crackedAppPath @"/etc/cracked.clutch"
 
+typedef NSDictionary *(*YZMobileInstallationLookupFunction)(NSDictionary *options);
+
+static BOOL YZIsNonEmptyString(id value) {
+    return [value isKindOfClass:[NSString class]] && [(NSString *)value length] > 0;
+}
+
+static NSDictionary *YZMobileInstallationLookup(NSDictionary *options) {
+    void *handle = dlopen("/System/Library/PrivateFrameworks/MobileInstallation.framework/MobileInstallation", RTLD_LAZY);
+    if (handle == NULL) {
+        DebugLog(@"MobileInstallation framework unavailable");
+        return nil;
+    }
+
+    YZMobileInstallationLookupFunction lookup = (YZMobileInstallationLookupFunction)dlsym(handle, "MobileInstallationLookup");
+    if (lookup == NULL) {
+        DebugLog(@"MobileInstallationLookup unavailable");
+        return nil;
+    }
+
+    @try {
+        NSDictionary *apps = lookup(options);
+        if ([apps isKindOfClass:[NSDictionary class]]) {
+            return apps;
+        }
+        DebugLog(@"MobileInstallationLookup returned unexpected object: %@", apps);
+    } @catch (NSException *exception) {
+        DebugLog(@"MobileInstallationLookup failed: %@ %@", [exception name], [exception reason]);
+    }
+    return nil;
+}
+
+static BOOL YZAppHasSCInfo(NSString *appPath) {
+    if (!YZIsNonEmptyString(appPath)) {
+        return NO;
+    }
+    NSString *scInfoPath = [appPath stringByAppendingPathComponent:@"SC_Info"];
+    BOOL isDirectory = NO;
+    return [[NSFileManager defaultManager] fileExistsAtPath:scInfoPath isDirectory:&isDirectory] && isDirectory;
+}
+
 NSDictionary *get_application_list() {
-    NSMutableDictionary *installedApps;
+    NSMutableDictionary *installedApps = [[NSMutableDictionary alloc] init];
     if (SYSTEM_VERSION_LESS_THAN(@"8.0")) {
-        NSDictionary *options = @{@"ApplicationType" : @"User", @"ReturnAttributes" : @[ @"CFBundleShortVersionString", @"CFBundleVersion", @"Path", @"CFBundleDisplayName", @"CFBundleExecutable", @"ApplicationSINF", @"MinimumOSVersion" ]};
-        installedApps = (NSMutableDictionary *)MobileInstallationLookup(options);
+        NSDictionary *options = @{@"ApplicationType" : @"User", @"ReturnAttributes" : @[ @"CFBundleShortVersionString", @"CFBundleVersion", @"Path", @"CFBundleDisplayName", @"CFBundleExecutable", @"MinimumOSVersion" ]};
+        NSDictionary *lookupApps = YZMobileInstallationLookup(options);
+        if (lookupApps != nil) {
+            [installedApps addEntriesFromDictionary:lookupApps];
+        }
     } else {
         LSApplicationWorkspace *workspace = [LSApplicationWorkspace defaultWorkspace];
         NSArray *apps = [workspace allInstalledApplications];
         for (LSApplicationProxy *app in apps) {
-            if (installedApps == nil) {
-                installedApps = [[NSMutableDictionary alloc] init];
+            NSString *shortVersionString = YZIsNonEmptyString([app shortVersionString]) ? [app shortVersionString] : [app bundleVersion];
+            NSString *bundleVersion = YZIsNonEmptyString([app bundleVersion]) ? [app bundleVersion] : @"Unknown";
+            NSString *path = YZIsNonEmptyString([app bundleContainerURL].path) ? [app bundleContainerURL].path : @"Unknown";
+            NSString *displayName = YZIsNonEmptyString([app localizedName]) ? [app localizedName] : @"Unknown";
+            NSString *executable = YZIsNonEmptyString([app bundleExecutable]) ? [app bundleExecutable] : @"Unknown";
+            NSString *minimumOSVersion = YZIsNonEmptyString([app minimumSystemVersion]) ? [app minimumSystemVersion] : @"Unknown";
+            if (!YZIsNonEmptyString(shortVersionString)) {
+                shortVersionString = bundleVersion;
             }
-            NSString *shortVersionString = [app shortVersionString] ?: [app bundleVersion];
-            NSString *bundleVersion = [app bundleVersion] ?: @"Unknown";
-            NSString *path = [app bundleContainerURL].path ?: @"Unknown";
-            NSString *displayName = [app localizedName] ?: @"Unknown";
-            NSString *executable = [app bundleExecutable] ?: @"Unknown";
-            NSString *minimumOSVersion = [app minimumSystemVersion] ?: @"Unknown";
             
-            if ([app applicationIdentifier] != nil) {
+            if (YZIsNonEmptyString([app applicationIdentifier])) {
                 [installedApps setObject:@{
                     @"CFBundleShortVersionString" : shortVersionString,
                     @"CFBundleVersion" : bundleVersion,
@@ -54,31 +98,47 @@ NSArray *get_crackable_apps_list(BOOL sort) {
     NSDictionary *installedApps = get_application_list();
     NSMutableArray *returnArray = [[NSMutableArray alloc] init];
     for (NSString *bundleID in [installedApps allKeys]) {
+        if (!YZIsNonEmptyString(bundleID)) {
+            continue;
+        }
         NSDictionary *appI = [installedApps objectForKey:bundleID];
-        NSString *appPath = [[appI objectForKey:@"Path"] stringByAppendingString:@"/"];
+        if (![appI isKindOfClass:[NSDictionary class]]) {
+            continue;
+        }
+        NSString *rawAppPath = [appI objectForKey:@"Path"];
+        if (!YZIsNonEmptyString(rawAppPath)) {
+            continue;
+        }
+        NSString *appPath = [rawAppPath stringByAppendingString:@"/"];
         NSString *container = [[appPath stringByDeletingLastPathComponent] stringByAppendingString:@"/"];
         NSString *displayName = [appI objectForKey:@"CFBundleDisplayName"];
         NSString *executableName = [appI objectForKey:@"CFBundleExecutable"];
 
         NSString *minimumOSVersion = [appI objectForKey:@"MinimumOSVersion"];
 
-        minimumOSVersion = minimumOSVersion != nil ? minimumOSVersion : @"1.0";
+        minimumOSVersion = YZIsNonEmptyString(minimumOSVersion) ? minimumOSVersion : @"1.0";
 
-        if (displayName == nil) {
+        if (!YZIsNonEmptyString(displayName)) {
             displayName = [[appPath lastPathComponent] stringByReplacingOccurrencesOfString:@".app" withString:@""];
         }
+        if (!YZIsNonEmptyString(executableName)) {
+            executableName = [[appPath lastPathComponent] stringByReplacingOccurrencesOfString:@".app" withString:@""];
+        }
 
-        NSString *version = @"";
+        NSString *version = @"Unknown";
 
         if ([[appI allKeys] containsObject:@"CFBundleShortVersionString"]) {
             version = [appI objectForKey:@"CFBundleShortVersionString"];
         } else {
             version = [appI objectForKey:@"CFBundleVersion"];
         }
+        if (!YZIsNonEmptyString(version)) {
+            version = @"Unknown";
+        }
 
         NSData *SINF = [appI objectForKey:@"ApplicationSINF"];
 
-        if (SINF) {
+        if (SINF || YZAppHasSCInfo(appPath)) {
             ApplicationC *app = [[ApplicationC alloc] initWithAppInfo:@{
                 @"ApplicationContainer" : container,
                 @"ApplicationDirectory" : appPath,

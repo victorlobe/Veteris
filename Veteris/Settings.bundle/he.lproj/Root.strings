@@ -50,9 +50,13 @@
 "Subtitle" = "כתובית";
 "Developer Name" = "שם המפתח";
 "Bundle ID" = "Bundle ID";
+"Performance" = "ביצועים";
+"Reduces caching and parallel requests on older devices." = "מפחית שמירת מטמון ובקשות מקבילות במכשירים ישנים.";
+"Low Memory Mode" = "Low Memory Mode";
 "Privacy" = "פרטיות";
 "Share Analytics" = "שתף נתוני שימוש";
-"Download starts and app requests are counted without storing IP addresses." = "התחלות הורדה ובקשות לאפליקציות נספרות בלי לשמור כתובות IP.";
+"Share Crash Reports" = "שתף דוחות קריסה";
+"Analytics uses an anonymous install ID to count app requests, searches, and download starts without storing IP addresses. If disabled, analytics events stop and only a separate anonymous opt out ID is sent to count disabled installs. Crash reports send technical crash details only when enabled." = "נתוני השימוש משתמשים ב ID התקנה אנונימי כדי לספור בקשות לאפליקציות, חיפושים והתחלות הורדה בלי לשמור כתובות IP. אם מכבים אותם, אירועי analytics נפסקים ונשלח רק ID opt out אנונימי נפרד כדי לספור התקנות כבויות. דוחות קריסה שולחים פרטים טכניים רק כשהם מופעלים.";
 "Reset" = "איפוס";
 "Reset Veteris" = "אפס את Veteris";
 "Reset All" = "אפס הכל";

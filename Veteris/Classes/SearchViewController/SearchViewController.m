@@ -109,7 +109,9 @@ static NSUInteger const VeterisSearchHistoryLimit = 10;
     if (cachedIcon == nil) {
         cachedIcon = [VAPISS imageFromCache:suggestion.iconurl];
         if (cachedIcon != nil) {
-            suggestion.icon = cachedIcon;
+            if ([VAPIHelper shouldRetainDecodedIcons]) {
+                suggestion.icon = cachedIcon;
+            }
         }
     }
     cell.appUIImage.image = cachedIcon;
@@ -173,9 +175,12 @@ static NSUInteger const VeterisSearchHistoryLimit = 10;
 
     UIImage *cachedIcon = [VAPISS imageFromCache:suggestion.iconurl];
     if (cachedIcon != nil) {
-        suggestion.icon = cachedIcon;
+        if ([VAPIHelper shouldRetainDecodedIcons]) {
+            suggestion.icon = cachedIcon;
+        }
         SearchTableViewCell *cell = (SearchTableViewCell *)[tableView cellForRowAtIndexPath:indexPath];
-        [self configureIconForCell:cell suggestion:suggestion];
+        cell.appUIImage.image = cachedIcon;
+        [cell.activityIndicator stopAnimating];
         return;
     }
 
@@ -197,7 +202,9 @@ static NSUInteger const VeterisSearchHistoryLimit = 10;
                 suggestion.nilIcon = YES;
                 return;
             }
-            suggestion.icon = image;
+            if ([VAPIHelper shouldRetainDecodedIcons]) {
+                suggestion.icon = image;
+            }
             if (indexPath.row >= [searchResults count] || [searchResults objectAtIndex:indexPath.row] != suggestion) {
                 return;
             }
@@ -205,7 +212,8 @@ static NSUInteger const VeterisSearchHistoryLimit = 10;
             if (cell == nil) {
                 return;
             }
-            [self configureIconForCell:cell suggestion:suggestion];
+            cell.appUIImage.image = image;
+            [cell.activityIndicator stopAnimating];
         });
     }];
 }

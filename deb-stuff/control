@@ -1,6 +1,6 @@
 Package: com.victorlobe.veteris
 Name: Veteris
-Version: 3
+Version: 3.0.1
 Architecture: iphoneos-arm
 Depends: firmware (>= 5.0), com.victorlobe.veterishelper
 Conflicts: com.ixmoe.1pwn.veteris, moe.yzu.veterishelper

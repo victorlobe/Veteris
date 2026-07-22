@@ -50,9 +50,13 @@
 "Subtitle" = "Sous titre";
 "Developer Name" = "Développeur";
 "Bundle ID" = "Bundle ID";
+"Performance" = "Performances";
+"Reduces caching and parallel requests on older devices." = "Réduit la mise en cache et les requêtes parallèles sur les anciens appareils.";
+"Low Memory Mode" = "Low Memory Mode";
 "Privacy" = "Confidentialité";
 "Share Analytics" = "Partager les statistiques";
-"Download starts and app requests are counted without storing IP addresses." = "Les débuts de téléchargement et les demandes d’apps sont comptés sans stocker les adresses IP.";
+"Share Crash Reports" = "Partager les rapports de crash";
+"Analytics uses an anonymous install ID to count app requests, searches, and download starts without storing IP addresses. If disabled, analytics events stop and only a separate anonymous opt out ID is sent to count disabled installs. Crash reports send technical crash details only when enabled." = "Les statistiques utilisent un identifiant d’installation anonyme pour compter les demandes d’apps, les recherches et les débuts de téléchargement sans stocker les adresses IP. Si elles sont désactivées, les événements de statistiques cessent et seul un identifiant anonyme séparé est envoyé pour compter les installations désactivées. Les rapports de crash envoient des détails techniques uniquement s’ils sont activés.";
 "Reset" = "Réinitialiser";
 "Reset Veteris" = "Réinitialiser Veteris";
 "Reset All" = "Tout réinitialiser";

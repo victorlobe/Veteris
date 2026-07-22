@@ -34,7 +34,7 @@ struct StateContext {
     dispatch_once(&onceToken, ^{
         sharedInstance = [[YZQueueManager alloc] init];
         BBHTTPExecutor *executor = [BBHTTPExecutor sharedExecutor];
-        executor.maxParallelRequests = 3;
+        executor.maxParallelRequests = [VAPIHelper isLowMemoryModeEnabled] ? 1 : 3;
     });
     return sharedInstance;
 }
@@ -63,6 +63,7 @@ struct StateContext {
 
 #pragma - mark Queue Operations
 + (void)enqueueYZApplicationForDownload:(YZApplication *)yzApp {
+    [BBHTTPExecutor sharedExecutor].maxParallelRequests = [VAPIHelper isLowMemoryModeEnabled] ? 1 : 3;
     dispatch_async([YZQueueManager sharedInstance]->_queue, ^{
         NSString *downloadURL = yzApp.url;
         if (![downloadURL hasPrefix:@"http://"] && ![downloadURL hasPrefix:@"https://"]) {
@@ -73,6 +74,7 @@ struct StateContext {
 }
 
 + (void)enqueueYZApplicationForDownloadOnly:(YZApplication *)yzApp targetPath:(NSString *)targetPath {
+    [BBHTTPExecutor sharedExecutor].maxParallelRequests = [VAPIHelper isLowMemoryModeEnabled] ? 1 : 3;
     dispatch_async([YZQueueManager sharedInstance]->_queue, ^{
         NSString *downloadURL = yzApp.url;
         if (![downloadURL hasPrefix:@"http://"] && ![downloadURL hasPrefix:@"https://"]) {
@@ -97,6 +99,7 @@ struct StateContext {
 - (void)enqueueAppContainerForInstall:(YZQueueRep *)appRep {
     dispatch_async(_installQueue, ^{
         appRep.state = YZRepStateInstalling;
+        [VAPISS clearMemoryCaches];
         bool ret = [YZQueueOps installIPA:appRep.path];
         if (!ret) {
             appRep.state = YZRepStateFailed;

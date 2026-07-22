@@ -166,7 +166,9 @@
     if (cachedIcon == nil) {
         cachedIcon = [VAPISS imageFromCache:app.iconurl];
         if (cachedIcon != nil) {
-            app.icon = cachedIcon;
+            if ([VAPIHelper shouldRetainDecodedIcons]) {
+                app.icon = cachedIcon;
+            }
         }
     }
     cell.appUIImage.image = cachedIcon;
@@ -205,9 +207,13 @@
 
     UIImage *cachedIcon = [VAPISS imageFromCache:app.iconurl];
     if (cachedIcon != nil) {
-        app.icon = cachedIcon;
+        if ([VAPIHelper shouldRetainDecodedIcons]) {
+            app.icon = cachedIcon;
+        }
         AppListTableViewCell *cell = (AppListTableViewCell *)[self.tableView cellForRowAtIndexPath:indexPath];
-        [self configureIconForCell:cell app:app];
+        cell.appUIImage.image = cachedIcon;
+        [cell.activityIndicator stopAnimating];
+        cell.indicatorCounter = 1;
         return;
     }
 
@@ -229,7 +235,9 @@
                 app.nilIcon = YES;
                 return;
             }
-            app.icon = image;
+            if ([VAPIHelper shouldRetainDecodedIcons]) {
+                app.icon = image;
+            }
             if (indexPath.row >= [applications count] || [applications objectAtIndex:indexPath.row] != app) {
                 return;
             }

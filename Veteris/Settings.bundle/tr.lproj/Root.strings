@@ -49,9 +49,13 @@
 "Subtitle" = "Alt başlık";
 "Developer Name" = "Geliştirici";
 "Bundle ID" = "Paket ID";
+"Performance" = "Performans";
+"Reduces caching and parallel requests on older devices." = "Eski cihazlarda önbelleği ve paralel istekleri azaltır.";
+"Low Memory Mode" = "Low Memory Mode";
 "Privacy" = "Gizlilik";
 "Share Analytics" = "Analizleri Paylaş";
-"Download starts and app requests are counted without storing IP addresses." = "Başlatılan indirmeler ve uygulama istekleri IP adresleri saklanmadan sayılır.";
+"Share Crash Reports" = "Çökme raporlarını paylaş";
+"Analytics uses an anonymous install ID to count app requests, searches, and download starts without storing IP addresses. If disabled, analytics events stop and only a separate anonymous opt out ID is sent to count disabled installs. Crash reports send technical crash details only when enabled." = "Analizler, IP adreslerini saklamadan uygulama isteklerini, aramaları ve indirme başlangıçlarını saymak için anonim bir kurulum ID kullanır. Kapatılırsa analiz olayları durur ve devre dışı kurulumları saymak için yalnızca ayrı bir anonim opt out ID gönderilir. Çökme raporları yalnızca açıkken teknik çökme ayrıntıları gönderir.";
 
 "App Subtitles" = "Uygulama Alt Başlıkları";
 "Apply To" = "Uygula";

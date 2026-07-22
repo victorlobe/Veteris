@@ -50,9 +50,13 @@
 "Subtitle" = "Phụ đề";
 "Developer Name" = "Nhà phát triển";
 "Bundle ID" = "ID gói";
+"Performance" = "Hiệu năng";
+"Reduces caching and parallel requests on older devices." = "Giảm bộ nhớ đệm và các yêu cầu song song trên thiết bị cũ.";
+"Low Memory Mode" = "Low Memory Mode";
 "Privacy" = "Quyền riêng tư";
 "Share Analytics" = "Chia sẻ phân tích";
-"Download starts and app requests are counted without storing IP addresses." = "Các lượt bắt đầu tải xuống và yêu cầu ứng dụng được đếm mà không lưu địa chỉ IP.";
+"Share Crash Reports" = "Chia sẻ báo cáo lỗi";
+"Analytics uses an anonymous install ID to count app requests, searches, and download starts without storing IP addresses. If disabled, analytics events stop and only a separate anonymous opt out ID is sent to count disabled installs. Crash reports send technical crash details only when enabled." = "Phân tích dùng ID cài đặt ẩn danh để đếm yêu cầu ứng dụng, tìm kiếm và lượt bắt đầu tải xuống mà không lưu địa chỉ IP. Nếu tắt, sự kiện phân tích sẽ dừng và chỉ gửi một ID opt out ẩn danh riêng để đếm các bản cài đặt đã tắt. Báo cáo lỗi chỉ gửi chi tiết kỹ thuật khi được bật.";
 
 "App Subtitles" = "Phụ đề ứng dụng";
 "Apply To" = "Áp dụng cho";

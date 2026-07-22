@@ -49,9 +49,13 @@
 "Subtitle" = "Subtítulo";
 "Developer Name" = "Desarrollador";
 "Bundle ID" = "ID del paquete";
+"Performance" = "Rendimiento";
+"Reduces caching and parallel requests on older devices." = "Reduce la caché y las solicitudes paralelas en dispositivos antiguos.";
+"Low Memory Mode" = "Low Memory Mode";
 "Privacy" = "Privacidad";
 "Share Analytics" = "Compartir analíticas";
-"Download starts and app requests are counted without storing IP addresses." = "Se cuentan los inicios de descarga y las solicitudes de apps sin almacenar direcciones IP.";
+"Share Crash Reports" = "Compartir informes de fallos";
+"Analytics uses an anonymous install ID to count app requests, searches, and download starts without storing IP addresses. If disabled, analytics events stop and only a separate anonymous opt out ID is sent to count disabled installs. Crash reports send technical crash details only when enabled." = "Analytics usa un ID de instalación anónimo para contar solicitudes de apps, búsquedas e inicios de descarga sin guardar direcciones IP. Si se desactiva, se dejan de enviar eventos de analytics y solo se envía un ID anónimo separado para contar instalaciones desactivadas. Los informes de fallos envían detalles técnicos solo cuando están activados.";
 
 "App Subtitles" = "Subtítulos de apps";
 "Apply To" = "Aplicar a";

@@ -149,11 +149,29 @@
         </dict>
         <dict>
             <key>Title</key>
+            <string>Performance</string>
+            <key>Type</key>
+            <string>PSGroupSpecifier</string>
+            <key>FooterText</key>
+            <string>Reduces caching and parallel requests on older devices.</string>
+        </dict>
+        <dict>
+            <key>Type</key>
+            <string>PSToggleSwitchSpecifier</string>
+            <key>Title</key>
+            <string>Low Memory Mode</string>
+            <key>Key</key>
+            <string>veteris_low_memory_mode_enabled</string>
+            <key>DefaultValue</key>
+            <false/>
+        </dict>
+        <dict>
+            <key>Title</key>
             <string>Privacy</string>
             <key>Type</key>
             <string>PSGroupSpecifier</string>
             <key>FooterText</key>
-            <string>Download starts and app requests are counted without storing IP addresses.</string>
+            <string>Analytics uses an anonymous install ID to count app requests, searches, and download starts without storing IP addresses. If disabled, analytics events stop and only a separate anonymous opt out ID is sent to count disabled installs. Crash reports send technical crash details only when enabled.</string>
         </dict>
         <dict>
             <key>Type</key>
@@ -162,6 +180,16 @@
             <string>Share Analytics</string>
             <key>Key</key>
             <string>veteris_analytics_enabled</string>
+            <key>DefaultValue</key>
+            <true/>
+        </dict>
+        <dict>
+            <key>Type</key>
+            <string>PSToggleSwitchSpecifier</string>
+            <key>Title</key>
+            <string>Share Crash Reports</string>
+            <key>Key</key>
+            <string>veteris_crash_reporting_enabled</string>
             <key>DefaultValue</key>
             <true/>
         </dict>

@@ -4,6 +4,10 @@
 #import "../../AppDelegate.h"
 #import <AppSupport/CPDistributedMessagingCenter.h>
 
+static BOOL YZQueueReactorHasBundleID(NSString *bundleId) {
+    return [bundleId isKindOfClass:[NSString class]] && [bundleId length] > 0;
+}
+
 @implementation YZQueueReactor {
     NSNotificationCenter *_notificationCenter;
     YZQueueState *_state;
@@ -67,10 +71,18 @@
     if (SYSTEM_VERSION_LESS_THAN(@"6.0")) {
         return;
     }
+    if (!YZQueueReactorHasBundleID(bundleId)) {
+        debugLog(@"Skipping mark newly installed with missing bundle identifier");
+        return;
+    }
     [_distributedMessageCenter sendMessageName:@"com.victorlobe.veteris.MarkNewlyInstalled" userInfo:@{@"bundleIdentifier": bundleId}];
 }
 
 - (void)launchApp:(NSString *)bundleId {
+    if (!YZQueueReactorHasBundleID(bundleId)) {
+        debugLog(@"Skipping launch with missing bundle identifier");
+        return;
+    }
     debugLog(@"Launching app: %@", bundleId);
     [_distributedMessageCenter sendMessageName:@"com.victorlobe.veteris.LaunchApp" userInfo:@{@"bundleIdentifier": bundleId}];
 }

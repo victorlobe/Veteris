@@ -1110,7 +1110,9 @@ static NSArray *AppInfoExcludedSystemActivityTypes(void) {
             UIImage *image = [UIImage imageWithData:data];
             dispatch_async(dispatch_get_main_queue(), ^{
                 appUIImage.image = image;
-                app.icon = image;
+                if ([VAPIHelper shouldRetainDecodedIcons]) {
+                    app.icon = image;
+                }
                 [activityIndicator stopAnimating];
                 activityIndicator.hidden = YES;
             });
@@ -1193,7 +1195,9 @@ static NSArray *AppInfoExcludedSystemActivityTypes(void) {
     if (cachedIcon == nil) {
         cachedIcon = [VAPISS imageFromCache:relatedApp.iconurl];
         if (cachedIcon != nil) {
-            relatedApp.icon = cachedIcon;
+            if ([VAPIHelper shouldRetainDecodedIcons]) {
+                relatedApp.icon = cachedIcon;
+            }
         }
     }
     cell.appUIImage.image = cachedIcon;
@@ -1215,9 +1219,12 @@ static NSArray *AppInfoExcludedSystemActivityTypes(void) {
 
     UIImage *cachedIcon = [VAPISS imageFromCache:relatedApp.iconurl];
     if (cachedIcon != nil) {
-        relatedApp.icon = cachedIcon;
+        if ([VAPIHelper shouldRetainDecodedIcons]) {
+            relatedApp.icon = cachedIcon;
+        }
         SearchTableViewCell *cell = (SearchTableViewCell *)[relatedTableView cellForRowAtIndexPath:indexPath];
-        [self configureRelatedIconForCell:cell app:relatedApp];
+        cell.appUIImage.image = cachedIcon;
+        [cell.activityIndicator stopAnimating];
         return;
     }
 
@@ -1239,7 +1246,9 @@ static NSArray *AppInfoExcludedSystemActivityTypes(void) {
                 relatedApp.nilIcon = YES;
                 return;
             }
-            relatedApp.icon = image;
+            if ([VAPIHelper shouldRetainDecodedIcons]) {
+                relatedApp.icon = image;
+            }
             if (indexPath.row >= [relatedApps count] || [relatedApps objectAtIndex:indexPath.row] != relatedApp) {
                 return;
             }
@@ -1247,7 +1256,8 @@ static NSArray *AppInfoExcludedSystemActivityTypes(void) {
             if (cell == nil) {
                 return;
             }
-            [self configureRelatedIconForCell:cell app:relatedApp];
+            cell.appUIImage.image = image;
+            [cell.activityIndicator stopAnimating];
         });
     }];
 }

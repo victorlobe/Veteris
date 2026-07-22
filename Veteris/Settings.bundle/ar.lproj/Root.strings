@@ -49,9 +49,13 @@
 "Subtitle" = "العنوان الفرعي";
 "Developer Name" = "اسم المطور";
 "Bundle ID" = "معرف الحزمة";
+"Performance" = "الأداء";
+"Reduces caching and parallel requests on older devices." = "يقلل التخزين المؤقت والطلبات المتوازية على الأجهزة القديمة.";
+"Low Memory Mode" = "Low Memory Mode";
 "Privacy" = "الخصوصية";
 "Share Analytics" = "مشاركة التحليلات";
-"Download starts and app requests are counted without storing IP addresses." = "يتم احتساب بدء التنزيلات وطلبات التطبيقات بدون تخزين عناوين IP.";
+"Share Crash Reports" = "مشاركة تقارير التعطل";
+"Analytics uses an anonymous install ID to count app requests, searches, and download starts without storing IP addresses. If disabled, analytics events stop and only a separate anonymous opt out ID is sent to count disabled installs. Crash reports send technical crash details only when enabled." = "تستخدم التحليلات ID تثبيت مجهول لعد طلبات التطبيقات وعمليات البحث وبدء التنزيلات بدون تخزين عناوين IP. عند التعطيل تتوقف أحداث التحليلات ولا يتم إرسال سوى ID opt out مجهول منفصل لعد التثبيتات المعطلة. ترسل تقارير التعطل تفاصيل تقنية فقط عند تفعيلها.";
 
 "App Subtitles" = "العناوين الفرعية للتطبيقات";
 "Apply To" = "تطبيق على";
