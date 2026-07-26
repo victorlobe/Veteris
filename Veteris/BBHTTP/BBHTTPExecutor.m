@@ -660,6 +660,11 @@ static BOOL BBHTTPExecutorInitialized = NO;
     // Execute
     CURLcode curlResult = curl_easy_perform(handle);
 
+    char *effectiveURL = NULL;
+    if (curl_easy_getinfo(handle, CURLINFO_EFFECTIVE_URL, &effectiveURL) == CURLE_OK && effectiveURL != NULL) {
+        request.effectiveURL = [NSString stringWithUTF8String:effectiveURL];
+    }
+
     // Cleanup the headers & reset handle to a pristine state
     curl_slist_free_all(headers);
     curl_slist_free_all(host);

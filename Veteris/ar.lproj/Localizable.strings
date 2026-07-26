@@ -11,6 +11,7 @@
 "DownloadOnlyInfoMessageFormat" = "سيتم حفظ ملف IPA في %@.";
 "Failed" = "فشل";
 "Queued" = "في قائمة الانتظار";
+"Paused" = "متوقف مؤقتًا";
 "Queue" = "قائمة الانتظار";
 "TypeToSearch" = "اكتب للبحث!";
 "Categories" = "الفئات";
@@ -40,6 +41,8 @@
 "ServerContactError" = "تعذر الاتصال بالخادم!";
 "RemoveFromQueue" = "إزالة من قائمة الانتظار";
 "Retry" = "إعادة المحاولة";
+"Resume" = "استئناف";
+"Pause" = "إيقاف مؤقت";
 "Close" = "إغلاق";
 "Options" = "خيارات";
 "Oops" = "عفوًا!";

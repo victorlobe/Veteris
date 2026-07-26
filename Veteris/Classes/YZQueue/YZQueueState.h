@@ -6,6 +6,7 @@
 - (NSUInteger)total;
 - (YZQueueRep *)repForSection:(NSUInteger)section atIndex:(NSUInteger)index;
 - (bool)markRepAsCancelled:(YZQueueRep*)rep;
+- (bool)pauseRep:(YZQueueRep*)rep;
 - (bool)retryRep:(YZQueueRep*)rep;
 - (void)refreshReps;
 - (void)launchApp:(NSString *)bundleId;

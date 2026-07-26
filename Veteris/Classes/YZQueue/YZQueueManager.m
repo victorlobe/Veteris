@@ -1,6 +1,7 @@
 #import "YZQueueManager.h"
 #import "YZQueueReactor.h"
 #import "YZArchiveTLSDownloader.h"
+#import "YZDownloadResumeStore.h"
 #import "../VAPIHelper/VAPIHelper.h"
 #import "../../BBHTTP/BBHTTP.h"
 
@@ -96,6 +97,59 @@ struct StateContext {
     });
 }
 
++ (void)restorePendingDownloads {
+    dispatch_async([YZQueueManager sharedInstance]->_queue, ^{
+        NSArray *records = [YZDownloadResumeStore pendingRecords];
+        if ([records count] == 0) {
+            return;
+        }
+
+        NSFileManager *manager = [NSFileManager defaultManager];
+        for (NSDictionary *record in records) {
+            YZApplication *application = [YZDownloadResumeStore applicationFromRecord:record];
+            NSString *sourceURL = [record objectForKey:@"source_url"];
+            NSString *targetPath = [record objectForKey:@"target_path"];
+            BOOL installAfterDownload = [[record objectForKey:@"install_after_download"] boolValue];
+            if (application == nil || [sourceURL length] == 0 || [targetPath length] == 0) {
+                [YZDownloadResumeStore removeRecordForTargetPath:targetPath];
+                continue;
+            }
+
+            NSString *targetDir = [targetPath stringByDeletingLastPathComponent];
+            NSError *error = nil;
+            if (![manager createDirectoryAtPath:targetDir withIntermediateDirectories:YES attributes:nil error:&error]) {
+                debugLog(@"Failed to create restored download directory %@: %@", targetDir, [error localizedDescription]);
+                continue;
+            }
+
+            BOOL alreadyQueued = NO;
+            @synchronized ([YZQueueManager sharedInstance]->_repsLock) {
+                for (YZQueueRep *existingRep in [YZQueueManager sharedInstance]->_reps) {
+                    if ([existingRep.bundleID isEqualToString:application.bundleID] &&
+                        [existingRep.version isEqualToString:application.version]) {
+                        alreadyQueued = YES;
+                        break;
+                    }
+                }
+            }
+            if (alreadyQueued) {
+                continue;
+            }
+
+            debugLog(@"Restoring pending download %@ %@", application.bundleID, application.version);
+            if (installAfterDownload) {
+                [YZQueueRep detachPausedRepWithYZApp:application andURL:sourceURL targetPath:targetPath];
+            } else {
+                [YZQueueRep detachPausedDownloadOnlyRepWithYZApp:application andURL:sourceURL targetPath:targetPath];
+            }
+        }
+    });
+}
+
++ (NSArray *)pendingResumeTargetPaths {
+    return [YZDownloadResumeStore pendingTargetPaths];
+}
+
 - (void)enqueueAppContainerForInstall:(YZQueueRep *)appRep {
     dispatch_async(_installQueue, ^{
         appRep.state = YZRepStateInstalling;
@@ -159,12 +213,23 @@ struct StateContext {
     }
     debugLog(@"Cancelling %@", actualRep.bundleID);
     BBHTTPRequest *request = actualRep.request;
+    id downloadTask = actualRep.downloadTask;
+    if (request == nil && [downloadTask isKindOfClass:[BBHTTPRequest class]]) {
+        request = (BBHTTPRequest *)downloadTask;
+    }
     if (request != nil) {
         [request cancel];
     }
-    id downloadTask = actualRep.downloadTask;
     if ([downloadTask isKindOfClass:[YZArchiveTLSDownloader class]]) {
         [(YZArchiveTLSDownloader *)downloadTask cancel];
+    }
+    if (actualRep.installAfterDownload) {
+        [YZDownloadResumeStore removeRecordForTargetPath:downloadPathFor(actualRep.bundleID)];
+    } else {
+        [YZDownloadResumeStore removeRecordForTargetPath:actualRep.path];
+    }
+    if (actualRep.state == YZRepStatePaused && [actualRep.path hasPrefix:[downloadPath() stringByAppendingString:@"/"]]) {
+        [[NSFileManager defaultManager] removeItemAtPath:actualRep.path error:NULL];
     }
     // destroy the fucker
     @synchronized ([YZQueueManager sharedInstance]->_repsLock) {
@@ -175,9 +240,32 @@ struct StateContext {
     return YES;
 }
 
++ (bool)pauseRep:(YZQueueRep *)rep {
+    YZQueueRep *actualRep = [YZQueueManager actualRepForRep:rep];
+    if (actualRep == nil || actualRep.state != YZRepStateDownloading) {
+        return NO;
+    }
+    debugLog(@"Pausing %@", actualRep.bundleID);
+    actualRep.preservePartialOnCancel = YES;
+    BBHTTPRequest *request = actualRep.request;
+    id downloadTask = actualRep.downloadTask;
+    if (request == nil && [downloadTask isKindOfClass:[BBHTTPRequest class]]) {
+        request = (BBHTTPRequest *)downloadTask;
+    }
+    if (request != nil) {
+        [request cancel];
+    }
+    if ([downloadTask isKindOfClass:[YZArchiveTLSDownloader class]]) {
+        [(YZArchiveTLSDownloader *)downloadTask cancel];
+    }
+    actualRep.state = YZRepStatePaused;
+    return YES;
+}
+
 + (bool)retryRep:(YZQueueRep *)rep {
     YZQueueRep *actualRep = [YZQueueManager actualRepForRep:rep];
     if (actualRep != nil) {
+        actualRep.preservePartialOnCancel = NO;
         actualRep.state = YZRepStateQueued;
         return YES;
     }

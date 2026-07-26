@@ -11,6 +11,7 @@
 "DownloadOnlyInfoMessageFormat" = "L’IPA sera enregistré dans %@.";
 "Failed" = "Échec";
 "Queued" = "En attente";
+"Paused" = "En pause";
 "Queue" = "File";
 "TypeToSearch" = "Saisissez votre recherche !";
 "Categories" = "Catégories";
@@ -40,6 +41,8 @@
 "ServerContactError" = "Impossible de contacter le serveur !";
 "RemoveFromQueue" = "Retirer de la file";
 "Retry" = "Réessayer";
+"Resume" = "Reprendre";
+"Pause" = "Mettre en pause";
 "Close" = "Fermer";
 "Options" = "Options";
 "Oops" = "Oups !";

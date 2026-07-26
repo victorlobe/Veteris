@@ -11,6 +11,7 @@
 "DownloadOnlyInfoMessageFormat" = "IPA %@ konumuna kaydedilecek.";
 "Failed" = "Başarısız";
 "Queued" = "Sırada";
+"Paused" = "Duraklatıldı";
 "Queue" = "Sıra";
 "TypeToSearch" = "Aramak için yaz!";
 "Categories" = "Kategoriler";
@@ -40,6 +41,8 @@
 "ServerContactError" = "Sunucuya ulaşılamadı!";
 "RemoveFromQueue" = "Sıradan kaldır";
 "Retry" = "Yeniden dene";
+"Resume" = "Sürdür";
+"Pause" = "Duraklat";
 "Close" = "Kapat";
 "Options" = "Seçenekler";
 "Oops" = "Hata!";

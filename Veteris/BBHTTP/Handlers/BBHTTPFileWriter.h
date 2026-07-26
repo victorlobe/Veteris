@@ -39,5 +39,6 @@
 
 - (instancetype)initWithTargetFile:(NSString*)pathToFile;
 - (instancetype)initWithTargetFile:(NSString*)pathToFile appendFromOffset:(unsigned long long)resumeOffset;
+- (instancetype)initWithTargetFile:(NSString*)pathToFile appendFromOffset:(unsigned long long)resumeOffset deletePartialOnCleanup:(BOOL)deletePartialOnCleanup;
 
 @end

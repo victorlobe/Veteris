@@ -9,6 +9,7 @@
 "DownloadOnlyInfoMessageFormat" = "IPA буде збережено в %@.";
 "Failed" = "Не вдалося";
 "Queued" = "У черзі";
+"Paused" = "Призупинено";
 "Queue" = "Черга";
 "TypeToSearch" = "Введіть для пошуку!";
 "Categories" = "Категорії";
@@ -36,6 +37,8 @@
 "ServerContactError" = "Не вдалося зв'язатися з сервером!";
 "RemoveFromQueue" = "Видалити з черги";
 "Retry" = "Спробувати ще раз";
+"Resume" = "Продовжити";
+"Pause" = "Призупинити";
 "Close" = "Закрити";
 "Options" = "Опції";
 "Oops" = "Ой!";

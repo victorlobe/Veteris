@@ -14,6 +14,7 @@
 @property (nonatomic, retain) UIActivityIndicatorView *appDownloadActivityIndicator;
 @property (nonatomic, retain) UIProgressView *appProgressView;
 @property (nonatomic, retain) UILabel *appProgressLabel;
+@property (nonatomic, retain) UILabel *appSpeedLabel;
 - (void)updateFromRep:(YZQueueRep *)rep;
 - (void)updateDownloadProgressWithCurrent:(NSUInteger)current total:(NSUInteger)total;
 - (YZQueueRep *)rep;

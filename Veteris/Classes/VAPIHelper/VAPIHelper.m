@@ -48,6 +48,7 @@ static NSString *const VAPI_DEV_MODE_ENABLED_KEY = @"veteris_dev_mode_enabled";
 static NSString *const VAPI_ANALYTICS_ENABLED_KEY = @"veteris_analytics_enabled";
 static NSString *const VAPI_CRASH_REPORTING_ENABLED_KEY = @"veteris_crash_reporting_enabled";
 static NSString *const VAPI_LOW_MEMORY_MODE_ENABLED_KEY = @"veteris_low_memory_mode_enabled";
+static NSString *const VAPI_ARCHIVE_DOWNLOAD_SEGMENTS_KEY = @"veteris_archive_download_segments";
 static NSString *const VAPI_SERVER_ENVIRONMENT_KEY = @"veteris_server_environment";
 static NSString *const VAPI_LANGUAGE_OVERRIDE_KEY = @"veteris_language_override";
 static NSString *const VAPI_LANGUAGE_OVERRIDE_SYSTEM = @"system";
@@ -162,6 +163,14 @@ static unsigned long long VAPIMemorySize(void) {
         return [[NSUserDefaults standardUserDefaults] boolForKey:VAPI_LOW_MEMORY_MODE_ENABLED_KEY];
     }
     return [VAPIHelper defaultLowMemoryModeEnabled];
+}
+
++ (NSUInteger)archiveDownloadParallelSegments {
+    NSInteger configured = [[NSUserDefaults standardUserDefaults] integerForKey:VAPI_ARCHIVE_DOWNLOAD_SEGMENTS_KEY];
+    if (configured > 0) {
+        return (NSUInteger)MAX(1, MIN(12, configured));
+    }
+    return [VAPIHelper isLowMemoryModeEnabled] ? 3 : 6;
 }
 
 + (BOOL)shouldRetainDecodedIcons {
@@ -349,17 +358,50 @@ static NSString *VAPIQueryEscape(NSString *value) {
         return;
     }
 
+    [self trackDownloadEvent:@"download_start"
+                    bundleID:application.bundleID
+                     appName:application.name
+                   developer:application.developer
+                     version:application.version
+                      minIOS:application.minimumOS
+                         url:url
+                   sizeBytes:application.sizeBytes
+                downloadOnly:downloadOnly
+                 extraFields:nil];
+}
+
++ (void)trackDownloadEvent:(NSString *)event
+                  bundleID:(NSString *)bundleID
+                   appName:(NSString *)appName
+                 developer:(NSString *)developer
+                   version:(NSString *)version
+                    minIOS:(NSString *)minIOS
+                       url:(NSString *)url
+                 sizeBytes:(unsigned long long)sizeBytes
+              downloadOnly:(BOOL)downloadOnly
+               extraFields:(NSDictionary *)extraFields {
+    if (url == nil || [url length] == 0) {
+        return;
+    }
+
     NSMutableArray *items = [NSMutableArray array];
-    NSDictionary *fields = @{
-        @"bundle_id" : application.bundleID ?: @"",
-        @"app_name" : application.name ?: @"",
-        @"developer" : application.developer ?: @"",
-        @"version" : application.version ?: @"",
-        @"min_ios" : application.minimumOS ?: @"",
+    NSMutableDictionary *fields = [@{
+        @"event" : event ?: @"download_start",
+        @"bundle_id" : bundleID ?: @"",
+        @"app_name" : appName ?: @"",
+        @"developer" : developer ?: @"",
+        @"version" : version ?: @"",
+        @"min_ios" : minIOS ?: @"",
         @"ipa_url" : url ?: @"",
-        @"size_bytes" : [NSString stringWithFormat:@"%llu", application.sizeBytes],
+        @"size_bytes" : [NSString stringWithFormat:@"%llu", sizeBytes],
         @"download_only" : downloadOnly ? @"1" : @"0",
-    };
+    } mutableCopy];
+    for (NSString *key in extraFields) {
+        id value = [extraFields objectForKey:key];
+        if ([key isKindOfClass:[NSString class]] && [key length] > 0 && value != nil) {
+            [fields setObject:[value description] forKey:key];
+        }
+    }
     for (NSString *key in fields) {
         [items addObject:[NSString stringWithFormat:@"%@=%@", key, VAPIQueryEscape([fields objectForKey:key])]];
     }

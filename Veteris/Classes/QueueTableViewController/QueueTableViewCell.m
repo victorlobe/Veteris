@@ -6,6 +6,8 @@
 @implementation QueueTableViewCell {
     YZQueueRep *_rep;
     NSString *_imageFromURL;
+    NSUInteger _lastProgressBytes;
+    NSTimeInterval _lastProgressTimestamp;
 }
 @synthesize appNameLabel;
 @synthesize appVersionLabel;
@@ -15,6 +17,7 @@
 @synthesize appDownloadActivityIndicator;
 @synthesize appProgressView;
 @synthesize appProgressLabel;
+@synthesize appSpeedLabel;
 - (id)initWithFrame:(CGRect)frame reuseIdentifier:(NSString *)reuseIdentifier {
     if (self = [super initWithFrame:frame reuseIdentifier:reuseIdentifier]) {
         CGFloat height = 78;
@@ -73,6 +76,16 @@
         appProgressView.autoresizingMask = UIViewAutoresizingFlexibleBottomMargin | UIViewAutoresizingFlexibleLeftMargin;
         appProgressView.hidden = YES;
 
+        appSpeedLabel = [[UILabel alloc] initWithFrame:CGRectMake(266, 20, 54, 13)];
+        appSpeedLabel.font = [UIFont systemFontOfSize:9];
+        appSpeedLabel.textColor = [UIColor lightGrayColor];
+        appSpeedLabel.textAlignment = NSTextAlignmentCenter;
+        appSpeedLabel.backgroundColor = [UIColor clearColor];
+        appSpeedLabel.autoresizingMask = UIViewAutoresizingFlexibleBottomMargin | UIViewAutoresizingFlexibleLeftMargin;
+        appSpeedLabel.adjustsFontSizeToFitWidth = YES;
+        appSpeedLabel.minimumFontSize = 7.0;
+        appSpeedLabel.hidden = YES;
+
         appDownloadActivityIndicator = [[UIActivityIndicatorView alloc] initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleGray];
         appDownloadActivityIndicator.frame = CGRectMake(280, 29, 20, 20);
         appDownloadActivityIndicator.hidesWhenStopped = YES;
@@ -92,6 +105,7 @@
         [self.contentView addSubview:appVersionLabel];
         [self.contentView addSubview:appDeveloperLabel];
         [self.contentView addSubview:appActivityIndicator];
+        [self.contentView addSubview:appSpeedLabel];
         [self.contentView addSubview:appProgressView];
         [self.contentView addSubview:appDownloadActivityIndicator];
         [self.contentView addSubview:appProgressLabel];
@@ -110,6 +124,10 @@
     [self.appDownloadActivityIndicator stopAnimating];
     self.appProgressLabel.hidden = YES;
     self.appProgressLabel.text = nil;
+    self.appSpeedLabel.hidden = YES;
+    self.appSpeedLabel.text = nil;
+    _lastProgressBytes = 0;
+    _lastProgressTimestamp = 0;
 }
 
 - (void)updateFromRep:(YZQueueRep *)rep {
@@ -134,6 +152,11 @@
     }
 
     appVersionLabel.text = [self versionTextForRep:rep sizeText:[self sizeTextForRep:rep]];
+    if (_rep != rep) {
+        _lastProgressBytes = 0;
+        _lastProgressTimestamp = 0;
+        appSpeedLabel.text = nil;
+    }
     [self setNeedsDisplay];
     _rep = rep;
 }
@@ -144,6 +167,10 @@
         appProgressView.progress = 0;
         appProgressLabel.text = nil;
         appProgressLabel.hidden = YES;
+        appSpeedLabel.text = nil;
+        appSpeedLabel.hidden = YES;
+        _lastProgressBytes = current;
+        _lastProgressTimestamp = [NSDate timeIntervalSinceReferenceDate];
         [appDownloadActivityIndicator startAnimating];
         appVersionLabel.text = [self versionTextForRep:_rep sizeText:[QueueTableViewCell stringForByteCount:current]];
         return;
@@ -155,6 +182,11 @@
     appProgressView.progress = progress;
     appProgressLabel.text = [NSString stringWithFormat:@"%lu%%", (unsigned long)(progress * 100.0f + 0.5f)];
     appProgressLabel.hidden = NO;
+    NSString *speedText = [self speedTextForCurrent:current];
+    if ([speedText length] > 0) {
+        appSpeedLabel.text = speedText;
+        appSpeedLabel.hidden = NO;
+    }
     appVersionLabel.text = [self versionTextForRep:_rep sizeText:[QueueTableViewCell stringForByteCount:total]];
 }
 
@@ -193,6 +225,34 @@
         return [NSString stringWithFormat:@"%llu %@", byteCount, [units objectAtIndex:unitIndex]];
     }
     return [NSString stringWithFormat:@"%.1f %@", bytes, [units objectAtIndex:unitIndex]];
+}
+
+- (NSString *)speedTextForCurrent:(NSUInteger)current {
+    NSTimeInterval now = [NSDate timeIntervalSinceReferenceDate];
+    NSString *speedText = nil;
+    if (_lastProgressTimestamp > 0 && current >= _lastProgressBytes) {
+        NSTimeInterval elapsed = now - _lastProgressTimestamp;
+        NSUInteger delta = current - _lastProgressBytes;
+        if (elapsed >= 0.2 && delta > 0) {
+            speedText = [QueueTableViewCell stringForByteRate:(double)delta / elapsed];
+        }
+    }
+    _lastProgressBytes = current;
+    _lastProgressTimestamp = now;
+    return speedText;
+}
+
++ (NSString *)stringForByteRate:(double)bytesPerSecond {
+    NSArray *units = [NSArray arrayWithObjects:@"B/s", @"KB/s", @"MB/s", @"GB/s", nil];
+    NSUInteger unitIndex = 0;
+    while (bytesPerSecond >= 1024.0 && unitIndex < ([units count] - 1)) {
+        bytesPerSecond = bytesPerSecond / 1024.0;
+        unitIndex++;
+    }
+    if (unitIndex == 0) {
+        return [NSString stringWithFormat:@"%.0f %@", bytesPerSecond, [units objectAtIndex:unitIndex]];
+    }
+    return [NSString stringWithFormat:@"%.1f %@", bytesPerSecond, [units objectAtIndex:unitIndex]];
 }
 
 @end

@@ -43,7 +43,7 @@
      if (self.tableView.backgroundView == _noItemsView) {
         return 0;
     }
-    return 6;
+    return 7;
 }
 
 - (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath {
@@ -106,11 +106,15 @@
         case YZRepStateFailed:
             [cell.appActivityIndicator stopAnimating];
             break;
+        case YZRepStatePaused:
+            [cell.appActivityIndicator stopAnimating];
+            break;
     }
     if (rep.state != YZRepStateDownloading) {
         cell.appProgressView.hidden = YES;
         [cell.appDownloadActivityIndicator stopAnimating];
         cell.appProgressLabel.hidden = YES;
+        cell.appSpeedLabel.hidden = YES;
     }
     [cell updateFromRep:rep];
     return cell;
@@ -130,6 +134,8 @@
             return NSLocalizedString(@"Queued", @"Queued");
         case 5:
             return NSLocalizedString(@"Failed", @"Failed");
+        case 6:
+            return NSLocalizedString(@"Paused", @"Paused");
         default:
             return nil;
     }
@@ -137,8 +143,12 @@
 
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
     UIActionSheet *actionSheet;
-    if (indexPath.section == YZRepStateFailed) {
+    if (indexPath.section == YZRepStateDownloading) {
+        actionSheet = [[UIActionSheet alloc] initWithTitle:NSLocalizedString(@"Options", nil) delegate:self cancelButtonTitle:NSLocalizedString(@"Close", nil) destructiveButtonTitle:NSLocalizedString(@"RemoveFromQueue", @"Remove from Queue") otherButtonTitles:NSLocalizedString(@"Pause", nil), nil];
+    } else if (indexPath.section == YZRepStateFailed) {
         actionSheet = [[UIActionSheet alloc] initWithTitle:NSLocalizedString(@"Options", nil) delegate:self cancelButtonTitle:NSLocalizedString(@"Close", nil) destructiveButtonTitle:NSLocalizedString(@"RemoveFromQueue", @"Remove from Queue") otherButtonTitles:NSLocalizedString(@"Retry", nil), nil];
+    } else if (indexPath.section == YZRepStatePaused) {
+        actionSheet = [[UIActionSheet alloc] initWithTitle:NSLocalizedString(@"Options", nil) delegate:self cancelButtonTitle:NSLocalizedString(@"Close", nil) destructiveButtonTitle:NSLocalizedString(@"RemoveFromQueue", @"Remove from Queue") otherButtonTitles:NSLocalizedString(@"Resume", nil), nil];
     } else if (indexPath.section == YZRepStateInstalled) {
         actionSheet = [[UIActionSheet alloc] initWithTitle:NSLocalizedString(@"Options", nil) delegate:self cancelButtonTitle:NSLocalizedString(@"Close", nil) destructiveButtonTitle:NSLocalizedString(@"RemoveFromQueue", @"Remove from Queue") otherButtonTitles:NSLocalizedString(@"Launch", nil), nil];
     } else {
@@ -158,7 +168,9 @@
 
     QueueTableViewCell *cell = (QueueTableViewCell *)[self.tableView cellForRowAtIndexPath:[self.tableView indexPathForSelectedRow]];
     YZQueueRep *rep = [cell rep];
+    bool isDownloading = rep.state == YZRepStateDownloading;
     bool isFailed = rep.state == YZRepStateFailed;
+    bool isPaused = rep.state == YZRepStatePaused;
     NSIndexPath *indexPath = [self.tableView indexPathForSelectedRow];
     if (buttonIndex == 0) {
         if (rep.state == YZRepStateInstalling) {
@@ -167,13 +179,15 @@
             bool success = [_queueState markRepAsCancelled:rep];
         }
     } else if (buttonIndex == 1) {
-        if (isFailed) {
+        if (isDownloading) {
+            [_queueState pauseRep:rep];
+        } else if (isFailed || isPaused) {
             [_queueState retryRep:rep];
         } else {
             if (indexPath.section == YZRepStateInstalled) {
                 [_queueState launchApp:rep.bundleID];
             } else {
-                alert(@"Error", @"You can only retry failed applications.", VAPIHelperErrorUnknown);
+                alert(@"Error", @"You can only retry failed or paused applications.", VAPIHelperErrorUnknown);
             }
         }
     }

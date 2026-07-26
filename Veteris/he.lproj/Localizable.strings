@@ -11,6 +11,7 @@
 "DownloadOnlyInfoMessageFormat" = "קובץ ה-IPA יישמר ב-%@.";
 "Failed" = "נכשל";
 "Queued" = "בתור";
+"Paused" = "מושהה";
 "Queue" = "תור";
 "TypeToSearch" = "הקלד כדי לחפש!";
 "Categories" = "קטגוריות";
@@ -40,6 +41,8 @@
 "ServerContactError" = "לא ניתן ליצור קשר עם השרת!";
 "RemoveFromQueue" = "הסר מהתור";
 "Retry" = "נסה שוב";
+"Resume" = "המשך";
+"Pause" = "השהה";
 "Close" = "סגור";
 "Options" = "אפשרויות";
 "Oops" = "אופס!";

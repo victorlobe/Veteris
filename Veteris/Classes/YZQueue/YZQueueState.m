@@ -54,6 +54,10 @@
     return [YZQueueManager markRepAsCancelled:rep];
 }
 
+- (bool)pauseRep:(YZQueueRep*)rep {
+    return [YZQueueManager pauseRep:rep];
+}
+
 - (bool)retryRep:(YZQueueRep*)rep {
     return [YZQueueManager retryRep:rep];
 }

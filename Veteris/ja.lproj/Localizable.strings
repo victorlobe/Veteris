@@ -11,6 +11,7 @@
 "DownloadOnlyInfoMessageFormat" = "IPAは%@に保存されます。";
 "Failed" = "失敗";
 "Queued" = "待機中";
+"Paused" = "一時停止中";
 "Queue" = "キュー";
 "TypeToSearch" = "検索語を入力！";
 "Categories" = "カテゴリ";
@@ -40,6 +41,8 @@
 "ServerContactError" = "サーバーに接続できませんでした！";
 "RemoveFromQueue" = "キューから削除";
 "Retry" = "再試行";
+"Resume" = "再開";
+"Pause" = "一時停止";
 "Close" = "閉じる";
 "Options" = "オプション";
 "Oops" = "おっと！";

@@ -9,7 +9,10 @@
 + (void)enqueueYZApplicationForDownload:(YZApplication *)yzApp;
 + (void)enqueueYZApplicationForDownloadOnly:(YZApplication *)yzApp targetPath:(NSString *)targetPath;
 + (void)enqueueYZApplicationDownloaded:(YZApplication *)yzApp;
++ (void)restorePendingDownloads;
++ (NSArray *)pendingResumeTargetPaths;
 + (bool)markRepAsCancelled:(YZQueueRep *)rep;
++ (bool)pauseRep:(YZQueueRep *)rep;
 + (bool)retryRep:(YZQueueRep *)rep;
 + (NSArray *)allReps;
 + (NSUInteger)activeDownloadsCount;

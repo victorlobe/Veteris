@@ -6,6 +6,7 @@
 "Download" = "Herunterladen";
 "DownloadOnlyInfoMessageFormat" = "Die IPA wird nach %@ geladen.";
 "Failed" = "Fehlgeschlagen";
+"Paused" = "Pausiert";
 "TypeToSearch" = "Tippen um zu suchen!";
 "Categories" = "Kategorien";
 "Default" = "Standard";
@@ -31,6 +32,8 @@
 "Cracking" = "Warteschlange";
 "Queue" = "Warteschlange";
 "Retry" = "Wiederholen";
+"Resume" = "Fortsetzen";
+"Pause" = "Pausieren";
 "Close" = "Schließen";
 "Options" = "Optionen";
 "Oops" = "Ups!";

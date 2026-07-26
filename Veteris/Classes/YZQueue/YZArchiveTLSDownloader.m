@@ -14,6 +14,9 @@
 #import "mbedtls/entropy.h"
 #import "mbedtls/error.h"
 #import "mbedtls/ssl.h"
+#import "mbedtls/ssl_ciphersuites.h"
+
+#import "../VAPIHelper/VAPIHelper.h"
 
 #ifndef SO_NOSIGPIPE
 #define SO_NOSIGPIPE 0x1022
@@ -27,6 +30,22 @@
 
 static const NSUInteger kYZArchiveTLSMaxRedirects = 8;
 static const NSUInteger kYZArchiveTLSBufferSize = 131072;
+static const int kYZArchiveTLSReceiveBufferSize = 512 * 1024;
+static const NSTimeInterval kYZArchiveTLSDebugSampleInterval = 10.0;
+static const unsigned long long kYZArchiveTLSParallelMinimumBytes = 2ULL * 1024ULL * 1024ULL;
+static const NSTimeInterval kYZArchiveTLSParallelProgressInterval = 0.25;
+
+static const int kYZArchiveTLSCipherSuites[] = {
+    MBEDTLS_TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
+    MBEDTLS_TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
+    MBEDTLS_TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256,
+    MBEDTLS_TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA,
+    MBEDTLS_TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+    MBEDTLS_TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+    MBEDTLS_TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256,
+    MBEDTLS_TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,
+    0
+};
 
 #ifdef VETERIS_DOWNLOAD_DEBUG
 #define YZTLSLog(...) NSLog(@"[VeterisDownload] %@", [NSString stringWithFormat:__VA_ARGS__])
@@ -40,6 +59,12 @@ typedef struct {
 
 static int YZTLSBioSend(void *ctx, const unsigned char *buf, size_t len);
 static int YZTLSBioRecv(void *ctx, unsigned char *buf, size_t len);
+
+static unsigned long long YZTLSNowUsec(void) {
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+    return ((unsigned long long)tv.tv_sec * 1000000ULL) + (unsigned long long)tv.tv_usec;
+}
 
 @implementation YZArchiveTLSResult
 @end
@@ -228,6 +253,23 @@ static int YZTLSBioRecv(void *ctx, unsigned char *buf, size_t len);
     }
 
     BOOL append = (self.resumeOffset > 0 && parsedStatus == 206);
+    unsigned long long base = append ? self.resumeOffset : 0;
+    unsigned long long total = [self totalBytesFromHeaders:parsedHeaders statusCode:parsedStatus base:base];
+    NSUInteger parallelSegments = [VAPIHelper archiveDownloadParallelSegments];
+    if (parallelSegments >= 2 &&
+        total > base &&
+        total - base >= kYZArchiveTLSParallelMinimumBytes &&
+        (parsedStatus == 200 || parsedStatus == 206)) {
+        YZTLSLog(@"tls parallel start url=%@ base=%llu total=%llu segments=%lu",
+                 urlString,
+                 base,
+                 total,
+                 (unsigned long)parallelSegments);
+        [self teardownTLS:useTLS ssl:&ssl config:&config entropy:&entropy ctr:&ctr bio:&bio];
+        close(fd);
+        return [self downloadURLInParallel:urlString base:base total:total error:error];
+    }
+
     NSFileHandle *file = nil;
     if (append) {
         file = [NSFileHandle fileHandleForWritingAtPath:self.targetPath];
@@ -245,22 +287,55 @@ static int YZTLSBioRecv(void *ctx, unsigned char *buf, size_t len);
         return NO;
     }
 
-    unsigned long long base = append ? self.resumeOffset : 0;
     unsigned long long written = 0;
-    unsigned long long total = [self totalBytesFromHeaders:parsedHeaders statusCode:parsedStatus base:base];
+    unsigned long long sampleBytes = 0;
+    unsigned long long sampleReads = 0;
+    unsigned long long sampleReadUsec = 0;
+    unsigned long long sampleWriteUsec = 0;
+    NSTimeInterval sampleStartedAt = [NSDate timeIntervalSinceReferenceDate];
     if ([bodyPrefix length] > 0) {
+        unsigned long long writeStarted = YZTLSNowUsec();
         [file writeData:bodyPrefix];
+        sampleWriteUsec += YZTLSNowUsec() - writeStarted;
         written += [bodyPrefix length];
+        sampleBytes += [bodyPrefix length];
         [self reportProgress:base + written total:total];
     }
 
     unsigned char buffer[kYZArchiveTLSBufferSize];
     while (!self.cancelled) {
+        unsigned long long readStarted = YZTLSNowUsec();
         int ret = useTLS ? mbedtls_ssl_read(&ssl, buffer, sizeof(buffer)) : (int)recv(fd, buffer, sizeof(buffer), 0);
+        sampleReadUsec += YZTLSNowUsec() - readStarted;
         if (ret > 0) {
+            unsigned long long writeStarted = YZTLSNowUsec();
             [file writeData:[NSData dataWithBytes:buffer length:(NSUInteger)ret]];
+            sampleWriteUsec += YZTLSNowUsec() - writeStarted;
             written += (unsigned long long)ret;
+            sampleBytes += (unsigned long long)ret;
+            sampleReads++;
             [self reportProgress:base + written total:total];
+            NSTimeInterval now = [NSDate timeIntervalSinceReferenceDate];
+            NSTimeInterval sampleElapsed = now - sampleStartedAt;
+            if (sampleElapsed >= kYZArchiveTLSDebugSampleInterval) {
+                unsigned long long bps = (unsigned long long)((double)sampleBytes / MAX(0.001, sampleElapsed));
+                unsigned long long avgChunk = sampleReads > 0 ? sampleBytes / sampleReads : 0;
+                YZTLSLog(@"tls io url=%@ bytes=%llu totalWritten=%llu total=%llu bps=%llu reads=%llu avgChunk=%llu readMs=%.1f writeMs=%.1f",
+                         urlString,
+                         sampleBytes,
+                         base + written,
+                         total,
+                         bps,
+                         sampleReads,
+                         avgChunk,
+                         (double)sampleReadUsec / 1000.0,
+                         (double)sampleWriteUsec / 1000.0);
+                sampleBytes = 0;
+                sampleReads = 0;
+                sampleReadUsec = 0;
+                sampleWriteUsec = 0;
+                sampleStartedAt = now;
+            }
             continue;
         }
         if (useTLS && (ret == MBEDTLS_ERR_SSL_WANT_READ || ret == MBEDTLS_ERR_SSL_WANT_WRITE)) {
@@ -281,6 +356,294 @@ static int YZTLSBioRecv(void *ctx, unsigned char *buf, size_t len);
     [file closeFile];
     [self teardownTLS:useTLS ssl:&ssl config:&config entropy:&entropy ctr:&ctr bio:&bio];
     close(fd);
+    return !self.cancelled;
+}
+
+- (BOOL)downloadURLInParallel:(NSString *)urlString base:(unsigned long long)base total:(unsigned long long)total error:(NSError **)error {
+    unsigned long long remaining = total - base;
+    NSUInteger maxSegments = [VAPIHelper archiveDownloadParallelSegments];
+    NSUInteger segmentCount = (NSUInteger)MIN((unsigned long long)maxSegments, remaining);
+    if (segmentCount < 2) {
+        return NO;
+    }
+
+    if (base == 0) {
+        [[NSFileManager defaultManager] createFileAtPath:self.targetPath contents:nil attributes:nil];
+    }
+
+    NSMutableArray *partPaths = [NSMutableArray arrayWithCapacity:segmentCount];
+    unsigned long long *segmentProgress = calloc(segmentCount, sizeof(unsigned long long));
+    if (segmentProgress == NULL) {
+        if (error != NULL) {
+            *error = [self errorWithCode:-4 description:@"Could not allocate segment progress"];
+        }
+        return NO;
+    }
+
+    NSLock *lock = [[NSLock alloc] init];
+    dispatch_group_t group = dispatch_group_create();
+    dispatch_queue_t queue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0);
+    __block BOOL failed = NO;
+    __block NSError *firstError = nil;
+    __block NSTimeInterval lastProgressReport = 0;
+
+    unsigned long long segmentSize = (remaining + segmentCount - 1) / segmentCount;
+    for (NSUInteger idx = 0; idx < segmentCount; idx++) {
+        unsigned long long start = base + ((unsigned long long)idx * segmentSize);
+        unsigned long long end = MIN(total - 1, start + segmentSize - 1);
+        BOOL writesContiguousPrefix = (idx == 0);
+        NSString *partPath = writesContiguousPrefix ? self.targetPath : [NSString stringWithFormat:@"%@.part.%lu", self.targetPath, (unsigned long)idx];
+        if (!writesContiguousPrefix) {
+            [[NSFileManager defaultManager] removeItemAtPath:partPath error:nil];
+        }
+        [partPaths addObject:writesContiguousPrefix ? [NSNull null] : partPath];
+
+        dispatch_group_async(group, queue, ^{
+            NSError *segmentError = nil;
+            BOOL ok = [self fetchURLRange:urlString
+                                    start:start
+                                      end:end
+                               targetPath:partPath
+                                   append:writesContiguousPrefix
+                                 progress:^(unsigned long long current) {
+                [lock lock];
+                segmentProgress[idx] = current;
+                unsigned long long aggregate = 0;
+                for (NSUInteger progressIdx = 0; progressIdx < segmentCount; progressIdx++) {
+                    aggregate += segmentProgress[progressIdx];
+                }
+                NSTimeInterval now = [NSDate timeIntervalSinceReferenceDate];
+                BOOL shouldReport = (now - lastProgressReport) >= kYZArchiveTLSParallelProgressInterval || base + aggregate >= total;
+                if (shouldReport) {
+                    lastProgressReport = now;
+                }
+                [lock unlock];
+                if (shouldReport) {
+                    [self reportProgress:base + aggregate total:total];
+                }
+            }
+                                    error:&segmentError];
+            if (!ok) {
+                [lock lock];
+                failed = YES;
+                if (firstError == nil) {
+                    firstError = segmentError;
+                }
+                [lock unlock];
+            }
+        });
+    }
+
+    dispatch_group_wait(group, DISPATCH_TIME_FOREVER);
+    free(segmentProgress);
+
+    if (self.cancelled) {
+        for (id partPath in partPaths) {
+            if ([partPath isKindOfClass:[NSString class]]) {
+                [[NSFileManager defaultManager] removeItemAtPath:partPath error:nil];
+            }
+        }
+        return NO;
+    }
+    if (failed) {
+        for (id partPath in partPaths) {
+            if ([partPath isKindOfClass:[NSString class]]) {
+                [[NSFileManager defaultManager] removeItemAtPath:partPath error:nil];
+            }
+        }
+        if (error != NULL) {
+            *error = firstError ?: [self errorWithCode:-5 description:@"Parallel range download failed"];
+        }
+        return NO;
+    }
+
+    NSFileHandle *target = [NSFileHandle fileHandleForWritingAtPath:self.targetPath];
+    if (target == nil) {
+        if (error != NULL) {
+            *error = [self errorWithCode:-2 description:@"Could not open target file"];
+        }
+        return NO;
+    }
+    [target seekToEndOfFile];
+    for (id partPath in partPaths) {
+        if (![partPath isKindOfClass:[NSString class]]) {
+            continue;
+        }
+        NSFileHandle *part = [NSFileHandle fileHandleForReadingAtPath:partPath];
+        if (part == nil) {
+            [target closeFile];
+            if (error != NULL) {
+                *error = [self errorWithCode:-6 description:@"Could not open downloaded segment"];
+            }
+            return NO;
+        }
+        while (!self.cancelled) {
+            NSData *chunk = [part readDataOfLength:65536];
+            if ([chunk length] == 0) {
+                break;
+            }
+            [target writeData:chunk];
+        }
+        [part closeFile];
+        [[NSFileManager defaultManager] removeItemAtPath:partPath error:nil];
+    }
+    [target closeFile];
+    [self reportProgress:total total:total];
+    YZTLSLog(@"tls parallel complete url=%@ base=%llu total=%llu segments=%lu",
+             urlString,
+             base,
+             total,
+             (unsigned long)segmentCount);
+    return !self.cancelled;
+}
+
+- (BOOL)fetchURLRange:(NSString *)urlString
+                start:(unsigned long long)start
+                  end:(unsigned long long)end
+           targetPath:(NSString *)targetPath
+                append:(BOOL)append
+             progress:(void (^)(unsigned long long current))progress
+                error:(NSError **)error {
+    NSURL *url = [NSURL URLWithString:urlString];
+    NSString *scheme = [[url scheme] lowercaseString];
+    NSString *host = [url host];
+    NSNumber *portNumber = [url port];
+    BOOL useTLS = [scheme isEqualToString:@"https"];
+    int port = [portNumber intValue] > 0 ? [portNumber intValue] : (useTLS ? 443 : 80);
+    if ([host length] == 0 || (!useTLS && ![scheme isEqualToString:@"http"])) {
+        if (error != NULL) {
+            *error = [self errorWithCode:-1 description:@"Unsupported or malformed URL"];
+        }
+        return NO;
+    }
+
+    int fd = [self connectToHost:host port:port error:error];
+    if (fd < 0) {
+        return NO;
+    }
+
+    mbedtls_entropy_context entropy;
+    mbedtls_ctr_drbg_context ctr;
+    mbedtls_ssl_config config;
+    mbedtls_ssl_context ssl;
+    YZTLSBio bio;
+    memset(&entropy, 0, sizeof(entropy));
+    memset(&ctr, 0, sizeof(ctr));
+    memset(&config, 0, sizeof(config));
+    memset(&ssl, 0, sizeof(ssl));
+    memset(&bio, 0, sizeof(bio));
+    bio.fd = fd;
+
+    if (useTLS && ![self setupTLS:&ssl config:&config entropy:&entropy ctr:&ctr bio:&bio host:host error:error]) {
+        close(fd);
+        return NO;
+    }
+
+    NSString *path = [self requestPathForURLString:urlString];
+    NSMutableString *request = [NSMutableString stringWithFormat:@"GET %@ HTTP/1.0\r\nHost: %@\r\nUser-Agent: Mozilla/5.0 (iPhone; CPU iPhone OS 6_1 like Mac OS X) Veteris/2.1\r\nAccept: */*\r\nConnection: close\r\n", path, host];
+    for (NSString *key in self.requestHeaders) {
+        NSString *value = [self.requestHeaders objectForKey:key];
+        if ([key length] > 0 && [value length] > 0 && [key rangeOfString:@"\r"].location == NSNotFound && [key rangeOfString:@"\n"].location == NSNotFound && [key caseInsensitiveCompare:@"Range"] != NSOrderedSame) {
+            [request appendFormat:@"%@: %@\r\n", key, value];
+        }
+    }
+    [request appendFormat:@"Range: bytes=%llu-%llu\r\n\r\n", start, end];
+
+    NSData *requestData = [request dataUsingEncoding:NSUTF8StringEncoding];
+    BOOL wroteRequest = useTLS ? [self tlsWrite:&ssl data:requestData error:error] : [self socketWrite:fd data:requestData error:error];
+    if (!wroteRequest) {
+        [self teardownTLS:useTLS ssl:&ssl config:&config entropy:&entropy ctr:&ctr bio:&bio];
+        close(fd);
+        return NO;
+    }
+
+    NSMutableData *headerData = [NSMutableData data];
+    NSMutableData *bodyPrefix = [NSMutableData data];
+    BOOL readHeader = [self readHeaderFromFD:fd ssl:(useTLS ? &ssl : NULL) headerData:headerData bodyPrefix:bodyPrefix error:error];
+    if (!readHeader) {
+        [self teardownTLS:useTLS ssl:&ssl config:&config entropy:&entropy ctr:&ctr bio:&bio];
+        close(fd);
+        return NO;
+    }
+
+    NSDictionary *parsedHeaders = nil;
+    NSUInteger parsedStatus = [self parseHeaderData:headerData headers:&parsedHeaders];
+    if (parsedStatus != 206) {
+        if (error != NULL) {
+            *error = [self errorWithCode:parsedStatus description:[NSString stringWithFormat:@"Range request returned HTTP %lu", (unsigned long)parsedStatus]];
+        }
+        [self teardownTLS:useTLS ssl:&ssl config:&config entropy:&entropy ctr:&ctr bio:&bio];
+        close(fd);
+        return NO;
+    }
+
+    if (append) {
+        if (![[NSFileManager defaultManager] fileExistsAtPath:targetPath]) {
+            [[NSFileManager defaultManager] createFileAtPath:targetPath contents:nil attributes:nil];
+        }
+    } else {
+        [[NSFileManager defaultManager] createFileAtPath:targetPath contents:nil attributes:nil];
+    }
+    NSFileHandle *file = [NSFileHandle fileHandleForWritingAtPath:targetPath];
+    if (file == nil) {
+        if (error != NULL) {
+            *error = [self errorWithCode:-2 description:@"Could not open segment file"];
+        }
+        [self teardownTLS:useTLS ssl:&ssl config:&config entropy:&entropy ctr:&ctr bio:&bio];
+        close(fd);
+        return NO;
+    }
+
+    unsigned long long expected = end - start + 1;
+    unsigned long long written = 0;
+    if (append) {
+        [file seekToEndOfFile];
+    }
+    if ([bodyPrefix length] > 0) {
+        [file writeData:bodyPrefix];
+        written += [bodyPrefix length];
+        if (progress != nil) {
+            progress(written);
+        }
+    }
+
+    unsigned char buffer[kYZArchiveTLSBufferSize];
+    while (!self.cancelled) {
+        int ret = useTLS ? mbedtls_ssl_read(&ssl, buffer, sizeof(buffer)) : (int)recv(fd, buffer, sizeof(buffer), 0);
+        if (ret > 0) {
+            [file writeData:[NSData dataWithBytes:buffer length:(NSUInteger)ret]];
+            written += (unsigned long long)ret;
+            if (progress != nil) {
+                progress(written);
+            }
+            continue;
+        }
+        if (useTLS && (ret == MBEDTLS_ERR_SSL_WANT_READ || ret == MBEDTLS_ERR_SSL_WANT_WRITE)) {
+            continue;
+        }
+        if (ret == 0 || (useTLS && ret == MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY)) {
+            break;
+        }
+        if (error != NULL) {
+            *error = [self errorWithCode:ret description:[self tlsErrorString:ret]];
+        }
+        [file closeFile];
+        [self teardownTLS:useTLS ssl:&ssl config:&config entropy:&entropy ctr:&ctr bio:&bio];
+        close(fd);
+        return NO;
+    }
+
+    [file closeFile];
+    [self teardownTLS:useTLS ssl:&ssl config:&config entropy:&entropy ctr:&ctr bio:&bio];
+    close(fd);
+
+    if (!self.cancelled && written != expected) {
+        if (error != NULL) {
+            *error = [self errorWithCode:-7 description:[NSString stringWithFormat:@"Segment size mismatch got %llu expected %llu", written, expected]];
+        }
+        return NO;
+    }
+    YZTLSLog(@"tls parallel segment start=%llu end=%llu bytes=%llu", start, end, written);
     return !self.cancelled;
 }
 
@@ -308,13 +671,21 @@ static int YZTLSBioRecv(void *ctx, unsigned char *buf, size_t len);
             continue;
         }
         int one = 1;
+        int receiveBuffer = kYZArchiveTLSReceiveBufferSize;
         setsockopt(fd, SOL_SOCKET, SO_NOSIGPIPE, &one, sizeof(one));
+        setsockopt(fd, SOL_SOCKET, SO_RCVBUF, &receiveBuffer, sizeof(receiveBuffer));
         struct timeval tv;
         tv.tv_sec = 45;
         tv.tv_usec = 0;
         setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv));
         setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
         if (connect(fd, p->ai_addr, p->ai_addrlen) == 0) {
+#ifdef VETERIS_DOWNLOAD_DEBUG
+            socklen_t len = sizeof(receiveBuffer);
+            if (getsockopt(fd, SOL_SOCKET, SO_RCVBUF, &receiveBuffer, &len) == 0) {
+                YZTLSLog(@"socket connected host=%@ port=%d receiveBuffer=%d", host, port, receiveBuffer);
+            }
+#endif
             break;
         }
         close(fd);
@@ -357,6 +728,7 @@ static int YZTLSBioRecv(void *ctx, unsigned char *buf, size_t len);
     }
     mbedtls_ssl_conf_authmode(config, MBEDTLS_SSL_VERIFY_NONE);
     mbedtls_ssl_conf_rng(config, mbedtls_ctr_drbg_random, ctr);
+    mbedtls_ssl_conf_ciphersuites(config, kYZArchiveTLSCipherSuites);
     ret = mbedtls_ssl_setup(ssl, config);
     if (ret != 0) {
         if (error != NULL) {
@@ -376,6 +748,10 @@ static int YZTLSBioRecv(void *ctx, unsigned char *buf, size_t len);
         }
         return NO;
     }
+    YZTLSLog(@"tls handshake host=%@ version=%s cipher=%s",
+             host,
+             mbedtls_ssl_get_version(ssl),
+             mbedtls_ssl_get_ciphersuite(ssl));
     return !self.cancelled;
 }
 

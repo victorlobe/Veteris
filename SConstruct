@@ -155,7 +155,8 @@ else:
     env.Append(CFLAGS=["-O3", "-g"])
     env.Append(CPPFLAGS=["-O3", "-g"])
 
-if not os.environ.get("FINALPACKAGE"):
+download_debug = (not os.environ.get("FINALPACKAGE")) or int(ARGUMENTS.get("download_debug", 0)) or int(debug) or os.environ.get("VETERIS_DOWNLOAD_DEBUG")
+if download_debug:
     env.Append(CFLAGS=["-DVETERIS_DOWNLOAD_DEBUG=1"])
     env.Append(CPPFLAGS=["-DVETERIS_DOWNLOAD_DEBUG=1"])
 

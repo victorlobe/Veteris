@@ -273,6 +273,9 @@ static NSString *VeterisURLDecodedString(NSString *value) {
     }
     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
         [self cleanDownloadDirectory];
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [YZQueueManager restorePendingDownloads];
+        });
         [self installCrashHandler];
     });
     return YES;
@@ -290,11 +293,16 @@ static NSString *VeterisURLDecodedString(NSString *value) {
             debugLog(@"Created download directory: %@", downloadDir);
         }
     }
+    NSSet *pendingResumePaths = [NSSet setWithArray:[YZQueueManager pendingResumeTargetPaths]];
+    NSString *resumeManifestPath = [downloadDir stringByAppendingPathComponent:@".VeterisPendingDownloads.plist"];
     NSDirectoryEnumerator *fileEnumerator = [manager enumeratorAtPath:downloadDir];
     for (NSString *filename in fileEnumerator) {
         NSString *filePath = [downloadDir stringByAppendingPathComponent:filename];
         NSString *savedDownloadDir = downloadOnlyPath();
-        if ([filePath isEqualToString:savedDownloadDir] || [filePath hasPrefix:[savedDownloadDir stringByAppendingString:@"/"]]) {
+        if ([filePath isEqualToString:resumeManifestPath] ||
+            [pendingResumePaths containsObject:filePath] ||
+            [filePath isEqualToString:savedDownloadDir] ||
+            [filePath hasPrefix:[savedDownloadDir stringByAppendingString:@"/"]]) {
             continue;
         }
         NSError *error = nil;

@@ -11,6 +11,7 @@
 "DownloadOnlyInfoMessageFormat" = "Plik IPA zostanie zapisany w %@.";
 "Failed" = "Niepowodzenie";
 "Queued" = "W kolejce";
+"Paused" = "Wstrzymano";
 "Queue" = "Kolejka";
 "TypeToSearch" = "Wpisz, aby wyszukać!";
 "Categories" = "Kategorie";
@@ -40,6 +41,8 @@
 "ServerContactError" = "Nie udało się połączyć z serwerem!";
 "RemoveFromQueue" = "Usuń z kolejki";
 "Retry" = "Spróbuj ponownie";
+"Resume" = "Wznów";
+"Pause" = "Wstrzymaj";
 "Close" = "Zamknij";
 "Options" = "Opcje";
 "Oops" = "Ups!";

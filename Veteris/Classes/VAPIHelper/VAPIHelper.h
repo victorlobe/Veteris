@@ -35,6 +35,7 @@
 + (void)resetNetworkState;
 + (BOOL)isLowMemoryModeEnabled;
 + (BOOL)defaultLowMemoryModeEnabled;
++ (NSUInteger)archiveDownloadParallelSegments;
 + (BOOL)shouldRetainDecodedIcons;
 + (BOOL)isCrashReportingEnabled;
 - (void)get:(NSString *)endpoint path:(NSString *)path completion:(void (^)(NSData *data, NSError *error))completion;
@@ -46,6 +47,16 @@
 + (void)checkForUpdates;
 + (NSDictionary *)getHeaders;
 + (void)trackDownloadStartForApplication:(YZApplication *)application url:(NSString *)url downloadOnly:(BOOL)downloadOnly;
++ (void)trackDownloadEvent:(NSString *)event
+                  bundleID:(NSString *)bundleID
+                   appName:(NSString *)appName
+                 developer:(NSString *)developer
+                   version:(NSString *)version
+                    minIOS:(NSString *)minIOS
+                       url:(NSString *)url
+                 sizeBytes:(unsigned long long)sizeBytes
+              downloadOnly:(BOOL)downloadOnly
+               extraFields:(NSDictionary *)extraFields;
 + (void)showWhatsNewIfNeeded;
 @property (strong, nonatomic) NSString *VAPIDeviceString;
 @end

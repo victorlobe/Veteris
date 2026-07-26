@@ -4,6 +4,8 @@
 "ServerContactError" = "Máy chủ không thể kết nối!";
 "RemoveFromQueue" = "Bỏ khỏi Hàng đợi";
 "Retry" = "Thử lại";
+"Resume" = "Tiếp tục";
+"Pause" = "Tạm dừng";
 "Close" = "Đóng";
 "Options" = "Tuỳ chọn";
 "Oops" = "Ôi không!";
@@ -20,6 +22,7 @@
 "DownloadOnlyInfoMessageFormat" = "IPA sẽ được lưu vào %@.";
 "Failed" = "Thất bại";
 "Queued" = "Đã thêm vào hàng đợi";
+"Paused" = "Đã tạm dừng";
 "Queue" = "Hàng đợi";
 "NoInternetMessage" = "Vui lòng hãy kết nối Internet để sử dụng Veteris!";
 "NoVersionsAvailable" = "%@ CHƯA được cài đặt, không có phiên bản khả dụng.";

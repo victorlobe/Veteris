@@ -32,6 +32,7 @@
     NSString* _pathToFile;
     NSOutputStream* _stream;
     BOOL _needsCleanup;
+    BOOL _deletePartialOnCleanup;
     unsigned long long _resumeOffset;
 }
 
@@ -44,7 +45,18 @@
     if (self != nil) {
         _pathToFile = pathToFile;
         _needsCleanup = NO;
+        _deletePartialOnCleanup = YES;
         _resumeOffset = 0;
+    }
+
+    return self;
+}
+
+- (instancetype)initWithTargetFile:(NSString*)pathToFile appendFromOffset:(unsigned long long)resumeOffset deletePartialOnCleanup:(BOOL)deletePartialOnCleanup
+{
+    self = [self initWithTargetFile:pathToFile appendFromOffset:resumeOffset];
+    if (self != nil) {
+        _deletePartialOnCleanup = deletePartialOnCleanup;
     }
 
     return self;
@@ -108,7 +120,9 @@
 
     _needsCleanup = NO;
     [_stream close];
-    [self deleteFileInBackground];
+    if (_deletePartialOnCleanup) {
+        [self deleteFileInBackground];
+    }
 }
 
 

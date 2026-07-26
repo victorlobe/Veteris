@@ -11,6 +11,7 @@
 "DownloadOnlyInfoMessageFormat" = "IPA 将保存到 %@。";
 "Failed" = "失败";
 "Queued" = "已排队";
+"Paused" = "已暂停";
 "Queue" = "队列";
 "TypeToSearch" = "输入内容搜索！";
 "Categories" = "分类";
@@ -40,6 +41,8 @@
 "ServerContactError" = "无法联系服务器！";
 "RemoveFromQueue" = "从队列中移除";
 "Retry" = "重试";
+"Resume" = "继续";
+"Pause" = "暂停";
 "Close" = "关闭";
 "Options" = "选项";
 "Oops" = "哎呀！";

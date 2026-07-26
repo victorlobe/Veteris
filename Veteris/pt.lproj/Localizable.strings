@@ -32,12 +32,15 @@
 "TypeToSearch" = "Digite para pesquisar!";
 "Done" = "Concluído";
 "Queued" = "Em lista de espera";
+"Paused" = "Em pausa";
 "Category-Productivity" = "Produtividade";
 "NoInternetMessage" = "Por favor estabeleça ligação à internet para usar a maioria das funções do Veteris!";
 "Ok" = "OK";
 "OK" = "OK";
 "NoLink" = "Esta publicação não tem link!";
 "Retry" = "Tente novamente";
+"Resume" = "Retomar";
+"Pause" = "Pausar";
 "Spooky" = "Assustador";
 "Category-Utilities" = "Utilitários";
 "Category-Navigation" = "Navegação";

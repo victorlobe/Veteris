@@ -467,6 +467,7 @@ extern NSString* NSStringFromBBTransferSpeed(BBTransferSpeed transferSpeed);
 @property(strong, nonatomic, readonly) NSError* error;
 @property(assign, nonatomic, readonly, getter = wasSuccessfullyExecuted) BOOL successfullyExecuted;
 @property(strong, nonatomic, readonly) BBHTTPResponse* response;
+@property(strong, nonatomic) NSString* effectiveURL;
 @property(assign, nonatomic, readonly) NSUInteger responseStatusCode;
 @property(assign, nonatomic, readonly, getter = hasSuccessfulResponse) BOOL successfulResponse;
 
