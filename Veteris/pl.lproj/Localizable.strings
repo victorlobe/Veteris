@@ -124,3 +124,10 @@
 "RandomApps" = "Losowe app";
 "Shuffle" = "Shuffle";
 "Cannot crack unswapped %@ portion of binary." = "Nie można crackować niewymienionej części %@ pliku binarnego.";
+"DownloadStreamsAlertTitle" = "Połączenia pobierania";
+"VeryLowMemoryStreamsWarning" = "Urządzenia z bardzo małą ilością pamięci domyślnie używają 4 strumieni pobierania w Auto. Wyższe wartości mogą zwiększyć obciążenie pamięci podczas dużych pobrań.";
+"LowMemoryStreamsWarning" = "Tryb niskiej pamięci domyślnie używa 4 strumieni pobierania w Auto. Wyższe wartości mogą zwiększyć obciążenie pamięci podczas dużych pobrań.";
+"LowMemoryManualStreamsWarning" = "Tryb niskiej pamięci domyślnie używa 4 strumieni pobierania w Auto. Twoje wyższe ręczne ustawienie strumieni nadal będzie używane dla nowych pobrań.";
+"Normal" = "Normalny";
+"Low" = "Niski";
+"Very Low" = "Bardzo niski";

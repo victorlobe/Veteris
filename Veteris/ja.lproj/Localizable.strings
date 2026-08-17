@@ -124,3 +124,10 @@
 "RandomApps" = "ランダムなアプリ";
 "Shuffle" = "Shuffle";
 "Cannot crack unswapped %@ portion of binary." = "バイナリ内の未スワップの %@ 部分はクラックできません。";
+"DownloadStreamsAlertTitle" = "ダウンロード接続";
+"VeryLowMemoryStreamsWarning" = "超低メモリデバイスでは Auto の既定値が 4 ダウンロードストリームになります。大きい値は大容量ダウンロード時のメモリ負荷を高めることがあります。";
+"LowMemoryStreamsWarning" = "低メモリモードでは Auto の既定値が 4 ダウンロードストリームになります。大きい値は大容量ダウンロード時のメモリ負荷を高めることがあります。";
+"LowMemoryManualStreamsWarning" = "低メモリモードでは Auto の既定値が 4 ダウンロードストリームになります。より高い手動ストリーム設定は新しいダウンロードで引き続き使用されます。";
+"Normal" = "通常";
+"Low" = "低";
+"Very Low" = "非常に低い";

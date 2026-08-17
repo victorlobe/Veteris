@@ -153,7 +153,7 @@
             <key>Type</key>
             <string>PSGroupSpecifier</string>
             <key>FooterText</key>
-            <string>Reduces caching and parallel requests on older devices.</string>
+            <string>Reduces caching and parallel requests. Veteris automatically uses Low or Very Low settings based on the device.</string>
         </dict>
         <dict>
             <key>Type</key>
@@ -164,6 +164,76 @@
             <string>veteris_low_memory_mode_enabled</string>
             <key>DefaultValue</key>
             <false/>
+        </dict>
+        <dict>
+            <key>Type</key>
+            <string>PSTitleValueSpecifier</string>
+            <key>Title</key>
+            <string>Active Mode</string>
+            <key>Key</key>
+            <string>veteris_low_memory_mode_status</string>
+            <key>DefaultValue</key>
+            <string>Normal</string>
+        </dict>
+        <dict>
+            <key>DefaultValue</key>
+            <integer>0</integer>
+            <key>Key</key>
+            <string>veteris_archive_download_segments</string>
+            <key>Title</key>
+            <string>Download Streams</string>
+            <key>FooterText</key>
+            <string>Choose how many connections Veteris uses for downloads. Auto uses 6 normally and 4 in Low Memory Mode. Higher values can be faster but may use more memory and battery. Changes apply to new downloads, retries, and resumed downloads. Active downloads keep their current connections.</string>
+            <key>Titles</key>
+            <array>
+                <string>Auto (6 normal, 4 low memory)</string>
+                <string>1</string>
+                <string>2</string>
+                <string>3</string>
+                <string>4</string>
+                <string>5</string>
+                <string>6</string>
+                <string>7</string>
+                <string>8</string>
+                <string>9</string>
+                <string>10</string>
+                <string>11</string>
+                <string>12</string>
+            </array>
+            <key>ShortTitles</key>
+            <array>
+                <string>Auto</string>
+                <string>1</string>
+                <string>2</string>
+                <string>3</string>
+                <string>4</string>
+                <string>5</string>
+                <string>6</string>
+                <string>7</string>
+                <string>8</string>
+                <string>9</string>
+                <string>10</string>
+                <string>11</string>
+                <string>12</string>
+            </array>
+            <key>Type</key>
+            <string>PSMultiValueSpecifier</string>
+            <key>Values</key>
+            <array>
+                <integer>0</integer>
+                <integer>1</integer>
+                <integer>2</integer>
+                <integer>3</integer>
+                <integer>4</integer>
+                <integer>5</integer>
+                <integer>6</integer>
+                <integer>7</integer>
+                <integer>8</integer>
+                <integer>9</integer>
+                <integer>10</integer>
+                <integer>11</integer>
+                <integer>12</integer>
+            </array>
         </dict>
         <dict>
             <key>Title</key>

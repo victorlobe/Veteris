@@ -111,3 +111,10 @@
 "RandomApps" = "Ứng dụng ngẫu nhiên";
 "Shuffle" = "Shuffle";
 "3NoVersionsAvailable" = "%@ CHƯA được cài đặt, không có phiên bản nào.";
+"DownloadStreamsAlertTitle" = "Kết nối tải xuống";
+"VeryLowMemoryStreamsWarning" = "Thiết bị có bộ nhớ rất thấp mặc định dùng 4 luồng tải xuống trong Auto. Giá trị cao hơn có thể tăng áp lực bộ nhớ khi tải xuống lớn.";
+"LowMemoryStreamsWarning" = "Chế độ bộ nhớ thấp mặc định dùng 4 luồng tải xuống trong Auto. Giá trị cao hơn có thể tăng áp lực bộ nhớ khi tải xuống lớn.";
+"LowMemoryManualStreamsWarning" = "Chế độ bộ nhớ thấp mặc định dùng 4 luồng tải xuống trong Auto. Cài đặt luồng thủ công cao hơn của bạn vẫn sẽ được dùng cho tải xuống mới.";
+"Normal" = "Bình thường";
+"Low" = "Thấp";
+"Very Low" = "Rất thấp";

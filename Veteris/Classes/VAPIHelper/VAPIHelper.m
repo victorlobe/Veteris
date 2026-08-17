@@ -48,6 +48,7 @@ static NSString *const VAPI_DEV_MODE_ENABLED_KEY = @"veteris_dev_mode_enabled";
 static NSString *const VAPI_ANALYTICS_ENABLED_KEY = @"veteris_analytics_enabled";
 static NSString *const VAPI_CRASH_REPORTING_ENABLED_KEY = @"veteris_crash_reporting_enabled";
 static NSString *const VAPI_LOW_MEMORY_MODE_ENABLED_KEY = @"veteris_low_memory_mode_enabled";
+static NSString *const VAPI_LOW_MEMORY_MODE_STATUS_KEY = @"veteris_low_memory_mode_status";
 static NSString *const VAPI_ARCHIVE_DOWNLOAD_SEGMENTS_KEY = @"veteris_archive_download_segments";
 static NSString *const VAPI_SERVER_ENVIRONMENT_KEY = @"veteris_server_environment";
 static NSString *const VAPI_LANGUAGE_OVERRIDE_KEY = @"veteris_language_override";
@@ -142,14 +143,11 @@ static unsigned long long VAPIMemorySize(void) {
     if (lowMemoryMode) {
         [_staticCache removeAllObjects];
     }
+    [VAPIHelper updateLowMemoryModeStatusPreference];
 }
 
 + (BOOL)defaultLowMemoryModeEnabled {
-    NSString *machine = VAPIHardwareMachine();
-    if ([machine isEqualToString:@"iPad1,1"] ||
-        [machine isEqualToString:@"iPod3,1"] ||
-        [machine isEqualToString:@"iPod4,1"] ||
-        [machine isEqualToString:@"iPhone2,1"]) {
+    if ([VAPIHelper isVeryLowMemoryDevice]) {
         return YES;
     }
 
@@ -165,12 +163,78 @@ static unsigned long long VAPIMemorySize(void) {
     return [VAPIHelper defaultLowMemoryModeEnabled];
 }
 
++ (BOOL)isVeryLowMemoryDevice {
+    NSString *machine = VAPIHardwareMachine();
+    return ([machine isEqualToString:@"iPad1,1"] ||
+            [machine isEqualToString:@"iPod3,1"] ||
+            [machine isEqualToString:@"iPod4,1"] ||
+            [machine isEqualToString:@"iPhone2,1"]);
+}
+
++ (BOOL)isLowMemoryDevice {
+    NSString *machine = VAPIHardwareMachine();
+    return ([VAPIHelper isVeryLowMemoryDevice] ||
+            [machine hasPrefix:@"iPhone3,"] ||
+            [machine isEqualToString:@"iPhone4,1"] ||
+            [machine hasPrefix:@"iPad2,"]);
+}
+
++ (BOOL)usesLowMemoryDownloadMode {
+    return [VAPIHelper isLowMemoryModeEnabled] || [VAPIHelper isLowMemoryDevice];
+}
+
++ (NSString *)activeLowMemoryModeStatusTitle {
+    if ([VAPIHelper isVeryLowMemoryDevice]) {
+        return NSLocalizedString(@"Very Low", nil);
+    }
+    if ([VAPIHelper usesLowMemoryDownloadMode]) {
+        return NSLocalizedString(@"Low", nil);
+    }
+    return NSLocalizedString(@"Normal", nil);
+}
+
++ (void)updateLowMemoryModeStatusPreference {
+    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+    NSString *statusTitle = [VAPIHelper activeLowMemoryModeStatusTitle];
+    NSString *currentTitle = [defaults objectForKey:VAPI_LOW_MEMORY_MODE_STATUS_KEY];
+    if (![currentTitle isEqualToString:statusTitle]) {
+        [defaults setObject:statusTitle forKey:VAPI_LOW_MEMORY_MODE_STATUS_KEY];
+    }
+}
+
 + (NSUInteger)archiveDownloadParallelSegments {
     NSInteger configured = [[NSUserDefaults standardUserDefaults] integerForKey:VAPI_ARCHIVE_DOWNLOAD_SEGMENTS_KEY];
     if (configured > 0) {
         return (NSUInteger)MAX(1, MIN(12, configured));
     }
-    return [VAPIHelper isLowMemoryModeEnabled] ? 3 : 6;
+    if ([VAPIHelper usesLowMemoryDownloadMode]) {
+        return 4;
+    }
+    return 6;
+}
+
++ (NSUInteger)archiveDownloadBufferSize {
+    if ([VAPIHelper isVeryLowMemoryDevice]) {
+        return 32 * 1024;
+    }
+    if ([VAPIHelper usesLowMemoryDownloadMode]) {
+        return 64 * 1024;
+    }
+    return 128 * 1024;
+}
+
++ (int)archiveDownloadReceiveBufferSize {
+    if ([VAPIHelper isVeryLowMemoryDevice]) {
+        return 64 * 1024;
+    }
+    if ([VAPIHelper usesLowMemoryDownloadMode]) {
+        return 128 * 1024;
+    }
+    return 512 * 1024;
+}
+
++ (NSTimeInterval)downloadProgressInterval {
+    return [VAPIHelper usesLowMemoryDownloadMode] ? 1.0 : 0.25;
 }
 
 + (BOOL)shouldRetainDecodedIcons {

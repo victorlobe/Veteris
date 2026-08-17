@@ -124,3 +124,10 @@
 "RandomApps" = "随机应用";
 "Shuffle" = "Shuffle";
 "Cannot crack unswapped %@ portion of binary." = "无法破解二进制中未交换的 %@ 部分。";
+"DownloadStreamsAlertTitle" = "下载连接";
+"VeryLowMemoryStreamsWarning" = "极低内存设备在 Auto 中默认使用 4 个下载流。更高的值可能会在大型下载期间增加内存压力。";
+"LowMemoryStreamsWarning" = "低内存模式在 Auto 中默认使用 4 个下载流。更高的值可能会在大型下载期间增加内存压力。";
+"LowMemoryManualStreamsWarning" = "低内存模式在 Auto 中默认使用 4 个下载流。你较高的手动流设置仍会用于新下载。";
+"Normal" = "正常";
+"Low" = "低";
+"Very Low" = "极低";

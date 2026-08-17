@@ -36,8 +36,11 @@ typedef enum {
 @property (nonatomic) BOOL installAfterDownload;
 @property (nonatomic, assign) YZRepState state;
 @property (nonatomic) BOOL preservePartialOnCancel;
+@property (nonatomic) NSUInteger storedProgressCurrent;
+@property (nonatomic) NSUInteger storedProgressTotal;
 @property (nonatomic, weak) BBHTTPRequest *request;
 @property (nonatomic, strong) id downloadTask;
 @property (nonatomic, copy) void (^downloadProgressBlock)(NSUInteger current, NSUInteger total);
 @property (nonatomic, copy) void (^downloadSelf)(void);
+- (void)refreshStoredDownloadProgress;
 @end

@@ -37,6 +37,8 @@ static NSString *const VeterisMaintainerSettingsKey = @"credits_maintainer";
 static NSString *const VeterisDevSettingsTitleKey = @"dev_settings_title";
 static NSString *const VeterisDevSettingsMenuKey = @"dev_settings_menu";
 static NSString *const VeterisLanguageOverrideKey = @"veteris_language_override";
+static NSString *const VeterisLowMemoryModeEnabledKey = @"veteris_low_memory_mode_enabled";
+static NSString *const VeterisArchiveDownloadSegmentsKey = @"veteris_archive_download_segments";
 static NSString *const VeterisResetSettingsKey = @"reset_veteris_all";
 static NSString *const VeterisDevSecretCode = @"VictorIsKing";
 static NSInteger const VeterisDevCodeAlertTag = 8001;
@@ -262,15 +264,40 @@ static NSInteger const VeterisDevCodeAlertTag = 8001;
 }
 
 - (void)settingChanged:(NSNotification *)notification {
-    if (![[notification object] isEqualToString:VeterisLanguageOverrideKey]) {
+    if ([[notification object] isEqualToString:VeterisArchiveDownloadSegmentsKey]) {
+        NSInteger streamCount = [[[notification userInfo] objectForKey:VeterisArchiveDownloadSegmentsKey] integerValue];
+        if (streamCount > 4 && [VAPIHelper usesLowMemoryDownloadMode]) {
+            NSString *message = [VAPIHelper isVeryLowMemoryDevice] ?
+                NSLocalizedString(@"VeryLowMemoryStreamsWarning", nil) :
+                NSLocalizedString(@"LowMemoryStreamsWarning", nil);
+            [[[UIAlertView alloc] initWithTitle:NSLocalizedString(@"DownloadStreamsAlertTitle", nil)
+                                        message:message
+                                       delegate:nil
+                              cancelButtonTitle:NSLocalizedString(@"Ok", nil)
+                              otherButtonTitles:nil] show];
+        }
         return;
     }
-    [VAPIHelper applyLanguageOverride];
-    [[[UIAlertView alloc] initWithTitle:@"Language"
-                                message:@"Restart Veteris to reload all localized screens."
-                               delegate:nil
-                      cancelButtonTitle:NSLocalizedString(@"Ok", nil)
-                      otherButtonTitles:nil] show];
+    if ([[notification object] isEqualToString:VeterisLowMemoryModeEnabledKey]) {
+        BOOL enabled = [[[notification userInfo] objectForKey:VeterisLowMemoryModeEnabledKey] boolValue];
+        NSInteger streamCount = [[NSUserDefaults standardUserDefaults] integerForKey:VeterisArchiveDownloadSegmentsKey];
+        if (enabled && streamCount > 4) {
+            [[[UIAlertView alloc] initWithTitle:NSLocalizedString(@"DownloadStreamsAlertTitle", nil)
+                                        message:NSLocalizedString(@"LowMemoryManualStreamsWarning", nil)
+                                       delegate:nil
+                              cancelButtonTitle:NSLocalizedString(@"Ok", nil)
+                              otherButtonTitles:nil] show];
+        }
+        return;
+    }
+    if ([[notification object] isEqualToString:VeterisLanguageOverrideKey]) {
+        [VAPIHelper applyLanguageOverride];
+        [[[UIAlertView alloc] initWithTitle:@"Language"
+                                    message:@"Restart Veteris to reload all localized screens."
+                                   delegate:nil
+                          cancelButtonTitle:NSLocalizedString(@"Ok", nil)
+                          otherButtonTitles:nil] show];
+    }
 }
 
 - (void)motionBegan:(UIEventSubtype)motion withEvent:(UIEvent *)event

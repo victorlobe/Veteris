@@ -19,6 +19,22 @@ struct StateContext {
     NSUInteger *count;
 };
 
+static void YZRemoveDownloadPartFiles(NSString *targetPath) {
+    NSString *directory = [targetPath stringByDeletingLastPathComponent];
+    NSString *prefix = [[targetPath lastPathComponent] stringByAppendingString:@".part."];
+    NSArray *contents = [[NSFileManager defaultManager] contentsOfDirectoryAtPath:directory error:nil];
+    for (NSString *entry in contents) {
+        if (![entry hasPrefix:prefix]) {
+            continue;
+        }
+        NSString *suffix = [entry substringFromIndex:[prefix length]];
+        if ([suffix length] == 0 || [suffix rangeOfCharacterFromSet:[[NSCharacterSet decimalDigitCharacterSet] invertedSet]].location != NSNotFound) {
+            continue;
+        }
+        [[NSFileManager defaultManager] removeItemAtPath:[directory stringByAppendingPathComponent:entry] error:nil];
+    }
+}
+
 #pragma - mark Initialization
 
 - (instancetype)init {
@@ -35,7 +51,7 @@ struct StateContext {
     dispatch_once(&onceToken, ^{
         sharedInstance = [[YZQueueManager alloc] init];
         BBHTTPExecutor *executor = [BBHTTPExecutor sharedExecutor];
-        executor.maxParallelRequests = [VAPIHelper isLowMemoryModeEnabled] ? 1 : 3;
+        executor.maxParallelRequests = [VAPIHelper usesLowMemoryDownloadMode] ? 1 : 3;
     });
     return sharedInstance;
 }
@@ -64,7 +80,7 @@ struct StateContext {
 
 #pragma - mark Queue Operations
 + (void)enqueueYZApplicationForDownload:(YZApplication *)yzApp {
-    [BBHTTPExecutor sharedExecutor].maxParallelRequests = [VAPIHelper isLowMemoryModeEnabled] ? 1 : 3;
+    [BBHTTPExecutor sharedExecutor].maxParallelRequests = [VAPIHelper usesLowMemoryDownloadMode] ? 1 : 3;
     dispatch_async([YZQueueManager sharedInstance]->_queue, ^{
         NSString *downloadURL = yzApp.url;
         if (![downloadURL hasPrefix:@"http://"] && ![downloadURL hasPrefix:@"https://"]) {
@@ -75,7 +91,7 @@ struct StateContext {
 }
 
 + (void)enqueueYZApplicationForDownloadOnly:(YZApplication *)yzApp targetPath:(NSString *)targetPath {
-    [BBHTTPExecutor sharedExecutor].maxParallelRequests = [VAPIHelper isLowMemoryModeEnabled] ? 1 : 3;
+    [BBHTTPExecutor sharedExecutor].maxParallelRequests = [VAPIHelper usesLowMemoryDownloadMode] ? 1 : 3;
     dispatch_async([YZQueueManager sharedInstance]->_queue, ^{
         NSString *downloadURL = yzApp.url;
         if (![downloadURL hasPrefix:@"http://"] && ![downloadURL hasPrefix:@"https://"]) {
@@ -230,6 +246,7 @@ struct StateContext {
     }
     if (actualRep.state == YZRepStatePaused && [actualRep.path hasPrefix:[downloadPath() stringByAppendingString:@"/"]]) {
         [[NSFileManager defaultManager] removeItemAtPath:actualRep.path error:NULL];
+        YZRemoveDownloadPartFiles(actualRep.path);
     }
     // destroy the fucker
     @synchronized ([YZQueueManager sharedInstance]->_repsLock) {
@@ -256,7 +273,9 @@ struct StateContext {
         [request cancel];
     }
     if ([downloadTask isKindOfClass:[YZArchiveTLSDownloader class]]) {
-        [(YZArchiveTLSDownloader *)downloadTask cancel];
+        YZArchiveTLSDownloader *downloader = (YZArchiveTLSDownloader *)downloadTask;
+        downloader.preservePartialOnCancel = YES;
+        [downloader cancel];
     }
     actualRep.state = YZRepStatePaused;
     return YES;
@@ -295,6 +314,10 @@ struct StateContext {
 + (void)attachProgressBlock:(void (^)(NSUInteger current, NSUInteger total))block toRep:(YZQueueRep *)rep {
     YZQueueRep *actualRep = [YZQueueManager actualRepForRep:rep];
     if (actualRep != nil) {
+        [actualRep refreshStoredDownloadProgress];
+        if (block != nil && actualRep.storedProgressCurrent > 0) {
+            block(actualRep.storedProgressCurrent, actualRep.storedProgressTotal);
+        }
         actualRep.downloadProgressBlock = block;
     }
 }

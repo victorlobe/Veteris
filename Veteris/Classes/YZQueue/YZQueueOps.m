@@ -36,6 +36,12 @@ static void YZFailDownload(YZQueueRep *parent, NSString *reason) {
     }
 }
 
+static void YZClearLowMemoryCachesAfterDownload(void) {
+    if ([VAPIHelper usesLowMemoryDownloadMode]) {
+        [VAPISS clearMemoryCaches];
+    }
+}
+
 static NSString *YZSanitizedURLString(NSString *urlString) {
     if (!YZIsNonEmptyString(urlString)) {
         return nil;
@@ -452,6 +458,7 @@ static void YZTrackDownloadTelemetry(YZQueueRep *parent,
             YZDownloadLog(@"tls success %@ existing file complete status=416", filePath);
             parent.state = YZRepStateDownloaded;
             parent.path = filePath;
+            YZClearLowMemoryCachesAfterDownload();
         } else if (validIPA) {
             YZTrackDownloadTelemetry(parent,
                                      @"download_complete",
@@ -476,6 +483,7 @@ static void YZTrackDownloadTelemetry(YZQueueRep *parent,
                           result.finalURL);
             parent.state = YZRepStateDownloaded;
             parent.path = filePath;
+            YZClearLowMemoryCachesAfterDownload();
         } else {
             NSString *location = YZHeaderValue(result.headers, @"Location");
             YZDownloadLog(@"tls failure %@ status=%lu size=%llu expected=%llu error=%@ location=%@ url=%@ finalURL=%@",
@@ -622,6 +630,7 @@ static void YZTrackDownloadTelemetry(YZQueueRep *parent,
             parent.downloadProgressBlock((NSUInteger)MIN(progressBase, expectedTotal), (NSUInteger)expectedTotal);
         }
     };
+    __block NSTimeInterval progressLastReportedAt = 0;
     request.downloadProgressBlock = ^(NSUInteger current, NSUInteger total) {
         unsigned long long fullCurrent = progressBase + current;
         unsigned long long fullTotal = expectedTotal > 0 ? expectedTotal : (progressBase + total);
@@ -649,7 +658,12 @@ static void YZTrackDownloadTelemetry(YZQueueRep *parent,
             telemetryLastSampleAt = now;
             telemetryLastBytes = fullCurrent;
         }
-        if (parent.downloadProgressBlock != nil) {
+        BOOL shouldReportProgress = (now - progressLastReportedAt) >= [VAPIHelper downloadProgressInterval] ||
+                                    (fullTotal > 0 && fullCurrent >= fullTotal);
+        if (shouldReportProgress) {
+            progressLastReportedAt = now;
+        }
+        if (shouldReportProgress && parent.downloadProgressBlock != nil) {
             parent.downloadProgressBlock((NSUInteger)fullCurrent, (NSUInteger)fullTotal);
         }
     };
@@ -681,6 +695,7 @@ static void YZTrackDownloadTelemetry(YZQueueRep *parent,
             YZDownloadLog(@"success %@ existing file complete status=416", filePath);
             parent.state = YZRepStateDownloaded;
             parent.path = filePath;
+            YZClearLowMemoryCachesAfterDownload();
         } else if (validIPA) {
             YZTrackDownloadTelemetry(parent,
                                      @"download_complete",
@@ -700,6 +715,7 @@ static void YZTrackDownloadTelemetry(YZQueueRep *parent,
             YZDownloadLog(@"success %@ status=%lu url=%@", filePath, (unsigned long)httpStatus, urlString);
             parent.state = YZRepStateDownloaded;
             parent.path = filePath;
+            YZClearLowMemoryCachesAfterDownload();
         } else {
             NSString *location = YZHeaderValue(request.response.headers, @"Location");
             YZDownloadLog(@"failure %@ status=%lu error=%@ location=%@ url=%@",

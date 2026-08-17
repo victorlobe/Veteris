@@ -51,8 +51,11 @@
 "Developer Name" = "开发者名称";
 "Bundle ID" = "Bundle ID";
 "Performance" = "性能";
-"Reduces caching and parallel requests on older devices." = "在旧设备上减少缓存和并行请求。";
-"Low Memory Mode" = "Low Memory Mode";
+"Reduces caching and parallel requests. Veteris automatically uses Low or Very Low settings based on the device." = "减少缓存和并行请求。Veteris 会根据设备自动使用低或极低设置。";
+"Choose how many connections Veteris uses for downloads. Auto uses 6 normally and 4 in Low Memory Mode. Higher values can be faster but may use more memory and battery. Changes apply to new downloads, retries, and resumed downloads. Active downloads keep their current connections." = "选择 Veteris 用于下载的连接数。Auto 通常使用 6 个连接，在低内存模式下使用 4 个连接。更高的值可能更快，但可能使用更多内存和电量。更改适用于新下载、重试和恢复的下载。正在进行的下载会保留当前连接数。";
+"Low Memory Mode" = "低内存模式";
+"Download Streams" = "下载连接";
+"Auto (6 normal, 4 low memory)" = "Auto (6 正常，4 低内存)";
 "Privacy" = "隐私";
 "Share Analytics" = "分享统计";
 "Share Crash Reports" = "分享崩溃报告";
@@ -72,3 +75,7 @@
 "Related" = "相关";
 "Queue" = "队列";
 "Dev Menu" = "开发菜单";
+"Active Mode" = "当前模式";
+"Normal" = "正常";
+"Low" = "低";
+"Very Low" = "极低";

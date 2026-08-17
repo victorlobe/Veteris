@@ -114,3 +114,10 @@
 "RandomApps" = "Apps aleatórias";
 "Shuffle" = "Shuffle";
 "3NoVersionsAvailable" = "%@ NÃO foi instalado, nenhuma versão disponível.";
+"DownloadStreamsAlertTitle" = "Conexões de download";
+"VeryLowMemoryStreamsWarning" = "Dispositivos com memória muito baixa usam 4 ligações de download por predefinição em Auto. Valores mais altos podem aumentar a pressão de memória durante downloads grandes.";
+"LowMemoryStreamsWarning" = "O modo de pouca memória usa 4 ligações de download por predefinição em Auto. Valores mais altos podem aumentar a pressão de memória durante downloads grandes.";
+"LowMemoryManualStreamsWarning" = "O modo de pouca memória usa 4 ligações de download por predefinição em Auto. A tua definição manual mais alta continuará a ser usada para novos downloads.";
+"Normal" = "Normal";
+"Low" = "Baixo";
+"Very Low" = "Muito baixo";

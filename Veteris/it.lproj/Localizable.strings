@@ -124,3 +124,10 @@
 "RandomApps" = "App casuali";
 "Shuffle" = "Shuffle";
 "Cannot crack unswapped %@ portion of binary." = "Impossibile crackare la parte %@ non scambiata del binario.";
+"DownloadStreamsAlertTitle" = "Connessioni download";
+"VeryLowMemoryStreamsWarning" = "I dispositivi con memoria molto bassa usano 4 connessioni di download per impostazione predefinita in Auto. Valori più alti possono aumentare la pressione sulla memoria durante download grandi.";
+"LowMemoryStreamsWarning" = "La modalità memoria bassa usa 4 connessioni di download per impostazione predefinita in Auto. Valori più alti possono aumentare la pressione sulla memoria durante download grandi.";
+"LowMemoryManualStreamsWarning" = "La modalità memoria bassa usa 4 connessioni di download per impostazione predefinita in Auto. La tua impostazione manuale più alta verrà comunque usata per i nuovi download.";
+"Normal" = "Normale";
+"Low" = "Bassa";
+"Very Low" = "Molto bassa";

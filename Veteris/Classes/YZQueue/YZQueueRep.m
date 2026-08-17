@@ -9,6 +9,32 @@
     NSString *_resumeTargetPath;
 }
 
+static unsigned long long YZQueueFileSizeAtPath(NSString *path) {
+    if ([path length] == 0) {
+        return 0;
+    }
+    NSDictionary *attrs = [[NSFileManager defaultManager] attributesOfItemAtPath:path error:NULL];
+    return attrs != nil ? [attrs fileSize] : 0;
+}
+
+static unsigned long long YZQueueParallelPartBytesForPath(NSString *targetPath) {
+    NSString *directory = [targetPath stringByDeletingLastPathComponent];
+    NSString *prefix = [[targetPath lastPathComponent] stringByAppendingString:@".part."];
+    NSArray *contents = [[NSFileManager defaultManager] contentsOfDirectoryAtPath:directory error:nil];
+    unsigned long long bytes = 0;
+    for (NSString *entry in contents) {
+        if (![entry hasPrefix:prefix]) {
+            continue;
+        }
+        NSString *suffix = [entry substringFromIndex:[prefix length]];
+        if ([suffix length] == 0 || [suffix rangeOfCharacterFromSet:[[NSCharacterSet decimalDigitCharacterSet] invertedSet]].location != NSNotFound) {
+            continue;
+        }
+        bytes += YZQueueFileSizeAtPath([directory stringByAppendingPathComponent:entry]);
+    }
+    return bytes;
+}
+
 + (void)detachRepWithYZApp:(YZApplication *)yzApp andURL:(NSString *)url {
     [self detachRepWithYZApp:yzApp andURL:url trackDownloadStart:YES];
 }
@@ -20,6 +46,7 @@
     rep->_installAfterDownload = YES;
     rep->_resumeSourceURL = [url copy];
     rep->_resumeTargetPath = [downloadPathFor(yzApp.bundleID) copy];
+    [rep refreshStoredDownloadProgress];
     __typeof__(rep) weakSelf = rep;
     rep->_downloadSelf = ^{
         [weakSelf setState:YZRepStateDownloading];
@@ -44,6 +71,7 @@
     rep->_installAfterDownload = YES;
     rep->_resumeSourceURL = [url copy];
     rep->_resumeTargetPath = [targetPath copy];
+    [rep refreshStoredDownloadProgress];
     __typeof__(rep) weakSelf = rep;
     rep->_downloadSelf = ^{
         [weakSelf setState:YZRepStateDownloading];
@@ -64,6 +92,7 @@
     rep->_installAfterDownload = NO;
     rep->_resumeSourceURL = [url copy];
     rep->_resumeTargetPath = [targetPath copy];
+    [rep refreshStoredDownloadProgress];
     __typeof__(rep) weakSelf = rep;
     rep->_downloadSelf = ^{
         [weakSelf setState:YZRepStateDownloading];
@@ -84,6 +113,7 @@
     rep->_installAfterDownload = NO;
     rep->_resumeSourceURL = [url copy];
     rep->_resumeTargetPath = [targetPath copy];
+    [rep refreshStoredDownloadProgress];
     __typeof__(rep) weakSelf = rep;
     rep->_downloadSelf = ^{
         [weakSelf setState:YZRepStateDownloading];
@@ -110,6 +140,17 @@
         }
     }
     [YZQueueOps notifyAppState:self];
+}
+
+- (void)refreshStoredDownloadProgress {
+    NSString *targetPath = _resumeTargetPath ?: _app.path;
+    unsigned long long current = YZQueueFileSizeAtPath(targetPath) + YZQueueParallelPartBytesForPath(targetPath);
+    unsigned long long total = _app.sizeBytes;
+    if (total > 0 && current > total) {
+        current = total;
+    }
+    self.storedProgressCurrent = (NSUInteger)MIN(current, (unsigned long long)NSUIntegerMax);
+    self.storedProgressTotal = (NSUInteger)MIN(total, (unsigned long long)NSUIntegerMax);
 }
 
 - (BOOL)isEqual:(id)object {

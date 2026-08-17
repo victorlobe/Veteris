@@ -51,8 +51,11 @@
 "Developer Name" = "שם המפתח";
 "Bundle ID" = "Bundle ID";
 "Performance" = "ביצועים";
-"Reduces caching and parallel requests on older devices." = "מפחית שמירת מטמון ובקשות מקבילות במכשירים ישנים.";
-"Low Memory Mode" = "Low Memory Mode";
+"Reduces caching and parallel requests. Veteris automatically uses Low or Very Low settings based on the device." = "מפחית מטמון ובקשות מקבילות. Veteris משתמש אוטומטית בהגדרות זיכרון נמוך או נמוך מאוד לפי המכשיר.";
+"Choose how many connections Veteris uses for downloads. Auto uses 6 normally and 4 in Low Memory Mode. Higher values can be faster but may use more memory and battery. Changes apply to new downloads, retries, and resumed downloads. Active downloads keep their current connections." = "בחר כמה חיבורים Veteris ישתמש להורדות. מצב אוטומטי משתמש בדרך כלל ב 6 ובמצב זיכרון נמוך ב 4. ערכים גבוהים יותר עשויים להיות מהירים יותר, אך להשתמש ביותר זיכרון וסוללה. השינויים חלים על הורדות חדשות, ניסיונות חוזרים והורדות שממשיכות. הורדות פעילות שומרות על החיבורים הנוכחיים שלהן.";
+"Low Memory Mode" = "מצב זיכרון נמוך";
+"Download Streams" = "חיבורי הורדה";
+"Auto (6 normal, 4 low memory)" = "אוטומטי (6 רגיל, 4 זיכרון נמוך)";
 "Privacy" = "פרטיות";
 "Share Analytics" = "שתף נתוני שימוש";
 "Share Crash Reports" = "שתף דוחות קריסה";
@@ -72,3 +75,7 @@
 "Related" = "קשורות";
 "Queue" = "תור";
 "Dev Menu" = "תפריט מפתח";
+"Active Mode" = "מצב פעיל";
+"Normal" = "רגיל";
+"Low" = "נמוך";
+"Very Low" = "נמוך מאוד";

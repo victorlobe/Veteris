@@ -187,6 +187,7 @@ static NSString *VeterisURLDecodedString(NSString *value) {
     if (changed) {
         [defaults synchronize];
     }
+    [VAPIHelper updateLowMemoryModeStatusPreference];
 }
 
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {

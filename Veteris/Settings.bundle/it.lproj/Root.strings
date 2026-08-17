@@ -51,8 +51,11 @@
 "Developer Name" = "Sviluppatore";
 "Bundle ID" = "Bundle ID";
 "Performance" = "Prestazioni";
-"Reduces caching and parallel requests on older devices." = "Riduce la cache e le richieste parallele sui dispositivi meno recenti.";
-"Low Memory Mode" = "Low Memory Mode";
+"Reduces caching and parallel requests. Veteris automatically uses Low or Very Low settings based on the device." = "Riduce cache e richieste parallele. Veteris usa automaticamente impostazioni basse o molto basse in base al dispositivo.";
+"Choose how many connections Veteris uses for downloads. Auto uses 6 normally and 4 in Low Memory Mode. Higher values can be faster but may use more memory and battery. Changes apply to new downloads, retries, and resumed downloads. Active downloads keep their current connections." = "Scegli quante connessioni usa Veteris per i download. Auto usa 6 normalmente e 4 in modalità memoria bassa. Valori più alti possono essere più veloci, ma possono usare più memoria e batteria. Le modifiche si applicano ai nuovi download, ai tentativi e ai download ripresi. I download attivi mantengono le connessioni correnti.";
+"Low Memory Mode" = "Modalità memoria bassa";
+"Download Streams" = "Connessioni download";
+"Auto (6 normal, 4 low memory)" = "Auto (6 normale, 4 memoria bassa)";
 "Privacy" = "Privacy";
 "Share Analytics" = "Condividi statistiche";
 "Share Crash Reports" = "Condividi rapporti crash";
@@ -72,3 +75,7 @@
 "Related" = "Correlate";
 "Queue" = "Coda";
 "Dev Menu" = "Menu dev";
+"Active Mode" = "Modalità attiva";
+"Normal" = "Normale";
+"Low" = "Bassa";
+"Very Low" = "Molto bassa";

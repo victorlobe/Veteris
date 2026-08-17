@@ -50,8 +50,11 @@
 "Developer Name" = "Geliştirici";
 "Bundle ID" = "Paket ID";
 "Performance" = "Performans";
-"Reduces caching and parallel requests on older devices." = "Eski cihazlarda önbelleği ve paralel istekleri azaltır.";
-"Low Memory Mode" = "Low Memory Mode";
+"Reduces caching and parallel requests. Veteris automatically uses Low or Very Low settings based on the device." = "Önbelleği ve paralel istekleri azaltır. Veteris cihaza göre düşük veya çok düşük ayarları otomatik olarak kullanır.";
+"Choose how many connections Veteris uses for downloads. Auto uses 6 normally and 4 in Low Memory Mode. Higher values can be faster but may use more memory and battery. Changes apply to new downloads, retries, and resumed downloads. Active downloads keep their current connections." = "Veteris indirmeler için kaç bağlantı kullanacağını seç. Auto normalde 6, düşük bellek modunda 4 kullanır. Daha yüksek değerler daha hızlı olabilir, ancak daha fazla bellek ve pil kullanabilir. Değişiklikler yeni indirmelere, yeniden denemelere ve sürdürülen indirmelere uygulanır. Aktif indirmeler mevcut bağlantılarını korur.";
+"Low Memory Mode" = "Düşük bellek modu";
+"Download Streams" = "İndirme bağlantıları";
+"Auto (6 normal, 4 low memory)" = "Auto (6 normal, 4 düşük bellek)";
 "Privacy" = "Gizlilik";
 "Share Analytics" = "Analizleri Paylaş";
 "Share Crash Reports" = "Çökme raporlarını paylaş";
@@ -71,3 +74,7 @@
 "Deletes all Veteris preferences, search history, crash reports, and caches." = "Tüm Veteris tercihlerini, arama geçmişini, çökme raporlarını ve önbellekleri siler.";
 "This will delete Veteris preferences, search history, crash reports, and caches. Veteris will close afterwards." = "Bu işlem Veteris tercihlerini, arama geçmişini, çökme raporlarını ve önbellekleri siler. Veteris ardından kapanır.";
 "Veteris has been reset and will now close." = "Veteris sıfırlandı ve şimdi kapanacak.";
+"Active Mode" = "Aktif mod";
+"Normal" = "Normal";
+"Low" = "Düşük";
+"Very Low" = "Çok düşük";

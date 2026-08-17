@@ -51,8 +51,11 @@
 "Developer Name" = "Nhà phát triển";
 "Bundle ID" = "ID gói";
 "Performance" = "Hiệu năng";
-"Reduces caching and parallel requests on older devices." = "Giảm bộ nhớ đệm và các yêu cầu song song trên thiết bị cũ.";
-"Low Memory Mode" = "Low Memory Mode";
+"Reduces caching and parallel requests. Veteris automatically uses Low or Very Low settings based on the device." = "Giảm bộ nhớ đệm và yêu cầu song song. Veteris tự động dùng cài đặt thấp hoặc rất thấp tùy theo thiết bị.";
+"Choose how many connections Veteris uses for downloads. Auto uses 6 normally and 4 in Low Memory Mode. Higher values can be faster but may use more memory and battery. Changes apply to new downloads, retries, and resumed downloads. Active downloads keep their current connections." = "Chọn số kết nối Veteris dùng cho tải xuống. Auto thường dùng 6 và dùng 4 trong chế độ bộ nhớ thấp. Giá trị cao hơn có thể nhanh hơn nhưng có thể dùng nhiều bộ nhớ và pin hơn. Thay đổi áp dụng cho tải xuống mới, thử lại và tải xuống được tiếp tục. Tải xuống đang hoạt động giữ kết nối hiện tại.";
+"Low Memory Mode" = "Chế độ bộ nhớ thấp";
+"Download Streams" = "Kết nối tải xuống";
+"Auto (6 normal, 4 low memory)" = "Auto (6 bình thường, 4 bộ nhớ thấp)";
 "Privacy" = "Quyền riêng tư";
 "Share Analytics" = "Chia sẻ phân tích";
 "Share Crash Reports" = "Chia sẻ báo cáo lỗi";
@@ -72,3 +75,7 @@
 "Deletes all Veteris preferences, search history, crash reports, and caches." = "Xóa tất cả tùy chọn Veteris, lịch sử tìm kiếm, báo cáo sự cố và bộ nhớ đệm.";
 "This will delete Veteris preferences, search history, crash reports, and caches. Veteris will close afterwards." = "Thao tác này sẽ xóa tùy chọn Veteris, lịch sử tìm kiếm, báo cáo sự cố và bộ nhớ đệm. Veteris sẽ đóng sau đó.";
 "Veteris has been reset and will now close." = "Veteris đã được đặt lại và bây giờ sẽ đóng.";
+"Active Mode" = "Chế độ đang dùng";
+"Normal" = "Bình thường";
+"Low" = "Thấp";
+"Very Low" = "Rất thấp";

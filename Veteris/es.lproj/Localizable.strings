@@ -123,3 +123,10 @@
 "Veteris has been reset and will now close." = "Veteris se ha restablecido y ahora se cerrará.";
 "RandomApps" = "Apps aleatorias";
 "Shuffle" = "Shuffle";
+"DownloadStreamsAlertTitle" = "Conexiones de descarga";
+"VeryLowMemoryStreamsWarning" = "Los dispositivos de memoria muy baja usan 4 conexiones de descarga por defecto en Auto. Los valores más altos pueden aumentar la presión de memoria durante descargas grandes.";
+"LowMemoryStreamsWarning" = "El modo de memoria baja usa 4 conexiones de descarga por defecto en Auto. Los valores más altos pueden aumentar la presión de memoria durante descargas grandes.";
+"LowMemoryManualStreamsWarning" = "El modo de memoria baja usa 4 conexiones de descarga por defecto en Auto. Tu ajuste manual más alto seguirá usándose para nuevas descargas.";
+"Normal" = "Normal";
+"Low" = "Bajo";
+"Very Low" = "Muy bajo";

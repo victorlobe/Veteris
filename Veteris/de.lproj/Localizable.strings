@@ -114,3 +114,10 @@
 "RandomApps" = "Zufällige Apps";
 "Shuffle" = "Shuffle";
 "3NoVersionsAvailable" = "%@ wurde NICHT installiert, keine Versionen verfügbar.";
+"DownloadStreamsAlertTitle" = "Download Verbindungen";
+"VeryLowMemoryStreamsWarning" = "Geräte mit sehr wenig Speicher verwenden in Auto standardmäßig 4 Download Streams. Höhere Werte können bei großen Downloads den Speicherdruck erhöhen.";
+"LowMemoryStreamsWarning" = "Der Speichersparmodus verwendet in Auto standardmäßig 4 Download Streams. Höhere Werte können bei großen Downloads den Speicherdruck erhöhen.";
+"LowMemoryManualStreamsWarning" = "Der Speichersparmodus verwendet in Auto standardmäßig 4 Download Streams. Deine höhere manuelle Stream Einstellung wird für neue Downloads weiterhin verwendet.";
+"Normal" = "Normal";
+"Low" = "Niedrig";
+"Very Low" = "Sehr niedrig";

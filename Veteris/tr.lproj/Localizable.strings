@@ -123,3 +123,10 @@
 "Veteris has been reset and will now close." = "Veteris sıfırlandı ve şimdi kapanacak.";
 "RandomApps" = "Rastgele Uygulamalar";
 "Shuffle" = "Shuffle";
+"DownloadStreamsAlertTitle" = "İndirme bağlantıları";
+"VeryLowMemoryStreamsWarning" = "Çok düşük bellekli cihazlar Auto içinde varsayılan olarak 4 indirme akışı kullanır. Daha yüksek değerler büyük indirmelerde bellek baskısını artırabilir.";
+"LowMemoryStreamsWarning" = "Düşük bellek modu Auto içinde varsayılan olarak 4 indirme akışı kullanır. Daha yüksek değerler büyük indirmelerde bellek baskısını artırabilir.";
+"LowMemoryManualStreamsWarning" = "Düşük bellek modu Auto içinde varsayılan olarak 4 indirme akışı kullanır. Daha yüksek manuel akış ayarın yeni indirmeler için yine kullanılacak.";
+"Normal" = "Normal";
+"Low" = "Düşük";
+"Very Low" = "Çok düşük";

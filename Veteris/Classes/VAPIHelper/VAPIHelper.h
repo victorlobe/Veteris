@@ -35,7 +35,15 @@
 + (void)resetNetworkState;
 + (BOOL)isLowMemoryModeEnabled;
 + (BOOL)defaultLowMemoryModeEnabled;
++ (BOOL)isVeryLowMemoryDevice;
++ (BOOL)isLowMemoryDevice;
++ (BOOL)usesLowMemoryDownloadMode;
++ (NSString *)activeLowMemoryModeStatusTitle;
++ (void)updateLowMemoryModeStatusPreference;
 + (NSUInteger)archiveDownloadParallelSegments;
++ (NSUInteger)archiveDownloadBufferSize;
++ (int)archiveDownloadReceiveBufferSize;
++ (NSTimeInterval)downloadProgressInterval;
 + (BOOL)shouldRetainDecodedIcons;
 + (BOOL)isCrashReportingEnabled;
 - (void)get:(NSString *)endpoint path:(NSString *)path completion:(void (^)(NSData *data, NSError *error))completion;

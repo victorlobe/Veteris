@@ -131,6 +131,7 @@
 }
 
 - (void)updateFromRep:(YZQueueRep *)rep {
+    [rep refreshStoredDownloadProgress];
     appNameLabel.text = rep.name;
     appDeveloperLabel.text = VeterisAppCellSubtitle(rep.developer, rep.bundleID, VeterisAppCellSubtitleAreaQueue);
     if (rep.icon == nil) {
@@ -159,9 +160,23 @@
     }
     [self setNeedsDisplay];
     _rep = rep;
+    BOOL shouldShowStoredProgress = (rep.state == YZRepStatePaused ||
+                                     rep.state == YZRepStateQueued ||
+                                     rep.state == YZRepStateFailed ||
+                                     rep.state == YZRepStateDownloading);
+    if (shouldShowStoredProgress && rep.storedProgressCurrent > 0) {
+        [self updateDownloadProgressWithCurrent:rep.storedProgressCurrent total:rep.storedProgressTotal];
+        if (rep.state != YZRepStateDownloading) {
+            [appDownloadActivityIndicator stopAnimating];
+        }
+    }
 }
 
 - (void)updateDownloadProgressWithCurrent:(NSUInteger)current total:(NSUInteger)total {
+    if (_rep != nil) {
+        _rep.storedProgressCurrent = current;
+        _rep.storedProgressTotal = total;
+    }
     if (total == 0) {
         appProgressView.hidden = YES;
         appProgressView.progress = 0;

@@ -17,4 +17,5 @@
                  completion:(void (^)(YZArchiveTLSResult *result))completion;
 - (void)start;
 - (void)cancel;
+@property (nonatomic, assign) BOOL preservePartialOnCancel;
 @end

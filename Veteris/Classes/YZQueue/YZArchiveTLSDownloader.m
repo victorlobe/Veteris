@@ -29,11 +29,10 @@
 #endif
 
 static const NSUInteger kYZArchiveTLSMaxRedirects = 8;
-static const NSUInteger kYZArchiveTLSBufferSize = 131072;
-static const int kYZArchiveTLSReceiveBufferSize = 512 * 1024;
 static const NSTimeInterval kYZArchiveTLSDebugSampleInterval = 10.0;
 static const unsigned long long kYZArchiveTLSParallelMinimumBytes = 2ULL * 1024ULL * 1024ULL;
-static const NSTimeInterval kYZArchiveTLSParallelProgressInterval = 0.25;
+static const NSUInteger kYZArchiveTLSMergeChunkSize = 64 * 1024;
+static const NSUInteger kYZArchiveTLSLowMemoryMergeChunkSize = 32 * 1024;
 
 static const int kYZArchiveTLSCipherSuites[] = {
     MBEDTLS_TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
@@ -64,6 +63,10 @@ static unsigned long long YZTLSNowUsec(void) {
     struct timeval tv;
     gettimeofday(&tv, NULL);
     return ((unsigned long long)tv.tv_sec * 1000000ULL) + (unsigned long long)tv.tv_usec;
+}
+
+static NSUInteger YZTLSMergeChunkSize(void) {
+    return [VAPIHelper usesLowMemoryDownloadMode] ? kYZArchiveTLSLowMemoryMergeChunkSize : kYZArchiveTLSMergeChunkSize;
 }
 
 @implementation YZArchiveTLSResult
@@ -292,6 +295,7 @@ static unsigned long long YZTLSNowUsec(void) {
     unsigned long long sampleReads = 0;
     unsigned long long sampleReadUsec = 0;
     unsigned long long sampleWriteUsec = 0;
+    NSUInteger bufferSize = [VAPIHelper archiveDownloadBufferSize];
     NSTimeInterval sampleStartedAt = [NSDate timeIntervalSinceReferenceDate];
     if ([bodyPrefix length] > 0) {
         unsigned long long writeStarted = YZTLSNowUsec();
@@ -302,50 +306,53 @@ static unsigned long long YZTLSNowUsec(void) {
         [self reportProgress:base + written total:total];
     }
 
-    unsigned char buffer[kYZArchiveTLSBufferSize];
+    NSMutableData *readBuffer = [NSMutableData dataWithLength:bufferSize];
+    unsigned char *buffer = (unsigned char *)[readBuffer mutableBytes];
     while (!self.cancelled) {
-        unsigned long long readStarted = YZTLSNowUsec();
-        int ret = useTLS ? mbedtls_ssl_read(&ssl, buffer, sizeof(buffer)) : (int)recv(fd, buffer, sizeof(buffer), 0);
-        sampleReadUsec += YZTLSNowUsec() - readStarted;
-        if (ret > 0) {
-            unsigned long long writeStarted = YZTLSNowUsec();
-            [file writeData:[NSData dataWithBytes:buffer length:(NSUInteger)ret]];
-            sampleWriteUsec += YZTLSNowUsec() - writeStarted;
-            written += (unsigned long long)ret;
-            sampleBytes += (unsigned long long)ret;
-            sampleReads++;
-            [self reportProgress:base + written total:total];
-            NSTimeInterval now = [NSDate timeIntervalSinceReferenceDate];
-            NSTimeInterval sampleElapsed = now - sampleStartedAt;
-            if (sampleElapsed >= kYZArchiveTLSDebugSampleInterval) {
-                unsigned long long bps = (unsigned long long)((double)sampleBytes / MAX(0.001, sampleElapsed));
-                unsigned long long avgChunk = sampleReads > 0 ? sampleBytes / sampleReads : 0;
-                YZTLSLog(@"tls io url=%@ bytes=%llu totalWritten=%llu total=%llu bps=%llu reads=%llu avgChunk=%llu readMs=%.1f writeMs=%.1f",
-                         urlString,
-                         sampleBytes,
-                         base + written,
-                         total,
-                         bps,
-                         sampleReads,
-                         avgChunk,
-                         (double)sampleReadUsec / 1000.0,
-                         (double)sampleWriteUsec / 1000.0);
-                sampleBytes = 0;
-                sampleReads = 0;
-                sampleReadUsec = 0;
-                sampleWriteUsec = 0;
-                sampleStartedAt = now;
+        @autoreleasepool {
+            unsigned long long readStarted = YZTLSNowUsec();
+            int ret = useTLS ? mbedtls_ssl_read(&ssl, buffer, bufferSize) : (int)recv(fd, buffer, bufferSize, 0);
+            sampleReadUsec += YZTLSNowUsec() - readStarted;
+            if (ret > 0) {
+                unsigned long long writeStarted = YZTLSNowUsec();
+                [file writeData:[NSData dataWithBytes:buffer length:(NSUInteger)ret]];
+                sampleWriteUsec += YZTLSNowUsec() - writeStarted;
+                written += (unsigned long long)ret;
+                sampleBytes += (unsigned long long)ret;
+                sampleReads++;
+                [self reportProgress:base + written total:total];
+                NSTimeInterval now = [NSDate timeIntervalSinceReferenceDate];
+                NSTimeInterval sampleElapsed = now - sampleStartedAt;
+                if (sampleElapsed >= kYZArchiveTLSDebugSampleInterval) {
+                    unsigned long long bps = (unsigned long long)((double)sampleBytes / MAX(0.001, sampleElapsed));
+                    unsigned long long avgChunk = sampleReads > 0 ? sampleBytes / sampleReads : 0;
+                    YZTLSLog(@"tls io url=%@ bytes=%llu totalWritten=%llu total=%llu bps=%llu reads=%llu avgChunk=%llu readMs=%.1f writeMs=%.1f",
+                             urlString,
+                             sampleBytes,
+                             base + written,
+                             total,
+                             bps,
+                             sampleReads,
+                             avgChunk,
+                             (double)sampleReadUsec / 1000.0,
+                             (double)sampleWriteUsec / 1000.0);
+                    sampleBytes = 0;
+                    sampleReads = 0;
+                    sampleReadUsec = 0;
+                    sampleWriteUsec = 0;
+                    sampleStartedAt = now;
+                }
+                continue;
             }
-            continue;
-        }
-        if (useTLS && (ret == MBEDTLS_ERR_SSL_WANT_READ || ret == MBEDTLS_ERR_SSL_WANT_WRITE)) {
-            continue;
-        }
-        if (ret == 0 || (useTLS && ret == MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY)) {
-            break;
-        }
-        if (error != NULL) {
-            *error = [self errorWithCode:ret description:[self tlsErrorString:ret]];
+            if (useTLS && (ret == MBEDTLS_ERR_SSL_WANT_READ || ret == MBEDTLS_ERR_SSL_WANT_WRITE)) {
+                continue;
+            }
+            if (ret == 0 || (useTLS && ret == MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY)) {
+                break;
+            }
+            if (error != NULL) {
+                *error = [self errorWithCode:ret description:[self tlsErrorString:ret]];
+            }
         }
         [file closeFile];
         [self teardownTLS:useTLS ssl:&ssl config:&config entropy:&entropy ctr:&ctr bio:&bio];
@@ -360,11 +367,32 @@ static unsigned long long YZTLSNowUsec(void) {
 }
 
 - (BOOL)downloadURLInParallel:(NSString *)urlString base:(unsigned long long)base total:(unsigned long long)total error:(NSError **)error {
+    if (base > 0) {
+        [self mergeExistingParallelPartsForTotal:total error:error];
+        NSDictionary *attrs = [[NSFileManager defaultManager] attributesOfItemAtPath:self.targetPath error:NULL];
+        if (attrs != nil) {
+            base = [attrs fileSize];
+            if (base >= total) {
+                [self reportProgress:total total:total];
+                YZTLSLog(@"tls parallel recovered complete target=%@ total=%llu", self.targetPath, total);
+                return YES;
+            }
+        }
+    }
+
     unsigned long long remaining = total - base;
     NSUInteger maxSegments = [VAPIHelper archiveDownloadParallelSegments];
     NSUInteger segmentCount = (NSUInteger)MIN((unsigned long long)maxSegments, remaining);
     if (segmentCount < 2) {
-        return NO;
+        return [self fetchURLRange:urlString
+                              start:base
+                                end:total - 1
+                         targetPath:self.targetPath
+                             append:YES
+                           progress:^(unsigned long long current) {
+            [self reportProgress:base + current total:total];
+        }
+                              error:error];
     }
 
     if (base == 0) {
@@ -386,6 +414,7 @@ static unsigned long long YZTLSNowUsec(void) {
     __block BOOL failed = NO;
     __block NSError *firstError = nil;
     __block NSTimeInterval lastProgressReport = 0;
+    NSTimeInterval progressInterval = [VAPIHelper downloadProgressInterval];
 
     unsigned long long segmentSize = (remaining + segmentCount - 1) / segmentCount;
     for (NSUInteger idx = 0; idx < segmentCount; idx++) {
@@ -413,7 +442,7 @@ static unsigned long long YZTLSNowUsec(void) {
                     aggregate += segmentProgress[progressIdx];
                 }
                 NSTimeInterval now = [NSDate timeIntervalSinceReferenceDate];
-                BOOL shouldReport = (now - lastProgressReport) >= kYZArchiveTLSParallelProgressInterval || base + aggregate >= total;
+                BOOL shouldReport = (now - lastProgressReport) >= progressInterval || base + aggregate >= total;
                 if (shouldReport) {
                     lastProgressReport = now;
                 }
@@ -438,9 +467,11 @@ static unsigned long long YZTLSNowUsec(void) {
     free(segmentProgress);
 
     if (self.cancelled) {
-        for (id partPath in partPaths) {
-            if ([partPath isKindOfClass:[NSString class]]) {
-                [[NSFileManager defaultManager] removeItemAtPath:partPath error:nil];
+        if (!self.preservePartialOnCancel) {
+            for (id partPath in partPaths) {
+                if ([partPath isKindOfClass:[NSString class]]) {
+                    [[NSFileManager defaultManager] removeItemAtPath:partPath error:nil];
+                }
             }
         }
         return NO;
@@ -457,6 +488,57 @@ static unsigned long long YZTLSNowUsec(void) {
         return NO;
     }
 
+    if (![self mergeParallelPartPaths:partPaths total:total error:error]) {
+        return NO;
+    }
+    [self reportProgress:total total:total];
+    YZTLSLog(@"tls parallel complete url=%@ base=%llu total=%llu segments=%lu",
+             urlString,
+             base,
+             total,
+             (unsigned long)segmentCount);
+    return !self.cancelled;
+}
+
+- (BOOL)mergeExistingParallelPartsForTotal:(unsigned long long)total error:(NSError **)error {
+    NSArray *partPaths = [self existingParallelPartPaths];
+    if ([partPaths count] == 0) {
+        return NO;
+    }
+    return [self mergeParallelPartPaths:partPaths total:total error:error];
+}
+
+- (NSArray *)existingParallelPartPaths {
+    NSString *directory = [self.targetPath stringByDeletingLastPathComponent];
+    NSString *name = [self.targetPath lastPathComponent];
+    NSString *prefix = [name stringByAppendingString:@".part."];
+    NSArray *contents = [[NSFileManager defaultManager] contentsOfDirectoryAtPath:directory error:nil];
+    NSMutableArray *paths = [NSMutableArray array];
+    for (NSString *entry in contents) {
+        if (![entry hasPrefix:prefix]) {
+            continue;
+        }
+        NSString *suffix = [entry substringFromIndex:[prefix length]];
+        if ([suffix length] == 0 || [suffix rangeOfCharacterFromSet:[[NSCharacterSet decimalDigitCharacterSet] invertedSet]].location != NSNotFound) {
+            continue;
+        }
+        [paths addObject:[directory stringByAppendingPathComponent:entry]];
+    }
+    [paths sortUsingComparator:^NSComparisonResult(NSString *left, NSString *right) {
+        NSInteger leftIndex = [[[left lastPathComponent] substringFromIndex:[prefix length]] integerValue];
+        NSInteger rightIndex = [[[right lastPathComponent] substringFromIndex:[prefix length]] integerValue];
+        if (leftIndex < rightIndex) {
+            return NSOrderedAscending;
+        }
+        if (leftIndex > rightIndex) {
+            return NSOrderedDescending;
+        }
+        return NSOrderedSame;
+    }];
+    return paths;
+}
+
+- (BOOL)mergeParallelPartPaths:(NSArray *)partPaths total:(unsigned long long)total error:(NSError **)error {
     NSFileHandle *target = [NSFileHandle fileHandleForWritingAtPath:self.targetPath];
     if (target == nil) {
         if (error != NULL) {
@@ -464,7 +546,17 @@ static unsigned long long YZTLSNowUsec(void) {
         }
         return NO;
     }
+    unsigned long long targetSize = [[[NSFileManager defaultManager] attributesOfItemAtPath:self.targetPath error:NULL] fileSize];
+    unsigned long long partBytes = 0;
+    for (id partPath in partPaths) {
+        if ([partPath isKindOfClass:[NSString class]]) {
+            partBytes += [[[NSFileManager defaultManager] attributesOfItemAtPath:partPath error:NULL] fileSize];
+        }
+    }
+    unsigned long long duplicateBytes = (targetSize + partBytes > total) ? (targetSize + partBytes - total) : 0;
+
     [target seekToEndOfFile];
+    NSUInteger mergeChunkSize = YZTLSMergeChunkSize();
     for (id partPath in partPaths) {
         if (![partPath isKindOfClass:[NSString class]]) {
             continue;
@@ -477,23 +569,31 @@ static unsigned long long YZTLSNowUsec(void) {
             }
             return NO;
         }
+        unsigned long long partSize = [[[NSFileManager defaultManager] attributesOfItemAtPath:partPath error:NULL] fileSize];
+        unsigned long long skipBytes = MIN(duplicateBytes, partSize);
+        duplicateBytes -= skipBytes;
+        if (skipBytes > 0) {
+            [part seekToFileOffset:skipBytes];
+        }
+        BOOL reachedEnd = NO;
         while (!self.cancelled) {
-            NSData *chunk = [part readDataOfLength:65536];
-            if ([chunk length] == 0) {
-                break;
+            @autoreleasepool {
+                NSData *chunk = [part readDataOfLength:mergeChunkSize];
+                if ([chunk length] == 0) {
+                    reachedEnd = YES;
+                    break;
+                }
+                [target writeData:chunk];
             }
-            [target writeData:chunk];
         }
         [part closeFile];
+        if (!reachedEnd) {
+            [target closeFile];
+            return NO;
+        }
         [[NSFileManager defaultManager] removeItemAtPath:partPath error:nil];
     }
     [target closeFile];
-    [self reportProgress:total total:total];
-    YZTLSLog(@"tls parallel complete url=%@ base=%llu total=%llu segments=%lu",
-             urlString,
-             base,
-             total,
-             (unsigned long)segmentCount);
     return !self.cancelled;
 }
 
@@ -596,6 +696,7 @@ static unsigned long long YZTLSNowUsec(void) {
 
     unsigned long long expected = end - start + 1;
     unsigned long long written = 0;
+    NSUInteger bufferSize = [VAPIHelper archiveDownloadBufferSize];
     if (append) {
         [file seekToEndOfFile];
     }
@@ -607,25 +708,28 @@ static unsigned long long YZTLSNowUsec(void) {
         }
     }
 
-    unsigned char buffer[kYZArchiveTLSBufferSize];
+    NSMutableData *readBuffer = [NSMutableData dataWithLength:bufferSize];
+    unsigned char *buffer = (unsigned char *)[readBuffer mutableBytes];
     while (!self.cancelled) {
-        int ret = useTLS ? mbedtls_ssl_read(&ssl, buffer, sizeof(buffer)) : (int)recv(fd, buffer, sizeof(buffer), 0);
-        if (ret > 0) {
-            [file writeData:[NSData dataWithBytes:buffer length:(NSUInteger)ret]];
-            written += (unsigned long long)ret;
-            if (progress != nil) {
-                progress(written);
+        @autoreleasepool {
+            int ret = useTLS ? mbedtls_ssl_read(&ssl, buffer, bufferSize) : (int)recv(fd, buffer, bufferSize, 0);
+            if (ret > 0) {
+                [file writeData:[NSData dataWithBytes:buffer length:(NSUInteger)ret]];
+                written += (unsigned long long)ret;
+                if (progress != nil) {
+                    progress(written);
+                }
+                continue;
             }
-            continue;
-        }
-        if (useTLS && (ret == MBEDTLS_ERR_SSL_WANT_READ || ret == MBEDTLS_ERR_SSL_WANT_WRITE)) {
-            continue;
-        }
-        if (ret == 0 || (useTLS && ret == MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY)) {
-            break;
-        }
-        if (error != NULL) {
-            *error = [self errorWithCode:ret description:[self tlsErrorString:ret]];
+            if (useTLS && (ret == MBEDTLS_ERR_SSL_WANT_READ || ret == MBEDTLS_ERR_SSL_WANT_WRITE)) {
+                continue;
+            }
+            if (ret == 0 || (useTLS && ret == MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY)) {
+                break;
+            }
+            if (error != NULL) {
+                *error = [self errorWithCode:ret description:[self tlsErrorString:ret]];
+            }
         }
         [file closeFile];
         [self teardownTLS:useTLS ssl:&ssl config:&config entropy:&entropy ctr:&ctr bio:&bio];
@@ -671,7 +775,7 @@ static unsigned long long YZTLSNowUsec(void) {
             continue;
         }
         int one = 1;
-        int receiveBuffer = kYZArchiveTLSReceiveBufferSize;
+        int receiveBuffer = [VAPIHelper archiveDownloadReceiveBufferSize];
         setsockopt(fd, SOL_SOCKET, SO_NOSIGPIPE, &one, sizeof(one));
         setsockopt(fd, SOL_SOCKET, SO_RCVBUF, &receiveBuffer, sizeof(receiveBuffer));
         struct timeval tv;

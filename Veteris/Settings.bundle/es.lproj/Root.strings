@@ -50,8 +50,11 @@
 "Developer Name" = "Desarrollador";
 "Bundle ID" = "ID del paquete";
 "Performance" = "Rendimiento";
-"Reduces caching and parallel requests on older devices." = "Reduce la caché y las solicitudes paralelas en dispositivos antiguos.";
-"Low Memory Mode" = "Low Memory Mode";
+"Reduces caching and parallel requests. Veteris automatically uses Low or Very Low settings based on the device." = "Reduce la caché y las solicitudes paralelas. Veteris usa automáticamente ajustes de memoria baja o muy baja según el dispositivo.";
+"Choose how many connections Veteris uses for downloads. Auto uses 6 normally and 4 in Low Memory Mode. Higher values can be faster but may use more memory and battery. Changes apply to new downloads, retries, and resumed downloads. Active downloads keep their current connections." = "Elige cuántas conexiones usa Veteris para las descargas. Auto usa 6 normalmente y 4 en modo de memoria baja. Los valores más altos pueden ser más rápidos, pero pueden usar más memoria y batería. Los cambios se aplican a descargas nuevas, reintentos y descargas reanudadas. Las descargas activas conservan sus conexiones actuales.";
+"Low Memory Mode" = "Modo de memoria baja";
+"Download Streams" = "Conexiones de descarga";
+"Auto (6 normal, 4 low memory)" = "Auto (6 normal, 4 memoria baja)";
 "Privacy" = "Privacidad";
 "Share Analytics" = "Compartir analíticas";
 "Share Crash Reports" = "Compartir informes de fallos";
@@ -71,3 +74,7 @@
 "Deletes all Veteris preferences, search history, crash reports, and caches." = "Elimina las preferencias de Veteris, el historial de búsqueda, los informes de fallos y las cachés.";
 "This will delete Veteris preferences, search history, crash reports, and caches. Veteris will close afterwards." = "Esto eliminará las preferencias de Veteris, el historial de búsqueda, los informes de fallos y las cachés. Veteris se cerrará después.";
 "Veteris has been reset and will now close." = "Veteris se ha restablecido y ahora se cerrará.";
+"Active Mode" = "Modo activo";
+"Normal" = "Normal";
+"Low" = "Bajo";
+"Very Low" = "Muy bajo";
