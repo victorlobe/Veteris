@@ -33,10 +33,35 @@ static NSInteger const AppInfoActionsActionSheetTag = 1003;
 static NSInteger const AppInfoNoPendingVersionIndex = -1;
 static NSInteger const AppInfoVersionActionInstallIndex = 0;
 static NSInteger const AppInfoVersionActionDownloadIndex = 1;
+static NSInteger const AppInfoVersionActionInfoIndex = 2;
 static NSInteger const AppInfoActionFavoriteIndex = 0;
 static NSInteger const AppInfoActionCopyLinkIndex = 1;
+static NSInteger const AppInfoRecommendedBadgeTag = 5401;
 static NSString * const AppInfoDownloadOnlyInfoShownDefaultsKey = @"AppInfoDownloadOnlyInfoShown";
 static char AppInfoFavoriteActivityApplicationKey;
+
+@interface AppInfoRecommendedBadgeLabel : UILabel
+@end
+
+@implementation AppInfoRecommendedBadgeLabel
+
+- (CGRect)textRectForBounds:(CGRect)bounds limitedToNumberOfLines:(NSInteger)numberOfLines {
+    CGRect textRect = [super textRectForBounds:bounds limitedToNumberOfLines:numberOfLines];
+    textRect.origin.x = bounds.origin.x;
+    textRect.size.width = bounds.size.width;
+    textRect.origin.y = bounds.origin.y + floor((bounds.size.height - textRect.size.height) / 2.0);
+    return textRect;
+}
+
+- (void)drawTextInRect:(CGRect)rect {
+    [super drawTextInRect:[self textRectForBounds:rect limitedToNumberOfLines:self.numberOfLines]];
+}
+
+@end
+
+static UIView *AppInfoActionSheetPresentationView(UIView *fallbackView) {
+    return fallbackView.window ?: fallbackView;
+}
 
 static NSString *AppInfoURLEscape(NSString *value) {
     if (value == nil) {
@@ -69,6 +94,91 @@ static NSString *AppInfoStringForByteCount(unsigned long long bytes) {
         return [NSString stringWithFormat:@"%llu %@", bytes, [units objectAtIndex:unitIndex]];
     }
     return [NSString stringWithFormat:@"%.1f %@", value, [units objectAtIndex:unitIndex]];
+}
+
+static NSString *AppInfoTrimmedString(NSString *value) {
+    if (![value isKindOfClass:[NSString class]]) {
+        return @"";
+    }
+    return [value stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+}
+
+static NSString *AppInfoDisplayBundleIDForApplication(Application *application) {
+    NSString *primaryBundleID = AppInfoTrimmedString(application.primaryBundleID);
+    if ([primaryBundleID length] > 0) {
+        return primaryBundleID;
+    }
+    return AppInfoTrimmedString(application.bundleid);
+}
+
+static NSString *AppInfoDisplayBundleIDForVersion(Application *application, Version *version) {
+    NSString *versionBundleID = AppInfoTrimmedString(version.bundleID);
+    if ([versionBundleID length] > 0) {
+        return versionBundleID;
+    }
+    return AppInfoDisplayBundleIDForApplication(application);
+}
+
+static NSString *AppInfoDistinctBundleIDForVersion(Application *application, Version *version) {
+    NSString *versionBundleID = AppInfoTrimmedString(version.bundleID);
+    NSString *appBundleID = AppInfoDisplayBundleIDForApplication(application);
+    if ([versionBundleID length] > 0 && ![versionBundleID isEqualToString:appBundleID]) {
+        return versionBundleID;
+    }
+    return @"";
+}
+
+static NSString *AppInfoVersionDisplayTitle(Application *application, Version *version) {
+    NSString *versionText = AppInfoTrimmedString(version.version);
+    NSString *bundleID = AppInfoDistinctBundleIDForVersion(application, version);
+    if ([bundleID length] > 0) {
+        return [NSString stringWithFormat:@"%@ - %@", versionText, bundleID];
+    }
+    return versionText;
+}
+
+static BOOL AppInfoVersionIsRecommended(Application *application, Version *version) {
+    if (version.recommended) {
+        return YES;
+    }
+    return NO;
+}
+
+static UILabel *AppInfoRecommendedBadge(void) {
+    UIColor *accentColor = [UIColor colorWithRed:191.0 / 255.0 green:72.0 / 255.0 blue:0.0 alpha:1.0];
+    UILabel *badge = [[AppInfoRecommendedBadgeLabel alloc] initWithFrame:CGRectMake(0.0, 0.0, 78.0, 14.0)];
+    badge.tag = AppInfoRecommendedBadgeTag;
+    badge.text = @"Recommended";
+    badge.textAlignment = NSTextAlignmentCenter;
+    badge.font = [UIFont systemFontOfSize:8.5];
+    badge.textColor = accentColor;
+    badge.backgroundColor = [UIColor clearColor];
+    badge.layer.cornerRadius = 7.0;
+    badge.layer.masksToBounds = YES;
+    badge.layer.borderColor = [accentColor CGColor];
+    badge.layer.borderWidth = 1.0;
+    return badge;
+}
+
+static void AppInfoConfigureRecommendedBadge(UITableViewCell *cell, BOOL recommended) {
+    UILabel *badge = (UILabel *)[cell.contentView viewWithTag:AppInfoRecommendedBadgeTag];
+    if (!recommended) {
+        [badge removeFromSuperview];
+        return;
+    }
+    if (badge == nil) {
+        badge = AppInfoRecommendedBadge();
+        badge.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin;
+        [cell.contentView addSubview:badge];
+    }
+    CGFloat width = 78.0;
+    CGFloat height = 14.0;
+    CGFloat x = MAX(0.0, cell.contentView.bounds.size.width - width - 12.0);
+    CGFloat labelCenterY = CGRectGetMidY(cell.detailTextLabel.frame);
+    if (labelCenterY <= 0.0) {
+        labelCenterY = 38.0;
+    }
+    badge.frame = CGRectMake(x, floor(labelCenterY - height / 2.0), width, height);
 }
 
 static UIImage *AppInfoFavoriteActivityImage(void) {
@@ -192,7 +302,15 @@ static NSArray *AppInfoExcludedSystemActivityTypes(void) {
 
 @interface AppInfoDetailRowView : UIView
 @property (nonatomic, assign) BOOL showsSeparator;
+@property (nonatomic, copy) NSString *copyableValue;
+@property (nonatomic, copy) NSString *openURLString;
 - (void)setCaption:(NSString *)caption value:(NSString *)value;
+- (CGFloat)heightForWidth:(CGFloat)width;
+@end
+
+@interface AppInfoCustomInfoBlockView : UIView
+- (void)applyTitleFont:(UIFont *)font textColor:(UIColor *)textColor;
+- (void)setTitle:(NSString *)title body:(NSString *)body fields:(NSArray *)fields;
 - (CGFloat)heightForWidth:(CGFloat)width;
 @end
 
@@ -337,9 +455,14 @@ static NSArray *AppInfoExcludedSystemActivityTypes(void) {
     UILabel *valueLabel;
     UIView *separatorLineView;
     UIView *separatorHighlightView;
+    UILongPressGestureRecognizer *copyGestureRecognizer;
+    UITapGestureRecognizer *openGestureRecognizer;
+    UIColor *normalValueTextColor;
 }
 
 @synthesize showsSeparator;
+@synthesize copyableValue;
+@synthesize openURLString;
 
 - (id)initWithFrame:(CGRect)frame {
     self = [super initWithFrame:frame];
@@ -360,7 +483,8 @@ static NSArray *AppInfoExcludedSystemActivityTypes(void) {
         valueLabel = [[UILabel alloc] initWithFrame:CGRectZero];
         valueLabel.backgroundColor = [UIColor clearColor];
         valueLabel.font = [UIFont fontWithName:@"HelveticaNeue" size:13.0];
-        valueLabel.textColor = [UIColor colorWithWhite:0.2 alpha:1.0];
+        normalValueTextColor = [UIColor colorWithWhite:0.2 alpha:1.0];
+        valueLabel.textColor = normalValueTextColor;
         valueLabel.shadowColor = [UIColor whiteColor];
         valueLabel.shadowOffset = CGSizeMake(0.0, 1.0);
         valueLabel.numberOfLines = 0;
@@ -374,8 +498,21 @@ static NSArray *AppInfoExcludedSystemActivityTypes(void) {
         separatorHighlightView = [[UIView alloc] initWithFrame:CGRectZero];
         separatorHighlightView.backgroundColor = [UIColor colorWithWhite:1.0 alpha:0.75];
         [self addSubview:separatorHighlightView];
+
+        copyGestureRecognizer = [[UILongPressGestureRecognizer alloc] initWithTarget:self action:@selector(copyGestureRecognized:)];
+        [self addGestureRecognizer:copyGestureRecognizer];
+        openGestureRecognizer = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(openGestureRecognized:)];
+        [self addGestureRecognizer:openGestureRecognizer];
+        [[NSNotificationCenter defaultCenter] addObserver:self
+                                                 selector:@selector(copyMenuDidHide:)
+                                                     name:UIMenuControllerDidHideMenuNotification
+                                                   object:nil];
     }
     return self;
+}
+
+- (void)dealloc {
+    [[NSNotificationCenter defaultCenter] removeObserver:self];
 }
 
 - (void)setCaption:(NSString *)caption value:(NSString *)value {
@@ -387,6 +524,82 @@ static NSArray *AppInfoExcludedSystemActivityTypes(void) {
     showsSeparator = shows;
     separatorLineView.hidden = !shows;
     separatorHighlightView.hidden = !shows;
+}
+
+- (void)setCopyableValue:(NSString *)value {
+    if (copyableValue != value) {
+        copyableValue = [value copy];
+    }
+    [self updateUserInteractionEnabled];
+}
+
+- (void)setOpenURLString:(NSString *)value {
+    if (openURLString != value) {
+        openURLString = [value copy];
+    }
+    valueLabel.textColor = ([openURLString length] > 0)
+        ? [UIColor colorWithRed:0.0 green:122.0 / 255.0 blue:1.0 alpha:1.0]
+        : normalValueTextColor;
+    [self updateUserInteractionEnabled];
+}
+
+- (void)updateUserInteractionEnabled {
+    self.userInteractionEnabled = ([copyableValue length] > 0 || [openURLString length] > 0);
+}
+
+- (BOOL)canBecomeFirstResponder {
+    return ([copyableValue length] > 0);
+}
+
+- (BOOL)canPerformAction:(SEL)action withSender:(id)sender {
+    if (action == @selector(copy:)) {
+        return ([copyableValue length] > 0);
+    }
+    return NO;
+}
+
+- (void)copy:(id)sender {
+    if ([copyableValue length] == 0) {
+        return;
+    }
+    [UIPasteboard generalPasteboard].string = copyableValue;
+}
+
+- (void)setCopyHighlighted:(BOOL)highlighted {
+    UIColor *highlightColor = nil;
+    if ([self respondsToSelector:@selector(tintColor)]) {
+        highlightColor = self.tintColor;
+    }
+    if (highlightColor == nil) {
+        highlightColor = [UIColor colorWithRed:0.0 green:122.0 / 255.0 blue:1.0 alpha:1.0];
+    }
+    valueLabel.textColor = highlighted ? highlightColor : normalValueTextColor;
+}
+
+- (void)copyMenuDidHide:(NSNotification *)notification {
+    [self setCopyHighlighted:NO];
+}
+
+- (void)copyGestureRecognized:(UILongPressGestureRecognizer *)gestureRecognizer {
+    if (gestureRecognizer.state != UIGestureRecognizerStateBegan || [copyableValue length] == 0) {
+        return;
+    }
+    [self becomeFirstResponder];
+    [self setCopyHighlighted:YES];
+    UIMenuController *menuController = [UIMenuController sharedMenuController];
+    [menuController setTargetRect:self.bounds inView:self];
+    [menuController setMenuVisible:YES animated:YES];
+}
+
+- (void)openGestureRecognized:(UITapGestureRecognizer *)gestureRecognizer {
+    if (gestureRecognizer.state != UIGestureRecognizerStateEnded || [openURLString length] == 0) {
+        return;
+    }
+    NSURL *url = [NSURL URLWithString:openURLString];
+    if (url == nil || [url scheme] == nil) {
+        return;
+    }
+    [[UIApplication sharedApplication] openURL:url];
 }
 
 - (CGFloat)valueHeightForWidth:(CGFloat)width {
@@ -410,6 +623,119 @@ static NSArray *AppInfoExcludedSystemActivityTypes(void) {
     valueLabel.frame = CGRectMake(0.0, 26.0, width, [self valueHeightForWidth:width]);
     separatorLineView.frame = CGRectMake(0.0, self.bounds.size.height - 2.0, width, 1.0);
     separatorHighlightView.frame = CGRectMake(0.0, self.bounds.size.height - 1.0, width, 1.0);
+}
+
+@end
+
+@implementation AppInfoCustomInfoBlockView {
+    UILabel *titleLabel;
+    UILabel *bodyLabel;
+    NSMutableArray *fieldRowViews;
+}
+
+- (id)initWithFrame:(CGRect)frame {
+    self = [super initWithFrame:frame];
+    if (self) {
+        self.backgroundColor = [UIColor clearColor];
+        self.opaque = NO;
+        self.userInteractionEnabled = NO;
+        fieldRowViews = [[NSMutableArray alloc] init];
+
+        titleLabel = [[UILabel alloc] initWithFrame:CGRectZero];
+        titleLabel.backgroundColor = [UIColor clearColor];
+        titleLabel.font = [UIFont fontWithName:@"HelveticaNeue-Bold" size:16.0];
+        titleLabel.textColor = [UIColor colorWithWhite:0.28 alpha:1.0];
+        titleLabel.shadowColor = [UIColor whiteColor];
+        titleLabel.shadowOffset = CGSizeMake(0.0, 1.0);
+        titleLabel.numberOfLines = 0;
+        titleLabel.lineBreakMode = NSLineBreakByWordWrapping;
+        [self addSubview:titleLabel];
+
+        bodyLabel = [[UILabel alloc] initWithFrame:CGRectZero];
+        bodyLabel.backgroundColor = [UIColor clearColor];
+        bodyLabel.font = [UIFont fontWithName:@"HelveticaNeue" size:15.0];
+        bodyLabel.textColor = [UIColor darkTextColor];
+        bodyLabel.shadowColor = [UIColor whiteColor];
+        bodyLabel.shadowOffset = CGSizeMake(0.0, 1.0);
+        bodyLabel.numberOfLines = 0;
+        bodyLabel.lineBreakMode = NSLineBreakByWordWrapping;
+        [self addSubview:bodyLabel];
+    }
+    return self;
+}
+
+- (void)applyTitleFont:(UIFont *)font textColor:(UIColor *)textColor {
+    titleLabel.font = font ?: [UIFont fontWithName:@"HelveticaNeue-Bold" size:16.0];
+    titleLabel.textColor = textColor ?: [UIColor colorWithWhite:0.28 alpha:1.0];
+}
+
+- (void)setTitle:(NSString *)title body:(NSString *)body fields:(NSArray *)fields {
+    titleLabel.text = title;
+    bodyLabel.text = body;
+    for (UIView *view in fieldRowViews) {
+        [view removeFromSuperview];
+    }
+    [fieldRowViews removeAllObjects];
+    for (ApplicationInfoField *field in fields) {
+        NSString *label = AppInfoTrimmedString(field.label);
+        NSString *value = AppInfoTrimmedString(field.value);
+        if ([label length] == 0 && [value length] == 0) {
+            continue;
+        }
+        AppInfoDetailRowView *row = [[AppInfoDetailRowView alloc] initWithFrame:CGRectZero];
+        [row setCaption:label value:value];
+        [self addSubview:row];
+        [fieldRowViews addObject:row];
+    }
+    [(AppInfoDetailRowView *)[fieldRowViews lastObject] setShowsSeparator:NO];
+}
+
+- (CGFloat)labelHeight:(UILabel *)label width:(CGFloat)width {
+    if ([label.text length] == 0) {
+        return 0.0;
+    }
+    CGSize size = [label.text sizeWithFont:label.font
+                         constrainedToSize:CGSizeMake(width, 100000.0)
+                             lineBreakMode:label.lineBreakMode];
+    return ceil(size.height);
+}
+
+- (CGFloat)heightForWidth:(CGFloat)width {
+    CGFloat titleHeight = [self labelHeight:titleLabel width:width];
+    CGFloat bodyHeight = [self labelHeight:bodyLabel width:width];
+    CGFloat gap = (titleHeight > 0.0 && bodyHeight > 0.0) ? 6.0 : 0.0;
+    CGFloat height = titleHeight + gap + bodyHeight;
+    if ([fieldRowViews count] > 0) {
+        if (height > 0.0) {
+            height += 10.0;
+        }
+        for (AppInfoDetailRowView *row in fieldRowViews) {
+            height += [row heightForWidth:width];
+        }
+    }
+    return height;
+}
+
+- (void)layoutSubviews {
+    [super layoutSubviews];
+    CGFloat width = self.bounds.size.width;
+    CGFloat titleHeight = [self labelHeight:titleLabel width:width];
+    titleLabel.frame = CGRectMake(0.0, 0.0, width, titleHeight);
+    CGFloat y = titleHeight;
+    if (titleHeight > 0.0 && [bodyLabel.text length] > 0) {
+        y += 6.0;
+    }
+    CGFloat bodyHeight = [self labelHeight:bodyLabel width:width];
+    bodyLabel.frame = CGRectMake(0.0, y, width, bodyHeight);
+    y += bodyHeight;
+    if ([fieldRowViews count] > 0 && y > 0.0) {
+        y += 10.0;
+    }
+    for (AppInfoDetailRowView *row in fieldRowViews) {
+        CGFloat rowHeight = [row heightForWidth:width];
+        row.frame = CGRectMake(0.0, y, width, rowHeight);
+        y += rowHeight;
+    }
 }
 
 @end
@@ -522,6 +848,7 @@ static NSArray *AppInfoExcludedSystemActivityTypes(void) {
     UILabel *appVersionsLabel;
     NSMutableArray *detailBadgeViews;
     NSMutableArray *detailRowViews;
+    NSMutableArray *customInfoBlockViews;
     UILabel *infoHeaderLabel;
     NSMutableArray *relatedApps;
     NSMutableSet *relatedLoadingIconURLs;
@@ -531,6 +858,8 @@ static NSArray *AppInfoExcludedSystemActivityTypes(void) {
     NSUInteger relatedIconLoadGeneration;
     AppInfoSection selectedSection;
     NSInteger pendingVersionActionIndex;
+    BOOL versionInfoMode;
+    Version *selectedVersion;
 }
 @synthesize getButton;
 @synthesize appNameLabel;
@@ -548,11 +877,12 @@ static NSArray *AppInfoExcludedSystemActivityTypes(void) {
     relatedLoadingIconURLs = [[NSMutableSet alloc] init];
     detailBadgeViews = [[NSMutableArray alloc] init];
     detailRowViews = [[NSMutableArray alloc] init];
+    customInfoBlockViews = [[NSMutableArray alloc] init];
     self.view.backgroundColor = [UIColor colorWithRed:245.0 / 255.0 green:245.0 / 255.0 blue:245.0 / 255.0 alpha:1.0];
     appUIImage.layer.masksToBounds = YES;
     appUIImage.layer.cornerRadius = 13.0;
     activityIndicator.hidden = YES;
-    self.navigationItem.title = NSLocalizedString(@"Info", nil);
+    self.navigationItem.title = NSLocalizedString(versionInfoMode ? @"VersionSingular" : @"Info", nil);
     self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemAction target:self action:@selector(actionsButtonPressed:)];
     self.descriptionLabel.text = NSLocalizedString(@"Description", nil);
     self.scrollView.backgroundColor = [UIColor colorWithRed:235.0 / 255.0 green:235.0 / 255.0 blue:235.0 / 255.0 alpha:1.0];
@@ -564,6 +894,9 @@ static NSArray *AppInfoExcludedSystemActivityTypes(void) {
     [self setupRelatedTableView];
     [self layoutSectionViews];
     [self selectSection:AppInfoSectionDetails];
+    if (versionInfoMode) {
+        [self configureVersionInfoMode];
+    }
     if (app == nil) {
         [self populateLoadingContent];
         [self layoutDetailsContent];
@@ -623,7 +956,7 @@ static NSArray *AppInfoExcludedSystemActivityTypes(void) {
     sectionBarBackgroundView = [[AppInfoSectionBarBackground alloc] initWithFrame:CGRectZero];
     sectionBarBackgroundView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
 
-    detailsTabButton = [self tabButtonWithTitle:NSLocalizedString(@"Details", nil) tag:AppInfoSectionDetails];
+    detailsTabButton = [self tabButtonWithTitle:(versionInfoMode ? NSLocalizedString(@"Info", nil) : NSLocalizedString(@"Details", nil)) tag:AppInfoSectionDetails];
     versionsTabButton = [self tabButtonWithTitle:NSLocalizedString(@"Versions", nil) tag:AppInfoSectionVersions];
     relatedTabButton = [self tabButtonWithTitle:NSLocalizedString(@"Related", nil) tag:AppInfoSectionRelated];
 
@@ -640,6 +973,16 @@ static NSArray *AppInfoExcludedSystemActivityTypes(void) {
 
 - (void)updateSectionTabAvailability {
     BOOL loaded = [self canShowLoadedSection];
+    if (versionInfoMode) {
+        detailsTabButton.enabled = YES;
+        versionsTabButton.enabled = NO;
+        relatedTabButton.enabled = NO;
+        versionsTabButton.hidden = YES;
+        relatedTabButton.hidden = YES;
+        return;
+    }
+    versionsTabButton.hidden = NO;
+    relatedTabButton.hidden = NO;
     versionsTabButton.enabled = loaded;
     relatedTabButton.enabled = loaded;
     versionsTabButton.alpha = loaded ? 1.0 : 0.55;
@@ -717,11 +1060,28 @@ static NSArray *AppInfoExcludedSystemActivityTypes(void) {
     CGFloat tabHeightValue = 24.0;
     CGFloat tabGap = 6.0;
     CGFloat sideMargin = 7.0;
+    CGFloat availableWidth = width - (sideMargin * 2.0);
     CGFloat detailsWidth = [self tabButtonWidthForButton:detailsTabButton];
     CGFloat versionsWidth = [self tabButtonWidthForButton:versionsTabButton];
     CGFloat relatedWidth = [self tabButtonWidthForButton:relatedTabButton];
+    if (versionInfoMode) {
+        CGFloat singleWidth = MIN(MAX(detailsWidth, 72.0), availableWidth);
+        detailsTabButton.frame = CGRectMake(floor((width - singleWidth) / 2.0), tabY, singleWidth, tabHeightValue);
+        versionsTabButton.frame = CGRectZero;
+        relatedTabButton.frame = CGRectZero;
+        sectionBarBackgroundView.cutoutFrame = CGRectMake(CGRectGetMidX(detailsTabButton.frame) - 8.0, tabHeight - indicatorHeight, 16.0, indicatorHeight + 1.0);
+
+        self.scrollView.frame = CGRectMake(0.0, contentFrameTop, width, contentHeight);
+        versionsTableView.frame = self.scrollView.frame;
+        relatedTableView.frame = self.scrollView.frame;
+        [self updateTableHeaderForTableView:versionsTableView height:contentTopInset width:width];
+        [self updateTableHeaderForTableView:relatedTableView height:contentTopInset width:width];
+        relatedStatusLabel.frame = CGRectMake(20.0, contentFrameTop + contentTopInset + 60.0, width - 40.0, 60.0);
+        contentTransitionView.frame = CGRectMake(0.0, contentFrameTop, width, contentTopInset + 10.0);
+        [self.view bringSubviewToFront:sectionBar];
+        return;
+    }
     CGFloat totalTabWidth = detailsWidth + versionsWidth + relatedWidth + (tabGap * 2.0);
-    CGFloat availableWidth = width - (sideMargin * 2.0);
 
     if (totalTabWidth > availableWidth) {
         CGFloat naturalWidth = detailsWidth + versionsWidth + relatedWidth;
@@ -785,6 +1145,9 @@ static NSArray *AppInfoExcludedSystemActivityTypes(void) {
 }
 
 - (void)selectSection:(AppInfoSection)section {
+    if (versionInfoMode) {
+        section = AppInfoSectionDetails;
+    }
     if (section != AppInfoSectionDetails && ![self canShowLoadedSection]) {
         section = AppInfoSectionDetails;
     }
@@ -801,6 +1164,35 @@ static NSArray *AppInfoExcludedSystemActivityTypes(void) {
         [self loadRelatedAppsIfNeeded];
     }
     [self layoutSectionViews];
+}
+
+- (void)configureVersionInfoMode {
+    versionInfoMode = YES;
+    initialized = (app != nil && selectedVersion != nil);
+    selectedSection = AppInfoSectionDetails;
+    self.navigationItem.title = NSLocalizedString(@"Info", nil);
+    self.navigationItem.rightBarButtonItem = nil;
+    if (app != nil && selectedVersion != nil) {
+        self.appDeveloperNameLabel.text = app.developer;
+        self.appNameLabel.text = app.name;
+        if (self.appUIImage.image == nil) {
+            self.appUIImage.image = app.icon;
+        }
+        appVersionsLabel.text = [NSString stringWithFormat:NSLocalizedString(@"VersionFormat", nil), selectedVersion.version];
+        appVersionsLabel.hidden = NO;
+        [activityIndicator stopAnimating];
+        activityIndicator.hidden = YES;
+    }
+    [detailsTabButton setTitle:NSLocalizedString(@"Info", nil) forState:UIControlStateNormal];
+    versionsTabButton.hidden = YES;
+    relatedTabButton.hidden = YES;
+    versionsTableView.hidden = YES;
+    relatedTableView.hidden = YES;
+    relatedStatusLabel.hidden = YES;
+    [self updateSectionTabAvailability];
+    [self selectSection:AppInfoSectionDetails];
+    [self populateVersionInfoContent];
+    [self layoutDetailsContent];
 }
 
 - (void)didReceiveInstallationStartedNotification:(NSNotification *)notification {
@@ -889,7 +1281,62 @@ static NSArray *AppInfoExcludedSystemActivityTypes(void) {
     [detailRowViews addObject:row];
 }
 
-- (void)populateLoadingContent {
+- (void)addCopyableDetailRowWithCaption:(NSString *)caption value:(NSString *)value {
+    if ([value length] == 0) {
+        return;
+    }
+    AppInfoDetailRowView *row = [[AppInfoDetailRowView alloc] initWithFrame:CGRectZero];
+    [row setCaption:caption value:value];
+    row.copyableValue = value;
+    [self.scrollView addSubview:row];
+    [detailRowViews addObject:row];
+}
+
+- (void)addWebsiteDetailRowWithCaption:(NSString *)caption value:(NSString *)value {
+    if ([value length] == 0) {
+        return;
+    }
+    AppInfoDetailRowView *row = [[AppInfoDetailRowView alloc] initWithFrame:CGRectZero];
+    [row setCaption:caption value:value];
+    row.copyableValue = value;
+    row.openURLString = value;
+    [self.scrollView addSubview:row];
+    [detailRowViews addObject:row];
+}
+
+- (UITableViewCell *)newVersionCellWithReuseIdentifier:(NSString *)reuseIdentifier {
+    UITableViewCell *cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleSubtitle reuseIdentifier:reuseIdentifier];
+    cell.backgroundColor = [UIColor colorWithWhite:0.96 alpha:1.0];
+    cell.textLabel.font = [UIFont boldSystemFontOfSize:16.0];
+    cell.textLabel.textColor = [UIColor colorWithWhite:0.18 alpha:1.0];
+    cell.textLabel.shadowColor = [UIColor whiteColor];
+    cell.textLabel.shadowOffset = CGSizeMake(0.0, 1.0);
+    cell.detailTextLabel.font = [UIFont systemFontOfSize:12.0];
+    cell.detailTextLabel.textColor = [UIColor colorWithWhite:0.42 alpha:1.0];
+    cell.detailTextLabel.numberOfLines = 2;
+    cell.selectionStyle = UITableViewCellSelectionStyleBlue;
+    return cell;
+}
+
+- (void)configureVersionCell:(UITableViewCell *)cell version:(Version *)version {
+    cell.accessoryView = nil;
+    cell.textLabel.text = [NSString stringWithFormat:NSLocalizedString(@"VersionFormat", nil), version.version];
+    NSString *requiresText = [NSString stringWithFormat:NSLocalizedString(@"RequiresIOSFormat", nil), version.minVersion];
+    NSString *sizeText = AppInfoStringForByteCount(version.sizeBytes);
+    NSMutableArray *subtitleParts = [NSMutableArray arrayWithObject:requiresText];
+    if ([sizeText length] > 0) {
+        [subtitleParts addObject:sizeText];
+    }
+    NSString *versionBundleID = AppInfoDistinctBundleIDForVersion(app, version);
+    if ([versionBundleID length] > 0) {
+        [subtitleParts addObject:versionBundleID];
+    }
+    cell.detailTextLabel.text = [subtitleParts componentsJoinedByString:@" - "];
+    [cell layoutIfNeeded];
+    AppInfoConfigureRecommendedBadge(cell, AppInfoVersionIsRecommended(app, version));
+}
+
+- (void)clearDetailGeneratedViews {
     for (UIView *view in detailBadgeViews) {
         [view removeFromSuperview];
     }
@@ -898,7 +1345,31 @@ static NSArray *AppInfoExcludedSystemActivityTypes(void) {
         [view removeFromSuperview];
     }
     [detailRowViews removeAllObjects];
+    for (UIView *view in customInfoBlockViews) {
+        [view removeFromSuperview];
+    }
+    [customInfoBlockViews removeAllObjects];
     [infoHeaderLabel removeFromSuperview];
+    infoHeaderLabel = nil;
+}
+
+- (void)addCustomInfoBlocks:(NSArray *)blocks {
+    for (ApplicationInfoBlock *block in blocks) {
+        NSString *title = AppInfoTrimmedString(block.title);
+        NSString *body = AppInfoTrimmedString(block.body);
+        if ([title length] == 0 && [body length] == 0 && [block.fields count] == 0) {
+            continue;
+        }
+        AppInfoCustomInfoBlockView *blockView = [[AppInfoCustomInfoBlockView alloc] initWithFrame:CGRectZero];
+        [blockView applyTitleFont:self.descriptionLabel.font textColor:self.descriptionLabel.textColor];
+        [blockView setTitle:title body:body fields:block.fields];
+        [self.scrollView addSubview:blockView];
+        [customInfoBlockViews addObject:blockView];
+    }
+}
+
+- (void)populateLoadingContent {
+    [self clearDetailGeneratedViews];
 
     self.appDescriptionLabel.text = NSLocalizedString(@"Loading", nil);
     self.appDescriptionLabel.font = [UIFont fontWithName:@"HelveticaNeue-Italic" size:13.0];
@@ -924,15 +1395,7 @@ static NSArray *AppInfoExcludedSystemActivityTypes(void) {
 }
 
 - (void)populateDetailsContent {
-    for (UIView *view in detailBadgeViews) {
-        [view removeFromSuperview];
-    }
-    [detailBadgeViews removeAllObjects];
-    for (UIView *view in detailRowViews) {
-        [view removeFromSuperview];
-    }
-    [detailRowViews removeAllObjects];
-    [infoHeaderLabel removeFromSuperview];
+    [self clearDetailGeneratedViews];
 
     if (app == nil) {
         return;
@@ -949,6 +1412,7 @@ static NSArray *AppInfoExcludedSystemActivityTypes(void) {
         self.appDescriptionLabel.font = [UIFont fontWithName:@"HelveticaNeue" size:15.0];
         self.appDescriptionLabel.textColor = [UIColor darkTextColor];
     }
+    [self addCustomInfoBlocks:app.customInfoBlocks];
 
     [self addDetailBadgeWithCaption:NSLocalizedString(@"DetailsBadgeCategory", nil)
                               value:[self localizedCategoryDisplayName:app.category]];
@@ -971,11 +1435,104 @@ static NSArray *AppInfoExcludedSystemActivityTypes(void) {
     if ([app.newsstand length] > 0) {
         [self addDetailRowWithCaption:NSLocalizedString(@"DetailsNewsstand", nil) value:NSLocalizedString(@"DetailsYes", nil)];
     }
-    [self addDetailRowWithCaption:NSLocalizedString(@"DetailsBundleID", nil) value:app.bundleid];
+    [self addCopyableDetailRowWithCaption:NSLocalizedString(@"DetailsBundleID", nil) value:AppInfoDisplayBundleIDForApplication(app)];
     [self addDetailRowWithCaption:NSLocalizedString(@"DetailsExecutable", nil) value:app.executable];
     [self addDetailRowWithCaption:NSLocalizedString(@"DetailsArchitectures", nil) value:app.archFlags];
     [self addDetailRowWithCaption:NSLocalizedString(@"DetailsRequiredCapabilities", nil) value:app.requiredCapabilities];
     [self addDetailRowWithCaption:NSLocalizedString(@"DetailsBackgroundModes", nil) value:app.backgroundModes];
+    [self addWebsiteDetailRowWithCaption:NSLocalizedString(@"DetailsWebsite", nil) value:AppInfoTrimmedString(app.websiteURL)];
+    [(AppInfoDetailRowView *)[detailRowViews lastObject] setShowsSeparator:NO];
+
+    if ([detailRowViews count] > 0) {
+        if (infoHeaderLabel == nil) {
+            infoHeaderLabel = [[UILabel alloc] initWithFrame:CGRectZero];
+        }
+        infoHeaderLabel.backgroundColor = [UIColor clearColor];
+        infoHeaderLabel.font = self.descriptionLabel.font;
+        infoHeaderLabel.textColor = self.descriptionLabel.textColor;
+        infoHeaderLabel.text = NSLocalizedString(@"Information", nil);
+        [self.scrollView addSubview:infoHeaderLabel];
+    }
+}
+
+- (NSString *)displayMetadataSource:(NSString *)metadataSource {
+    if ([metadataSource isEqualToString:@"info_plist"]) {
+        return @"Info.plist";
+    }
+    if ([metadataSource isEqualToString:@"itunes_metadata"]) {
+        return @"iTunesMetadata.plist";
+    }
+    if ([metadataSource isEqualToString:@"filename_fallback"]) {
+        return NSLocalizedString(@"VersionInfoMetadataFilename", nil);
+    }
+    return metadataSource;
+}
+
+- (BOOL)versionHasITunesMetadata:(Version *)version {
+    return ([version.releaseDate length] > 0
+        || [version.contentRating length] > 0
+        || [version.price length] > 0
+        || [version.subgenres length] > 0
+        || [version.copyrightText length] > 0
+        || [version.gameCenter length] > 0
+        || [version.newsstand length] > 0);
+}
+
+- (void)populateVersionInfoContent {
+    [self clearDetailGeneratedViews];
+
+    if (app == nil || selectedVersion == nil) {
+        return;
+    }
+
+    self.descriptionLabel.text = NSLocalizedString(@"VersionSingular", nil);
+    self.appDescriptionLabel.text = [NSString stringWithFormat:NSLocalizedString(@"VersionFormat", nil), selectedVersion.version];
+    self.appDescriptionLabel.font = [UIFont fontWithName:@"HelveticaNeue" size:15.0];
+    self.appDescriptionLabel.textColor = [UIColor darkTextColor];
+
+    [self addDetailBadgeWithCaption:NSLocalizedString(@"DetailsReleased", nil)
+                              value:[self displayReleaseDate:selectedVersion.releaseDate]];
+    if ([selectedVersion.minVersion length] > 0) {
+        [self addDetailBadgeWithCaption:NSLocalizedString(@"DetailsBadgeRequires", nil)
+                                  value:[NSString stringWithFormat:NSLocalizedString(@"MinIOSBadgeFormat", nil), selectedVersion.minVersion]];
+    }
+    [self addDetailBadgeWithCaption:NSLocalizedString(@"VersionInfoSize", nil)
+                              value:AppInfoStringForByteCount(selectedVersion.sizeBytes)];
+
+    [self addDetailRowWithCaption:NSLocalizedString(@"VersionSingular", nil) value:selectedVersion.version];
+    if ([selectedVersion.buildVersion length] > 0 && ![selectedVersion.buildVersion isEqualToString:selectedVersion.version]) {
+        [self addDetailRowWithCaption:NSLocalizedString(@"VersionInfoBuild", nil) value:selectedVersion.buildVersion];
+    }
+    [self addDetailRowWithCaption:NSLocalizedString(@"VersionInfoITunesMetadata", nil)
+                            value:([self versionHasITunesMetadata:selectedVersion] ? NSLocalizedString(@"DetailsYes", nil) : NSLocalizedString(@"VersionInfoNotAvailable", nil))];
+    [self addDetailRowWithCaption:NSLocalizedString(@"DetailsReleased", nil) value:[self displayReleaseDate:selectedVersion.releaseDate]];
+    [self addDetailRowWithCaption:NSLocalizedString(@"DetailsRating", nil) value:selectedVersion.contentRating];
+    [self addDetailRowWithCaption:NSLocalizedString(@"DetailsPrice", nil) value:selectedVersion.price];
+    [self addDetailRowWithCaption:NSLocalizedString(@"DetailsSubgenres", nil) value:selectedVersion.subgenres];
+    [self addDetailRowWithCaption:NSLocalizedString(@"DetailsCopyright", nil) value:selectedVersion.copyrightText];
+    if ([selectedVersion.gameCenter length] > 0) {
+        [self addDetailRowWithCaption:NSLocalizedString(@"DetailsGameCenter", nil) value:NSLocalizedString(@"DetailsYes", nil)];
+    }
+    if ([selectedVersion.newsstand length] > 0) {
+        [self addDetailRowWithCaption:NSLocalizedString(@"DetailsNewsstand", nil) value:NSLocalizedString(@"DetailsYes", nil)];
+    }
+    [self addCopyableDetailRowWithCaption:NSLocalizedString(@"DetailsBundleID", nil) value:AppInfoDisplayBundleIDForVersion(app, selectedVersion)];
+    [self addDetailRowWithCaption:NSLocalizedString(@"DetailsBadgeDevices", nil)
+                            value:[self deviceFamilyDisplayName:selectedVersion.platform]];
+    [self addDetailRowWithCaption:NSLocalizedString(@"DetailsArchitectures", nil) value:selectedVersion.archFlags];
+    [self addDetailRowWithCaption:NSLocalizedString(@"VersionInfoFairPlay", nil) value:selectedVersion.fairplayStatus];
+    [self addDetailRowWithCaption:NSLocalizedString(@"DetailsExecutable", nil) value:selectedVersion.executable];
+    [self addDetailRowWithCaption:NSLocalizedString(@"DetailsRequiredCapabilities", nil) value:selectedVersion.requiredCapabilities];
+    [self addDetailRowWithCaption:NSLocalizedString(@"DetailsBackgroundModes", nil) value:selectedVersion.backgroundModes];
+    [self addDetailRowWithCaption:NSLocalizedString(@"VersionInfoArchiveItem", nil) value:selectedVersion.sourceItem];
+    [self addDetailRowWithCaption:NSLocalizedString(@"VersionInfoArchiveFile", nil) value:selectedVersion.sourceFile];
+    [self addDetailRowWithCaption:NSLocalizedString(@"VersionInfoIconPath", nil) value:selectedVersion.iconPath];
+    [self addDetailRowWithCaption:NSLocalizedString(@"VersionInfoIconBundleID", nil) value:selectedVersion.iconBundleID];
+    [self addCopyableDetailRowWithCaption:@"SHA1" value:selectedVersion.sha1];
+    [self addDetailRowWithCaption:@"MD5" value:selectedVersion.md5];
+    [self addDetailRowWithCaption:NSLocalizedString(@"VersionInfoMetadataSource", nil)
+                            value:[self displayMetadataSource:selectedVersion.metadataSource]];
+    [self addCopyableDetailRowWithCaption:NSLocalizedString(@"VersionInfoDownloadURL", nil) value:selectedVersion.fileName];
     [(AppInfoDetailRowView *)[detailRowViews lastObject] setShowsSeparator:NO];
 
     if ([detailRowViews count] > 0) {
@@ -1031,6 +1588,13 @@ static NSArray *AppInfoExcludedSystemActivityTypes(void) {
     }
     self.appDescriptionLabel.frame = CGRectMake(margin, y, contentWidth, descriptionHeight);
     y += descriptionHeight;
+
+    for (AppInfoCustomInfoBlockView *blockView in customInfoBlockViews) {
+        y += sectionGap;
+        CGFloat blockHeight = [blockView heightForWidth:contentWidth];
+        blockView.frame = CGRectMake(margin, y, contentWidth, blockHeight);
+        y += blockHeight;
+    }
 
     if ([detailRowViews count] > 0) {
         y += sectionGap;
@@ -1098,6 +1662,32 @@ static NSArray *AppInfoExcludedSystemActivityTypes(void) {
 
 - (void)initialize:(NSString *)bundleID {
     [self initialize:bundleID developer:nil name:nil image:NULL];
+}
+
+- (void)initializeVersionInfoWithApplication:(Application *)application version:(Version *)version image:(UIImage *)image {
+    versionInfoMode = YES;
+    app = application;
+    selectedVersion = version;
+    initialized = (app != nil && selectedVersion != nil);
+    relatedLoaded = YES;
+    relatedLoading = NO;
+    relatedIconLoadGeneration++;
+    [relatedApps removeAllObjects];
+    [relatedLoadingIconURLs removeAllObjects];
+
+    if (![self isViewLoaded]) {
+        return;
+    }
+
+    self.appDeveloperNameLabel.text = app.developer;
+    self.appNameLabel.text = app.name;
+    self.appUIImage.image = image ?: app.icon;
+    appVersionsLabel.text = [NSString stringWithFormat:NSLocalizedString(@"VersionFormat", nil), selectedVersion.version];
+    appVersionsLabel.hidden = NO;
+    [activityIndicator stopAnimating];
+    activityIndicator.hidden = YES;
+    [self configureVersionInfoMode];
+    [self loadImageIfNeeded];
 }
 
 - (void)loadImageIfNeeded {
@@ -1262,9 +1852,47 @@ static NSArray *AppInfoExcludedSystemActivityTypes(void) {
     }];
 }
 
+- (void)showVersionActionSheetAtIndex:(NSInteger)versionIndex includeInfo:(BOOL)includeInfo {
+    if (versionIndex < 0 || versionIndex >= [app.versions count]) {
+        return;
+    }
+    pendingVersionActionIndex = versionIndex;
+    Version *version = [app.versions objectAtIndex:versionIndex];
+    NSString *title = [NSString stringWithFormat:NSLocalizedString(@"VersionFormat", nil), AppInfoVersionDisplayTitle(app, version)];
+    UIActionSheet *actionSheet;
+    if (includeInfo) {
+        actionSheet = [[UIActionSheet alloc] initWithTitle:title
+                                                  delegate:self
+                                         cancelButtonTitle:NSLocalizedString(@"Cancel", nil)
+                                    destructiveButtonTitle:nil
+                                         otherButtonTitles:NSLocalizedString(@"Install", nil), NSLocalizedString(@"Download", nil), NSLocalizedString(@"Info", nil), nil];
+    } else {
+        actionSheet = [[UIActionSheet alloc] initWithTitle:title
+                                                  delegate:self
+                                         cancelButtonTitle:NSLocalizedString(@"Cancel", nil)
+                                    destructiveButtonTitle:nil
+                                         otherButtonTitles:NSLocalizedString(@"Install", nil), NSLocalizedString(@"Download", nil), nil];
+    }
+    actionSheet.tag = AppInfoVersionCellActionSheetTag;
+    [actionSheet showInView:AppInfoActionSheetPresentationView(self.view)];
+}
+
 - (IBAction)getButtonPressed:(id)sender {
     if (!initialized) {
         alert(NSLocalizedString(@"Oops", nil), NSLocalizedString(@"WaitForAppFinishLoading", nil), VAPIHelperErrorUnknown);
+        return;
+    }
+    if (versionInfoMode) {
+        NSUInteger versionIndex = [app.versions indexOfObjectIdenticalTo:selectedVersion];
+        if (versionIndex == NSNotFound) {
+            versionIndex = [app.versions indexOfObject:selectedVersion];
+        }
+        if (versionIndex == NSNotFound) {
+            NSString *message = [NSString stringWithFormat:NSLocalizedString(@"NoVersionsAvailable", @"%@ has NOT been installed, no versions available."), app.name];
+            alert(@"Error", message, VAPIHelperErrorUnknown);
+            return;
+        }
+        [self showVersionActionSheetAtIndex:versionIndex includeInfo:NO];
         return;
     }
     // Set initialized here because if the button is pressed the view must be fully loaded
@@ -1272,11 +1900,11 @@ static NSArray *AppInfoExcludedSystemActivityTypes(void) {
     UIActionSheet *actionSheet = [[UIActionSheet alloc] initWithTitle:NSLocalizedString(@"SelectAVersion", nil) delegate:self cancelButtonTitle:nil destructiveButtonTitle:nil otherButtonTitles:nil, nil];
     actionSheet.tag = AppInfoVersionPickerActionSheetTag;
     for (Version *ver in app.versions) {
-        [actionSheet addButtonWithTitle:ver.version];
+        [actionSheet addButtonWithTitle:AppInfoVersionDisplayTitle(app, ver)];
     }
     [actionSheet addButtonWithTitle:NSLocalizedString(@"Cancel", nil)];
     [actionSheet setCancelButtonIndex:[app.versions count]];
-    [actionSheet showInView:self.view];
+    [actionSheet showInView:AppInfoActionSheetPresentationView(self.view)];
 
 }
 
@@ -1301,13 +1929,13 @@ static NSArray *AppInfoExcludedSystemActivityTypes(void) {
 - (void)showActionsFallbackActionSheet {
     BOOL favorite = [VeterisFavoritesManager isFavoriteBundleID:app.bundleid];
     NSString *favoriteTitle = favorite ? NSLocalizedString(@"RemoveFromFavorites", nil) : NSLocalizedString(@"AddToFavorites", nil);
-    UIActionSheet *actionSheet = [[UIActionSheet alloc] initWithTitle:app.name delegate:self cancelButtonTitle:nil destructiveButtonTitle:nil otherButtonTitles:nil, nil];
+    UIActionSheet *actionSheet = [[UIActionSheet alloc] initWithTitle:app.name
+                                                             delegate:self
+                                                    cancelButtonTitle:NSLocalizedString(@"Cancel", nil)
+                                               destructiveButtonTitle:nil
+                                                    otherButtonTitles:favoriteTitle, NSLocalizedString(@"CopyLink", nil), nil];
     actionSheet.tag = AppInfoActionsActionSheetTag;
-    [actionSheet addButtonWithTitle:favoriteTitle];
-    [actionSheet addButtonWithTitle:NSLocalizedString(@"CopyLink", nil)];
-    [actionSheet addButtonWithTitle:NSLocalizedString(@"Cancel", nil)];
-    [actionSheet setCancelButtonIndex:2];
-    [actionSheet showInView:self.view];
+    [actionSheet showInView:AppInfoActionSheetPresentationView(self.view)];
 }
 
 - (void)copyCurrentApplicationLink {
@@ -1384,7 +2012,7 @@ static NSArray *AppInfoExcludedSystemActivityTypes(void) {
 - (NSString *)downloadOnlyPathForVersion:(Version *)version {
     NSString *name = [self safeDownloadFileComponent:app.name ?: app.bundleid];
     NSString *versionString = [self safeDownloadFileComponent:version.version];
-    NSString *bundleID = [self safeDownloadFileComponent:app.bundleid];
+    NSString *bundleID = [self safeDownloadFileComponent:AppInfoDisplayBundleIDForVersion(app, version)];
     NSString *fileName = [NSString stringWithFormat:@"%@-%@-%@.ipa", name, versionString, bundleID];
     return [downloadOnlyPath() stringByAppendingPathComponent:fileName];
 }
@@ -1419,6 +2047,17 @@ static NSArray *AppInfoExcludedSystemActivityTypes(void) {
     }
 }
 
+- (void)showVersionInfoAtIndex:(NSInteger)versionIndex {
+    if (versionIndex < 0 || versionIndex >= [app.versions count]) {
+        return;
+    }
+    Version *version = [app.versions objectAtIndex:versionIndex];
+    AppInfo *versionInfo = [self.storyboard instantiateViewControllerWithIdentifier:@"AppInfoViewController"];
+    [versionInfo view];
+    [versionInfo initializeVersionInfoWithApplication:app version:version image:self.appUIImage.image];
+    [self.navigationController pushViewController:versionInfo animated:YES];
+}
+
 - (void)actionSheet:(UIActionSheet *)actionSheet clickedButtonAtIndex:(NSInteger)buttonIndex {
     if (actionSheet.tag == AppInfoActionsActionSheetTag) {
         if (buttonIndex == actionSheet.cancelButtonIndex) {
@@ -1441,6 +2080,8 @@ static NSArray *AppInfoExcludedSystemActivityTypes(void) {
             [self enqueueVersionAtIndex:pendingVersionActionIndex];
         } else if (buttonIndex == AppInfoVersionActionDownloadIndex) {
             [self downloadVersionAtIndex:pendingVersionActionIndex];
+        } else if (buttonIndex == AppInfoVersionActionInfoIndex) {
+            [self showVersionInfoAtIndex:pendingVersionActionIndex];
         }
         pendingVersionActionIndex = AppInfoNoPendingVersionIndex;
         return;
@@ -1489,23 +2130,11 @@ static NSArray *AppInfoExcludedSystemActivityTypes(void) {
     static NSString *cellIdentifier = @"AppInfoVersionCell";
     UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:cellIdentifier];
     if (cell == nil) {
-        cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleSubtitle reuseIdentifier:cellIdentifier];
-        cell.backgroundColor = [UIColor colorWithWhite:0.96 alpha:1.0];
-        cell.textLabel.font = [UIFont boldSystemFontOfSize:16.0];
-        cell.textLabel.textColor = [UIColor colorWithWhite:0.18 alpha:1.0];
-        cell.textLabel.shadowColor = [UIColor whiteColor];
-        cell.textLabel.shadowOffset = CGSizeMake(0.0, 1.0);
-        cell.detailTextLabel.font = [UIFont systemFontOfSize:12.0];
-        cell.detailTextLabel.textColor = [UIColor colorWithWhite:0.42 alpha:1.0];
-        cell.detailTextLabel.numberOfLines = 2;
-        cell.selectionStyle = UITableViewCellSelectionStyleBlue;
+        cell = [self newVersionCellWithReuseIdentifier:cellIdentifier];
     }
 
     Version *version = [app.versions objectAtIndex:indexPath.row];
-    cell.textLabel.text = [NSString stringWithFormat:NSLocalizedString(@"VersionFormat", nil), version.version];
-    NSString *requiresText = [NSString stringWithFormat:NSLocalizedString(@"RequiresIOSFormat", nil), version.minVersion];
-    NSString *sizeText = AppInfoStringForByteCount(version.sizeBytes);
-    cell.detailTextLabel.text = sizeText ? [NSString stringWithFormat:@"%@ - %@", requiresText, sizeText] : requiresText;
+    [self configureVersionCell:cell version:version];
     return cell;
 }
 
@@ -1528,15 +2157,6 @@ static NSArray *AppInfoExcludedSystemActivityTypes(void) {
         return;
     }
 
-    pendingVersionActionIndex = indexPath.row;
-    Version *version = [app.versions objectAtIndex:indexPath.row];
-    NSString *title = [NSString stringWithFormat:NSLocalizedString(@"VersionFormat", nil), version.version];
-    UIActionSheet *actionSheet = [[UIActionSheet alloc] initWithTitle:title delegate:self cancelButtonTitle:nil destructiveButtonTitle:nil otherButtonTitles:nil, nil];
-    actionSheet.tag = AppInfoVersionCellActionSheetTag;
-    [actionSheet addButtonWithTitle:NSLocalizedString(@"Install", nil)];
-    [actionSheet addButtonWithTitle:NSLocalizedString(@"Download", nil)];
-    [actionSheet addButtonWithTitle:NSLocalizedString(@"Cancel", nil)];
-    [actionSheet setCancelButtonIndex:2];
-    [actionSheet showInView:self.view];
+    [self showVersionActionSheetAtIndex:indexPath.row includeInfo:YES];
 }
 @end

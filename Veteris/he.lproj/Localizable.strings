@@ -101,6 +101,7 @@
 "DetailsArchitectures" = "ארכיטקטורות";
 "DetailsBackgroundModes" = "מצבי רקע";
 "DetailsExecutable" = "Executable";
+"DetailsWebsite" = "אתר אינטרנט";
 "NoDescriptionAvailable" = "אין עדיין תיאור.";
 "DetailsReleased" = "שוחרר";
 "DetailsRating" = "דירוג";
@@ -111,6 +112,18 @@
 "DetailsNewsstand" = "Newsstand";
 "DetailsRequiredCapabilities" = "יכולות נדרשות";
 "DetailsYes" = "כן";
+"VersionInfoSize" = "גודל";
+"VersionInfoBuild" = "Build";
+"VersionInfoITunesMetadata" = "iTunes Metadata";
+"VersionInfoNotAvailable" = "לא זמין";
+"VersionInfoFairPlay" = "FairPlay";
+"VersionInfoArchiveItem" = "פריט ארכיון";
+"VersionInfoArchiveFile" = "קובץ ארכיון";
+"VersionInfoIconPath" = "נתיב אייקון";
+"VersionInfoIconBundleID" = "Icon Bundle ID";
+"VersionInfoMetadataSource" = "מקור מטא נתונים";
+"VersionInfoMetadataFilename" = "גיבוי לפי שם קובץ";
+"VersionInfoDownloadURL" = "כתובת הורדה";
 "Favorites" = "מועדפים";
 "AddToFavorites" = "הוסף למועדפים";
 "RemoveFromFavorites" = "הסר מהמועדפים";

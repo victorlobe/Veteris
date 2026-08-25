@@ -16,6 +16,30 @@ typedef struct _VersionMsg {
     pb_callback_t minVersion;
     bool has_sizeBytes;
     uint64_t sizeBytes;
+    pb_callback_t buildVersion;
+    pb_callback_t platform;
+    pb_callback_t sourceItem;
+    pb_callback_t sourceFile;
+    pb_callback_t sha1;
+    pb_callback_t md5;
+    pb_callback_t fairplayStatus;
+    pb_callback_t archFlags;
+    pb_callback_t backgroundModes;
+    pb_callback_t executable;
+    pb_callback_t releaseDate;
+    pb_callback_t contentRating;
+    pb_callback_t price;
+    pb_callback_t subgenres;
+    pb_callback_t copyrightText;
+    pb_callback_t gameCenter;
+    pb_callback_t newsstand;
+    pb_callback_t requiredCapabilities;
+    pb_callback_t metadataSource;
+    pb_callback_t iconPath;
+    pb_callback_t iconBundleID;
+    pb_callback_t bundleID;
+    bool has_recommended;
+    bool recommended;
 } VersionMsg;
 
 typedef struct _AppMsg {
@@ -40,7 +64,21 @@ typedef struct _AppMsg {
     pb_callback_t gameCenter;
     pb_callback_t newsstand;
     pb_callback_t requiredCapabilities;
+    pb_callback_t primaryBundleID;
+    pb_callback_t customInfoBlocks;
+    pb_callback_t websiteURL;
 } AppMsg;
+
+typedef struct _InfoBlockMsg {
+    pb_callback_t title;
+    pb_callback_t body;
+    pb_callback_t fields;
+} InfoBlockMsg;
+
+typedef struct _InfoFieldMsg {
+    pb_callback_t label;
+    pb_callback_t value;
+} InfoFieldMsg;
 
 
 #ifdef __cplusplus
@@ -48,16 +86,43 @@ extern "C" {
 #endif
 
 /* Initializer values for message structs */
-#define VersionMsg_init_default                  {{{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, false, 0}
-#define AppMsg_init_default                      {{{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}}
-#define VersionMsg_init_zero                     {{{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, false, 0}
-#define AppMsg_init_zero                         {{{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}}
+#define VersionMsg_init_default                  {{{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, false, 0, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, false, false}
+#define AppMsg_init_default                      {{{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}}
+#define InfoBlockMsg_init_default                {{{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}}
+#define InfoFieldMsg_init_default                {{{NULL}, NULL}, {{NULL}, NULL}}
+#define VersionMsg_init_zero                     {{{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, false, 0, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, false, false}
+#define AppMsg_init_zero                         {{{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}}
+#define InfoBlockMsg_init_zero                   {{{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}}
+#define InfoFieldMsg_init_zero                   {{{NULL}, NULL}, {{NULL}, NULL}}
 
 /* Field tags (for use in manual encoding/decoding) */
 #define VersionMsg_version_tag                   1
 #define VersionMsg_fileName_tag                  2
 #define VersionMsg_minVersion_tag                3
 #define VersionMsg_sizeBytes_tag                 4
+#define VersionMsg_buildVersion_tag              5
+#define VersionMsg_platform_tag                  6
+#define VersionMsg_sourceItem_tag                7
+#define VersionMsg_sourceFile_tag                8
+#define VersionMsg_sha1_tag                      9
+#define VersionMsg_md5_tag                       10
+#define VersionMsg_fairplayStatus_tag            11
+#define VersionMsg_archFlags_tag                 12
+#define VersionMsg_backgroundModes_tag           13
+#define VersionMsg_executable_tag                14
+#define VersionMsg_releaseDate_tag               15
+#define VersionMsg_contentRating_tag             16
+#define VersionMsg_price_tag                     17
+#define VersionMsg_subgenres_tag                 18
+#define VersionMsg_copyrightText_tag             19
+#define VersionMsg_gameCenter_tag                20
+#define VersionMsg_newsstand_tag                 21
+#define VersionMsg_requiredCapabilities_tag       22
+#define VersionMsg_metadataSource_tag            23
+#define VersionMsg_iconPath_tag                  24
+#define VersionMsg_iconBundleID_tag              25
+#define VersionMsg_bundleID_tag                  26
+#define VersionMsg_recommended_tag               27
 #define AppMsg_name_tag                          1
 #define AppMsg_developer_tag                     2
 #define AppMsg_bundleid_tag                      3
@@ -79,13 +144,44 @@ extern "C" {
 #define AppMsg_gameCenter_tag                    19
 #define AppMsg_newsstand_tag                     20
 #define AppMsg_requiredCapabilities_tag          21
+#define AppMsg_primaryBundleID_tag               22
+#define AppMsg_customInfoBlocks_tag              23
+#define AppMsg_websiteURL_tag                    24
+#define InfoBlockMsg_title_tag                   1
+#define InfoBlockMsg_body_tag                    2
+#define InfoBlockMsg_fields_tag                  3
+#define InfoFieldMsg_label_tag                   1
+#define InfoFieldMsg_value_tag                   2
 
 /* Struct field encoding specification for nanopb */
 #define VersionMsg_FIELDLIST(X, a) \
 X(a, CALLBACK, REQUIRED, STRING,   version,           1) \
 X(a, CALLBACK, REQUIRED, STRING,   fileName,          2) \
 X(a, CALLBACK, REQUIRED, STRING,   minVersion,        3) \
-X(a, STATIC,   OPTIONAL, UINT64,   sizeBytes,         4)
+X(a, STATIC,   OPTIONAL, UINT64,   sizeBytes,         4) \
+X(a, CALLBACK, OPTIONAL, STRING,   buildVersion,      5) \
+X(a, CALLBACK, OPTIONAL, STRING,   platform,          6) \
+X(a, CALLBACK, OPTIONAL, STRING,   sourceItem,        7) \
+X(a, CALLBACK, OPTIONAL, STRING,   sourceFile,        8) \
+X(a, CALLBACK, OPTIONAL, STRING,   sha1,              9) \
+X(a, CALLBACK, OPTIONAL, STRING,   md5,              10) \
+X(a, CALLBACK, OPTIONAL, STRING,   fairplayStatus,   11) \
+X(a, CALLBACK, OPTIONAL, STRING,   archFlags,        12) \
+X(a, CALLBACK, OPTIONAL, STRING,   backgroundModes,  13) \
+X(a, CALLBACK, OPTIONAL, STRING,   executable,       14) \
+X(a, CALLBACK, OPTIONAL, STRING,   releaseDate,      15) \
+X(a, CALLBACK, OPTIONAL, STRING,   contentRating,    16) \
+X(a, CALLBACK, OPTIONAL, STRING,   price,            17) \
+X(a, CALLBACK, OPTIONAL, STRING,   subgenres,        18) \
+X(a, CALLBACK, OPTIONAL, STRING,   copyrightText,    19) \
+X(a, CALLBACK, OPTIONAL, STRING,   gameCenter,       20) \
+X(a, CALLBACK, OPTIONAL, STRING,   newsstand,        21) \
+X(a, CALLBACK, OPTIONAL, STRING,   requiredCapabilities, 22) \
+X(a, CALLBACK, OPTIONAL, STRING,   metadataSource,   23) \
+X(a, CALLBACK, OPTIONAL, STRING,   iconPath,         24) \
+X(a, CALLBACK, OPTIONAL, STRING,   iconBundleID,     25) \
+X(a, CALLBACK, OPTIONAL, STRING,   bundleID,         26) \
+X(a, STATIC,   OPTIONAL, BOOL,     recommended,      27)
 #define VersionMsg_CALLBACK pb_default_field_callback
 #define VersionMsg_DEFAULT NULL
 
@@ -110,21 +206,45 @@ X(a, CALLBACK, OPTIONAL, STRING,   subgenres,        17) \
 X(a, CALLBACK, OPTIONAL, STRING,   copyrightText,    18) \
 X(a, CALLBACK, OPTIONAL, STRING,   gameCenter,       19) \
 X(a, CALLBACK, OPTIONAL, STRING,   newsstand,        20) \
-X(a, CALLBACK, OPTIONAL, STRING,   requiredCapabilities, 21)
+X(a, CALLBACK, OPTIONAL, STRING,   requiredCapabilities, 21) \
+X(a, CALLBACK, OPTIONAL, STRING,   primaryBundleID, 22) \
+X(a, CALLBACK, REPEATED, MESSAGE,  customInfoBlocks, 23) \
+X(a, CALLBACK, OPTIONAL, STRING,   websiteURL,       24)
 #define AppMsg_CALLBACK pb_default_field_callback
 #define AppMsg_DEFAULT NULL
 #define AppMsg_versions_MSGTYPE VersionMsg
+#define AppMsg_customInfoBlocks_MSGTYPE InfoBlockMsg
+
+#define InfoBlockMsg_FIELDLIST(X, a) \
+X(a, CALLBACK, REQUIRED, STRING,   title,             1) \
+X(a, CALLBACK, REQUIRED, STRING,   body,              2) \
+X(a, CALLBACK, REPEATED, MESSAGE,  fields,            3)
+#define InfoBlockMsg_CALLBACK pb_default_field_callback
+#define InfoBlockMsg_DEFAULT NULL
+#define InfoBlockMsg_fields_MSGTYPE InfoFieldMsg
+
+#define InfoFieldMsg_FIELDLIST(X, a) \
+X(a, CALLBACK, REQUIRED, STRING,   label,             1) \
+X(a, CALLBACK, REQUIRED, STRING,   value,             2)
+#define InfoFieldMsg_CALLBACK pb_default_field_callback
+#define InfoFieldMsg_DEFAULT NULL
 
 extern const pb_msgdesc_t VersionMsg_msg;
 extern const pb_msgdesc_t AppMsg_msg;
+extern const pb_msgdesc_t InfoBlockMsg_msg;
+extern const pb_msgdesc_t InfoFieldMsg_msg;
 
 /* Defines for backwards compatibility with code written before nanopb-0.4.0 */
 #define VersionMsg_fields &VersionMsg_msg
 #define AppMsg_fields &AppMsg_msg
+#define InfoBlockMsg_fields &InfoBlockMsg_msg
+#define InfoFieldMsg_fields &InfoFieldMsg_msg
 
 /* Maximum encoded size of messages (where known) */
 /* VersionMsg_size depends on runtime parameters */
 /* AppMsg_size depends on runtime parameters */
+/* InfoBlockMsg_size depends on runtime parameters */
+/* InfoFieldMsg_size depends on runtime parameters */
 
 #ifdef __cplusplus
 } /* extern "C" */

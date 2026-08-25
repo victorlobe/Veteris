@@ -225,6 +225,7 @@ debug_symbols = env.Command(
 )
 
 resources = [
+    "Veteris/IMPORTANT SERVER INFOS",
     "Veteris/Images.xcassets",
     "Veteris/SVProgressHUD/SVProgressHUD.bundle",
 ]

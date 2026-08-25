@@ -101,6 +101,7 @@
 "DetailsArchitectures" = "Architetture";
 "DetailsBackgroundModes" = "Modalità in background";
 "DetailsExecutable" = "Executable";
+"DetailsWebsite" = "Sito web";
 "NoDescriptionAvailable" = "Nessuna descrizione disponibile.";
 "DetailsReleased" = "Uscita";
 "DetailsRating" = "Classificazione";
@@ -111,6 +112,18 @@
 "DetailsNewsstand" = "Edicola";
 "DetailsRequiredCapabilities" = "Funzioni richieste";
 "DetailsYes" = "Sì";
+"VersionInfoSize" = "Dimensione";
+"VersionInfoBuild" = "Build";
+"VersionInfoITunesMetadata" = "Metadati iTunes";
+"VersionInfoNotAvailable" = "Non disponibile";
+"VersionInfoFairPlay" = "FairPlay";
+"VersionInfoArchiveItem" = "Elemento archivio";
+"VersionInfoArchiveFile" = "File archivio";
+"VersionInfoIconPath" = "Percorso icona";
+"VersionInfoIconBundleID" = "Icon Bundle ID";
+"VersionInfoMetadataSource" = "Fonte metadati";
+"VersionInfoMetadataFilename" = "Fallback nome file";
+"VersionInfoDownloadURL" = "URL download";
 "Favorites" = "Preferite";
 "AddToFavorites" = "Aggiungi alle preferite";
 "RemoveFromFavorites" = "Rimuovi dalle preferite";

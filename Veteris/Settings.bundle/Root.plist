@@ -148,6 +148,16 @@
             <string>initWithFile:withKey:</string>
         </dict>
         <dict>
+            <key>Type</key>
+            <string>PSToggleSwitchSpecifier</string>
+            <key>Title</key>
+            <string>Home Icon Badge</string>
+            <key>Key</key>
+            <string>veteris_home_icon_badge_enabled</string>
+            <key>DefaultValue</key>
+            <true/>
+        </dict>
+        <dict>
             <key>Title</key>
             <string>Performance</string>
             <key>Type</key>

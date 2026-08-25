@@ -230,7 +230,7 @@
         if ([doneArray containsObject:app]) {
             if (app->finishedSuccessfully) {
                 UIActionSheet *actionSheet = [[UIActionSheet alloc] initWithTitle:app.applicationDisplayName delegate:self cancelButtonTitle:@"Cancel!" destructiveButtonTitle:nil otherButtonTitles:nil, nil];
-                [actionSheet showInView:self.view];
+                [actionSheet showInView:self.view.window ?: self.view];
             }
         }
     }

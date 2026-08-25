@@ -1,13 +1,68 @@
 #!/bin/sh
-# Normalize /Applications/Veteris.app ownership and executable permissions.
+# Normalize /Applications/Veteris.app ownership and executable permissions, then
+# choose the icon artwork that matches the installed iOS generation.
 set -e
 
 APP=/Applications/Veteris.app
 
+copy_icon() {
+    src="$1"
+    dest="$2"
+    if [ -f "$APP/$src" ]; then
+        cp "$APP/$src" "$APP/$dest" 2>/dev/null || true
+    fi
+}
+
+ios_major_version() {
+    version=""
+    if command -v sw_vers >/dev/null 2>&1; then
+        version="$(sw_vers -productVersion 2>/dev/null || true)"
+    fi
+    if [ -z "$version" ] && command -v defaults >/dev/null 2>&1; then
+        version="$(defaults read /System/Library/CoreServices/SystemVersion ProductVersion 2>/dev/null || true)"
+    fi
+    echo "$version" | sed 's/\..*$//'
+}
+
+select_app_icons() {
+    major="$(ios_major_version)"
+    case "$major" in
+        ''|0|1|2|3|4|5|6)
+            copy_icon VeterisIconClassic.png Icon.png
+            copy_icon VeterisIconClassic@2x.png Icon@2x.png
+            copy_icon VeterisIconClassicSmall.png Icon-Small.png
+            copy_icon VeterisIconClassicSmall@2x.png Icon-Small@2x.png
+            copy_icon VeterisIconClassicSmall-50.png Icon-Small-50.png
+            copy_icon VeterisIconClassicSmall-50@2x.png Icon-Small-50@2x.png
+            copy_icon VeterisIconClassic-72.png Icon-72.png
+            copy_icon VeterisIconClassic-72@2x.png Icon-72@2x.png
+            ;;
+        *)
+            copy_icon VeterisIconFlat.png Icon.png
+            copy_icon VeterisIconFlat@2x.png Icon@2x.png
+            copy_icon VeterisIconFlatSmall.png Icon-Small.png
+            copy_icon VeterisIconFlatSmall@2x.png Icon-Small@2x.png
+            copy_icon VeterisIconFlatSmall.png Icon-Small-50.png
+            copy_icon VeterisIconFlatSmall@2x.png Icon-Small-50@2x.png
+            copy_icon VeterisIconFlat-76.png Icon-72.png
+            copy_icon VeterisIconFlat-76@2x.png Icon-72@2x.png
+            copy_icon VeterisIconFlat.png Icon-60.png
+            copy_icon VeterisIconFlat@2x.png Icon-60@2x.png
+            copy_icon VeterisIconFlat-76.png Icon-76.png
+            copy_icon VeterisIconFlat-76@2x.png Icon-76@2x.png
+            ;;
+    esac
+}
+
 if [ -d "$APP" ]; then
+    select_app_icons
     chown -R root:mobile "$APP" 2>/dev/null || true
     chmod -R 755 "$APP" 2>/dev/null || true
     [ -f "$APP/Veteris" ] && chmod 755 "$APP/Veteris" 2>/dev/null || true
+fi
+
+if command -v uicache >/dev/null 2>&1; then
+    uicache >/dev/null 2>&1 || true
 fi
 
 exit 0

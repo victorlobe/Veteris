@@ -101,6 +101,7 @@
 "DetailsArchitectures" = "Mimariler";
 "DetailsBackgroundModes" = "Arka plan modları";
 "DetailsExecutable" = "Yürütülebilir dosya";
+"DetailsWebsite" = "Web sitesi";
 "NoDescriptionAvailable" = "Henüz açıklama yok.";
 "DetailsReleased" = "Yayınlanma";
 "DetailsRating" = "Yaş sınırı";
@@ -111,6 +112,18 @@
 "DetailsNewsstand" = "Gazetelik";
 "DetailsRequiredCapabilities" = "Gerekli özellikler";
 "DetailsYes" = "Evet";
+"VersionInfoSize" = "Boyut";
+"VersionInfoBuild" = "Build";
+"VersionInfoITunesMetadata" = "iTunes Metadata";
+"VersionInfoNotAvailable" = "Kullanılamaz";
+"VersionInfoFairPlay" = "FairPlay";
+"VersionInfoArchiveItem" = "Arşiv öğesi";
+"VersionInfoArchiveFile" = "Arşiv dosyası";
+"VersionInfoIconPath" = "Simge yolu";
+"VersionInfoIconBundleID" = "Icon Bundle ID";
+"VersionInfoMetadataSource" = "Metadata kaynağı";
+"VersionInfoMetadataFilename" = "Dosya adı yedeği";
+"VersionInfoDownloadURL" = "İndirme URL";
 "Favorites" = "Favoriler";
 "AddToFavorites" = "Favorilere ekle";
 "RemoveFromFavorites" = "Favorilerden kaldır";

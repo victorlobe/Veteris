@@ -14,7 +14,8 @@
     if (!self) {
         return nil;
     }
-    self->_bundleID = app.bundleid;
+    NSString *primaryBundleID = ([app.primaryBundleID length] > 0) ? app.primaryBundleID : app.bundleid;
+    self->_bundleID = ([version.bundleID length] > 0) ? version.bundleID : primaryBundleID;
     self->_name = app.name;
     self->_developer = app.developer;
     self->_iconurl = app.iconurl;

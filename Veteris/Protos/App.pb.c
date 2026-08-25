@@ -6,10 +6,14 @@
 #error Regenerate this file with the current version of nanopb generator.
 #endif
 
+/* Descriptor bindings are rebuilt from the hand-maintained App.pb.h schema. */
 PB_BIND(VersionMsg, VersionMsg, AUTO)
 
 
+PB_BIND(InfoFieldMsg, InfoFieldMsg, AUTO)
+
+
+PB_BIND(InfoBlockMsg, InfoBlockMsg, AUTO)
+
+
 PB_BIND(AppMsg, AppMsg, AUTO)
-
-
-

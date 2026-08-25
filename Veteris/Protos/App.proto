@@ -5,6 +5,40 @@ message VersionMsg {
     required string fileName = 2;
     required string minVersion = 3;
     optional uint64 sizeBytes = 4;
+    optional string buildVersion = 5;
+    optional string platform = 6;
+    optional string sourceItem = 7;
+    optional string sourceFile = 8;
+    optional string sha1 = 9;
+    optional string md5 = 10;
+    optional string fairplayStatus = 11;
+    optional string archFlags = 12;
+    optional string backgroundModes = 13;
+    optional string executable = 14;
+    optional string releaseDate = 15;
+    optional string contentRating = 16;
+    optional string price = 17;
+    optional string subgenres = 18;
+    optional string copyrightText = 19;
+    optional string gameCenter = 20;
+    optional string newsstand = 21;
+    optional string requiredCapabilities = 22;
+    optional string metadataSource = 23;
+    optional string iconPath = 24;
+    optional string iconBundleID = 25;
+    optional string bundleID = 26;
+    optional bool recommended = 27;
+}
+
+message InfoBlockMsg {
+    required string title = 1;
+    required string body = 2;
+    repeated InfoFieldMsg fields = 3;
+}
+
+message InfoFieldMsg {
+    required string label = 1;
+    required string value = 2;
 }
 
 message AppMsg {
@@ -29,4 +63,7 @@ message AppMsg {
     optional string gameCenter = 19;
     optional string newsstand = 20;
     optional string requiredCapabilities = 21;
+    optional string primaryBundleID = 22;
+    repeated InfoBlockMsg customInfoBlocks = 23;
+    optional string websiteURL = 24;
 }

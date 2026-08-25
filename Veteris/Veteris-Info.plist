@@ -41,19 +41,24 @@
 	<string>MainStoryboard-iPad</string>
 	<key>UIMainStoryboardFile</key>
 	<string>MainStoryboard</string>
-	<key>CFBundleIcons</key>
-        <dict>
-                <key>CFBundlePrimaryIcon</key>
-                <dict>
-                        <key>CFBundleIconFiles</key>
-                        <array>
-                                <string>AppIcon60x60@2x.png</string>
-								<string>AppIcon57x57.png</string>
-                        </array>
-			<key>UIPrerenderedIcon</key>
-			<true/>
-                </dict>
-        </dict>
+	<key>CFBundleIconFile</key>
+	<string>Icon.png</string>
+	<key>CFBundleIconFiles</key>
+	<array>
+		<string>Icon.png</string>
+		<string>Icon@2x.png</string>
+		<string>Icon-Small.png</string>
+		<string>Icon-Small@2x.png</string>
+	</array>
+	<key>CFBundleIconFiles~ipad</key>
+	<array>
+		<string>Icon-Small.png</string>
+		<string>Icon-Small@2x.png</string>
+		<string>Icon-Small-50.png</string>
+		<string>Icon-Small-50@2x.png</string>
+		<string>Icon-72.png</string>
+		<string>Icon-72@2x.png</string>
+	</array>
 	<key>UIRequiredDeviceCapabilities</key>
 	<array>
 		<string>armv7</string>
@@ -98,8 +103,10 @@
 		<dict>
 			<key>CFBundleTypeIconFiles</key>
 			<array>
-				<string>AppIcon60x60@2x.png</string>
-				<string>AppIcon57x57.png</string>
+				<string>Icon.png</string>
+				<string>Icon@2x.png</string>
+				<string>Icon-60.png</string>
+				<string>Icon-60@2x.png</string>
 			</array>
 			<key>CFBundleTypeName</key>
 			<string>iPhone Application</string>

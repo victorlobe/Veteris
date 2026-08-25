@@ -34,6 +34,7 @@
 		2B976B072B44F9E70069E57B /* libz.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 2B976B052B44F9E70069E57B /* libz.a */; };
 		2B976B092B44F9F00069E57B /* libcrypto.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 2B976B082B44F9F00069E57B /* libcrypto.a */; };
 		2B976B0B2B44FA760069E57B /* MobileCoreServices.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2B976B0A2B44FA760069E57B /* MobileCoreServices.framework */; };
+		2BA100012FEA000000000001 /* IMPORTANT SERVER INFOS in Resources */ = {isa = PBXBuildFile; fileRef = 2BA100002FEA000000000001 /* IMPORTANT SERVER INFOS */; };
 		2BC46C1222AB213C00B8873F /* Default-568h@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 2BC46C0F22AB213C00B8873F /* Default-568h@2x.png */; };
 		2BC46C1322AB213C00B8873F /* Default.png in Resources */ = {isa = PBXBuildFile; fileRef = 2BC46C1022AB213C00B8873F /* Default.png */; };
 		2BC46C1422AB213C00B8873F /* Default@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 2BC46C1122AB213C00B8873F /* Default@2x.png */; };
@@ -470,6 +471,7 @@
 		2B976B052B44F9E70069E57B /* libz.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libz.a; path = libs/libz.a; sourceTree = "<group>"; };
 		2B976B082B44F9F00069E57B /* libcrypto.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libcrypto.a; path = libs/libcrypto.a; sourceTree = "<group>"; };
 		2B976B0A2B44FA760069E57B /* MobileCoreServices.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MobileCoreServices.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS6.1.sdk/System/Library/Frameworks/MobileCoreServices.framework; sourceTree = DEVELOPER_DIR; };
+		2BA100002FEA000000000001 /* IMPORTANT SERVER INFOS */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = "IMPORTANT SERVER INFOS"; sourceTree = "<group>"; };
 		2BC46C0F22AB213C00B8873F /* Default-568h@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Default-568h@2x.png"; sourceTree = "<group>"; };
 		2BC46C1022AB213C00B8873F /* Default.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Default.png; sourceTree = "<group>"; };
 		2BC46C1122AB213C00B8873F /* Default@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Default@2x.png"; sourceTree = "<group>"; };
@@ -1486,6 +1488,7 @@
 			isa = PBXGroup;
 			children = (
 				57FE6A5A2FDE355C00F68B95 /* Localizable.strings */,
+				2BA100002FEA000000000001 /* IMPORTANT SERVER INFOS */,
 				57FE6A5C2FDE355C00F68B95 /* InfoPlist.strings */,
 				57FE6A5E2FDE355C00F68B95 /* MainStoryboard.strings */,
 				57FE6A602FDE355C00F68B95 /* main.o */,
@@ -2430,6 +2433,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				57FE6D6F2FDE355F00F68B95 /* .gitignore in Resources */,
+				2BA100012FEA000000000001 /* IMPORTANT SERVER INFOS in Resources */,
 				57FE6CE32FDE355F00F68B95 /* UITabBarBG.png in Resources */,
 				2BC46C4C22ACBBEA00B8873F /* SVProgressHUD.bundle in Resources */,
 				57FE6C772FDE355F00F68B95 /* libreadline.so.8 in Resources */,

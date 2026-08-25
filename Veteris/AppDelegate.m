@@ -183,6 +183,10 @@ static NSString *VeterisURLDecodedString(NSString *value) {
         [defaults setBool:YES forKey:@"veteris_crash_reporting_enabled"];
         changed = YES;
     }
+    if ([defaults objectForKey:@"veteris_home_icon_badge_enabled"] == nil) {
+        [defaults setBool:YES forKey:@"veteris_home_icon_badge_enabled"];
+        changed = YES;
+    }
 
     if (changed) {
         [defaults synchronize];

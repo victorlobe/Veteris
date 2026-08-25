@@ -39,12 +39,36 @@ static NSString *const VeterisDevSettingsMenuKey = @"dev_settings_menu";
 static NSString *const VeterisLanguageOverrideKey = @"veteris_language_override";
 static NSString *const VeterisLowMemoryModeEnabledKey = @"veteris_low_memory_mode_enabled";
 static NSString *const VeterisArchiveDownloadSegmentsKey = @"veteris_archive_download_segments";
+static NSString *const VeterisHomeIconBadgeEnabledKey = @"veteris_home_icon_badge_enabled";
 static NSString *const VeterisResetSettingsKey = @"reset_veteris_all";
 static NSString *const VeterisDevSecretCode = @"VictorIsKing";
 static NSInteger const VeterisDevCodeAlertTag = 8001;
 
+- (BOOL)homeIconBadgeEnabled
+{
+    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+    if ([defaults objectForKey:VeterisHomeIconBadgeEnabledKey] == nil) {
+        return YES;
+    }
+    return [defaults boolForKey:VeterisHomeIconBadgeEnabledKey];
+}
+
+- (void)updateHomeIconBadgeVisibility
+{
+    BOOL enabled = [self homeIconBadgeEnabled];
+    self.badgeImageView.hidden = !enabled;
+    if (!enabled) {
+        currentBadgeName = nil;
+        self.badgeImageView.image = nil;
+    }
+}
+
 - (void)applyRandomBadgeImage
 {
+    if (![self homeIconBadgeEnabled]) {
+        [self updateHomeIconBadgeVisibility];
+        return;
+    }
     NSArray *badgeNames = @[
         @"honoringElectimonBadge",
         @"thankYouElectimonBadge",
@@ -64,6 +88,7 @@ static NSInteger const VeterisDevCodeAlertTag = 8001;
     }
     currentBadgeName = badgeName;
     self.badgeImageView.image = [UIImage imageNamed:badgeName];
+    self.badgeImageView.hidden = NO;
 }
 
 - (void)shuffleBadgeFromHomeIconTap:(UITapGestureRecognizer *)gestureRecognizer
@@ -86,6 +111,7 @@ static NSInteger const VeterisDevCodeAlertTag = 8001;
     [self setupBottomBackgroundView];
     entries = nil;
     self.appIconImageView.userInteractionEnabled = YES;
+    [self updateHomeIconBadgeVisibility];
     UITapGestureRecognizer *appIconTapRecognizer = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(shuffleBadgeFromHomeIconTap:)];
     [self.appIconImageView addGestureRecognizer:appIconTapRecognizer];
     [getDelegate().themeManager applyThemeToNavigationBar:self.navigationController.navigationBar];
@@ -287,6 +313,14 @@ static NSInteger const VeterisDevCodeAlertTag = 8001;
                                        delegate:nil
                               cancelButtonTitle:NSLocalizedString(@"Ok", nil)
                               otherButtonTitles:nil] show];
+        }
+        return;
+    }
+    if ([[notification object] isEqualToString:VeterisHomeIconBadgeEnabledKey]) {
+        if ([self homeIconBadgeEnabled]) {
+            [self applyRandomBadgeImage];
+        } else {
+            [self updateHomeIconBadgeVisibility];
         }
         return;
     }

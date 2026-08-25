@@ -32,17 +32,65 @@ static bool decode_string(pb_istream_t *stream, const pb_field_t *field, void **
     return true;
 }
 
+static void free_version_msg_strings(VersionMsg version) {
+    free(version.version.arg);
+    free(version.fileName.arg);
+    free(version.minVersion.arg);
+    free(version.buildVersion.arg);
+    free(version.platform.arg);
+    free(version.sourceItem.arg);
+    free(version.sourceFile.arg);
+    free(version.sha1.arg);
+    free(version.md5.arg);
+    free(version.fairplayStatus.arg);
+    free(version.archFlags.arg);
+    free(version.backgroundModes.arg);
+    free(version.executable.arg);
+    free(version.releaseDate.arg);
+    free(version.contentRating.arg);
+    free(version.price.arg);
+    free(version.subgenres.arg);
+    free(version.copyrightText.arg);
+    free(version.gameCenter.arg);
+    free(version.newsstand.arg);
+    free(version.requiredCapabilities.arg);
+    free(version.metadataSource.arg);
+    free(version.iconPath.arg);
+    free(version.iconBundleID.arg);
+    free(version.bundleID.arg);
+}
+
 static bool decode_versions(pb_istream_t *stream, const pb_field_t *field, void **arg) {
     VersionMsg version = VersionMsg_init_zero;
     setDecFS(version.version);
     setDecFS(version.fileName);
     setDecFS(version.minVersion);
+    setDecFS(version.buildVersion);
+    setDecFS(version.platform);
+    setDecFS(version.sourceItem);
+    setDecFS(version.sourceFile);
+    setDecFS(version.sha1);
+    setDecFS(version.md5);
+    setDecFS(version.fairplayStatus);
+    setDecFS(version.archFlags);
+    setDecFS(version.backgroundModes);
+    setDecFS(version.executable);
+    setDecFS(version.releaseDate);
+    setDecFS(version.contentRating);
+    setDecFS(version.price);
+    setDecFS(version.subgenres);
+    setDecFS(version.copyrightText);
+    setDecFS(version.gameCenter);
+    setDecFS(version.newsstand);
+    setDecFS(version.requiredCapabilities);
+    setDecFS(version.metadataSource);
+    setDecFS(version.iconPath);
+    setDecFS(version.iconBundleID);
+    setDecFS(version.bundleID);
     if (!pb_decode(stream, VersionMsg_fields, &version)) {
         const char *error = PB_GET_ERROR(stream);
         debugLog(@"Error decoding VersionMsg: %s — freeing partial allocs", error);
-        free(version.version.arg);
-        free(version.fileName.arg);
-        free(version.minVersion.arg);
+        free_version_msg_strings(version);
         return false;
     }
     Version *versionObj = [[Version alloc] initFromVersionProto:version];
@@ -52,9 +100,52 @@ static bool decode_versions(pb_istream_t *stream, const pb_field_t *field, void 
     }
     [versions addObject:versionObj];
     *arg = (__bridge_retained void *)versions;
-    free(version.version.arg);
-    free(version.fileName.arg);
-    free(version.minVersion.arg);
+    free_version_msg_strings(version);
+    return true;
+}
+
+static bool decode_info_fields(pb_istream_t *stream, const pb_field_t *field, void **arg) {
+    InfoFieldMsg infoField = InfoFieldMsg_init_zero;
+    setDecFS(infoField.label);
+    setDecFS(infoField.value);
+    if (!pb_decode(stream, InfoFieldMsg_fields, &infoField)) {
+        const char *error = PB_GET_ERROR(stream);
+        debugLog(@"Error decoding InfoFieldMsg: %s — freeing partial allocs", error);
+        free(infoField.label.arg);
+        free(infoField.value.arg);
+        return false;
+    }
+    NSMutableArray *fields = (__bridge NSMutableArray *)(*arg);
+    if (fields == nil) {
+        fields = [NSMutableArray array];
+    }
+    [fields addObject:[[ApplicationInfoField alloc] initFromInfoFieldProto:infoField]];
+    *arg = (__bridge_retained void *)fields;
+    free(infoField.label.arg);
+    free(infoField.value.arg);
+    return true;
+}
+
+static bool decode_info_blocks(pb_istream_t *stream, const pb_field_t *field, void **arg) {
+    InfoBlockMsg block = InfoBlockMsg_init_zero;
+    setDecFS(block.title);
+    setDecFS(block.body);
+    block.fields.funcs.decode = &decode_info_fields;
+    if (!pb_decode(stream, InfoBlockMsg_fields, &block)) {
+        const char *error = PB_GET_ERROR(stream);
+        debugLog(@"Error decoding InfoBlockMsg: %s — freeing partial allocs", error);
+        free(block.title.arg);
+        free(block.body.arg);
+        return false;
+    }
+    NSMutableArray *blocks = (__bridge NSMutableArray *)(*arg);
+    if (blocks == nil) {
+        blocks = [NSMutableArray array];
+    }
+    [blocks addObject:[[ApplicationInfoBlock alloc] initFromInfoBlockProto:block]];
+    *arg = (__bridge_retained void *)blocks;
+    free(block.title.arg);
+    free(block.body.arg);
     return true;
 }
 
@@ -235,7 +326,10 @@ void* decode(const void* data, size_t data_len, ProtoType type) {
             setDecFS(app.gameCenter);
             setDecFS(app.newsstand);
             setDecFS(app.requiredCapabilities);
+            setDecFS(app.primaryBundleID);
+            setDecFS(app.websiteURL);
             app.versions.funcs.decode = &decode_versions;
+            app.customInfoBlocks.funcs.decode = &decode_info_blocks;
             bool success = pb_decode(&stream, AppMsg_fields, &app);
             if (!success) {
                 const char *error = PB_GET_ERROR(&stream);
@@ -260,6 +354,8 @@ void* decode(const void* data, size_t data_len, ProtoType type) {
                 free(app.gameCenter.arg);
                 free(app.newsstand.arg);
                 free(app.requiredCapabilities.arg);
+                free(app.primaryBundleID.arg);
+                free(app.websiteURL.arg);
                 return NULL;
             }
             Application *application = [[Application alloc] initFromAppProto:app];

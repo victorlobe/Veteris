@@ -101,6 +101,7 @@
 "DetailsArchitectures" = "البنيات";
 "DetailsBackgroundModes" = "أوضاع الخلفية";
 "DetailsExecutable" = "الملف التنفيذي";
+"DetailsWebsite" = "الموقع الإلكتروني";
 "NoDescriptionAvailable" = "لا يوجد وصف بعد.";
 "DetailsReleased" = "تاريخ الإصدار";
 "DetailsRating" = "التصنيف العمري";
@@ -111,6 +112,18 @@
 "DetailsNewsstand" = "كشك الصحف";
 "DetailsRequiredCapabilities" = "الميزات المطلوبة";
 "DetailsYes" = "نعم";
+"VersionInfoSize" = "الحجم";
+"VersionInfoBuild" = "Build";
+"VersionInfoITunesMetadata" = "iTunes Metadata";
+"VersionInfoNotAvailable" = "غير متوفر";
+"VersionInfoFairPlay" = "FairPlay";
+"VersionInfoArchiveItem" = "عنصر الأرشيف";
+"VersionInfoArchiveFile" = "ملف الأرشيف";
+"VersionInfoIconPath" = "مسار الأيقونة";
+"VersionInfoIconBundleID" = "Icon Bundle ID";
+"VersionInfoMetadataSource" = "مصدر البيانات الوصفية";
+"VersionInfoMetadataFilename" = "احتياطي اسم الملف";
+"VersionInfoDownloadURL" = "رابط التنزيل";
 "Favorites" = "المفضلة";
 "AddToFavorites" = "إضافة إلى المفضلة";
 "RemoveFromFavorites" = "إزالة من المفضلة";

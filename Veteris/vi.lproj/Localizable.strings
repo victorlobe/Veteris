@@ -88,6 +88,7 @@
 "DetailsArchitectures" = "Kiến trúc";
 "DetailsBackgroundModes" = "Chế độ chạy nền";
 "DetailsExecutable" = "Tệp thực thi";
+"DetailsWebsite" = "Trang web";
 "NoDescriptionAvailable" = "Chưa có mô tả.";
 "DetailsReleased" = "Ngày phát hành";
 "DetailsRating" = "Xếp hạng độ tuổi";
@@ -98,6 +99,18 @@
 "DetailsNewsstand" = "Quầy báo";
 "DetailsRequiredCapabilities" = "Tính năng bắt buộc";
 "DetailsYes" = "Có";
+"VersionInfoSize" = "Kích thước";
+"VersionInfoBuild" = "Build";
+"VersionInfoITunesMetadata" = "iTunes Metadata";
+"VersionInfoNotAvailable" = "Không có";
+"VersionInfoFairPlay" = "FairPlay";
+"VersionInfoArchiveItem" = "Mục lưu trữ";
+"VersionInfoArchiveFile" = "Tệp lưu trữ";
+"VersionInfoIconPath" = "Đường dẫn biểu tượng";
+"VersionInfoIconBundleID" = "Icon Bundle ID";
+"VersionInfoMetadataSource" = "Nguồn metadata";
+"VersionInfoMetadataFilename" = "Dự phòng tên tệp";
+"VersionInfoDownloadURL" = "URL tải xuống";
 "Favorites" = "Mục yêu thích";
 "AddToFavorites" = "Thêm vào mục yêu thích";
 "RemoveFromFavorites" = "Xóa khỏi mục yêu thích";

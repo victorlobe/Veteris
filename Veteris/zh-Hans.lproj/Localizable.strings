@@ -101,6 +101,7 @@
 "DetailsArchitectures" = "架构";
 "DetailsBackgroundModes" = "后台模式";
 "DetailsExecutable" = "Executable";
+"DetailsWebsite" = "网站";
 "NoDescriptionAvailable" = "暂时没有描述。";
 "DetailsReleased" = "发布";
 "DetailsRating" = "评级";
@@ -111,6 +112,18 @@
 "DetailsNewsstand" = "报刊杂志";
 "DetailsRequiredCapabilities" = "所需功能";
 "DetailsYes" = "是";
+"VersionInfoSize" = "大小";
+"VersionInfoBuild" = "Build";
+"VersionInfoITunesMetadata" = "iTunes Metadata";
+"VersionInfoNotAvailable" = "不可用";
+"VersionInfoFairPlay" = "FairPlay";
+"VersionInfoArchiveItem" = "归档项目";
+"VersionInfoArchiveFile" = "归档文件";
+"VersionInfoIconPath" = "图标路径";
+"VersionInfoIconBundleID" = "Icon Bundle ID";
+"VersionInfoMetadataSource" = "元数据来源";
+"VersionInfoMetadataFilename" = "文件名备用";
+"VersionInfoDownloadURL" = "下载 URL";
 "Favorites" = "收藏";
 "AddToFavorites" = "加入收藏";
 "RemoveFromFavorites" = "移出收藏";

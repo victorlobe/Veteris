@@ -101,6 +101,7 @@
 "DetailsArchitectures" = "アーキテクチャ";
 "DetailsBackgroundModes" = "バックグラウンドモード";
 "DetailsExecutable" = "Executable";
+"DetailsWebsite" = "ウェブサイト";
 "NoDescriptionAvailable" = "説明はまだありません。";
 "DetailsReleased" = "リリース";
 "DetailsRating" = "レーティング";
@@ -111,6 +112,18 @@
 "DetailsNewsstand" = "Newsstand";
 "DetailsRequiredCapabilities" = "必要な機能";
 "DetailsYes" = "はい";
+"VersionInfoSize" = "サイズ";
+"VersionInfoBuild" = "Build";
+"VersionInfoITunesMetadata" = "iTunes Metadata";
+"VersionInfoNotAvailable" = "利用不可";
+"VersionInfoFairPlay" = "FairPlay";
+"VersionInfoArchiveItem" = "アーカイブ項目";
+"VersionInfoArchiveFile" = "アーカイブファイル";
+"VersionInfoIconPath" = "アイコンパス";
+"VersionInfoIconBundleID" = "Icon Bundle ID";
+"VersionInfoMetadataSource" = "メタデータソース";
+"VersionInfoMetadataFilename" = "ファイル名フォールバック";
+"VersionInfoDownloadURL" = "ダウンロード URL";
 "Favorites" = "お気に入り";
 "AddToFavorites" = "お気に入りに追加";
 "RemoveFromFavorites" = "お気に入りから削除";
