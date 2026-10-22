@@ -1,7 +1,6 @@
 #import "DownloadButtonSettingsViewController.h"
 #import "../AppInfo/VLInstallButton.h"
 #import "../../InAppSettingsKit/Models/IASKSettingsReader.h"
-#import <QuartzCore/QuartzCore.h>
 
 static NSString * const DownloadButtonPreviewReuseIdentifier = @"DownloadButtonPreviewCell";
 static NSString * const DownloadButtonChoiceReuseIdentifier = @"DownloadButtonChoiceCell";
@@ -21,11 +20,6 @@ static NSArray *DownloadButtonSettingsStyles(void) {
 @interface DownloadButtonPreviewCell : UITableViewCell
 @property (nonatomic, retain) UIView *appInfoCanvasView;
 @property (nonatomic, retain) UIView *appInfoHeaderView;
-@property (nonatomic, retain) UIImageView *appInfoShadowView;
-@property (nonatomic, retain) UIImageView *previewIconView;
-@property (nonatomic, retain) UILabel *previewNameLabel;
-@property (nonatomic, retain) UILabel *previewDeveloperLabel;
-@property (nonatomic, retain) UILabel *previewVersionsLabel;
 @property (nonatomic, retain) VLInstallButton *previewButton;
 @property (nonatomic, retain) UIButton *cloudPreviewButton;
 @property (nonatomic, retain) UIButton *nativePreviewButton;
@@ -54,54 +48,6 @@ static NSArray *DownloadButtonSettingsStyles(void) {
         self.appInfoHeaderView = [[UIView alloc] initWithFrame:CGRectZero];
         self.appInfoHeaderView.backgroundColor = [UIColor clearColor];
         [self.appInfoCanvasView addSubview:self.appInfoHeaderView];
-
-        self.appInfoShadowView = [[UIImageView alloc] initWithFrame:CGRectZero];
-        self.appInfoShadowView.image = [UIImage imageNamed:@"DepthShadow.png"];
-        self.appInfoShadowView.contentMode = UIViewContentModeScaleToFill;
-        self.appInfoShadowView.userInteractionEnabled = NO;
-        [self.appInfoCanvasView addSubview:self.appInfoShadowView];
-
-        self.previewIconView = [[UIImageView alloc] initWithFrame:CGRectZero];
-        self.previewIconView.contentMode = UIViewContentModeScaleToFill;
-        self.previewIconView.userInteractionEnabled = NO;
-        self.previewIconView.layer.cornerRadius = 13.0;
-        self.previewIconView.layer.masksToBounds = YES;
-        NSString *iconPath = [[NSBundle mainBundle] pathForResource:@"AppIcon60x60@2x" ofType:@"png"];
-        self.previewIconView.image = iconPath != nil ? [UIImage imageWithContentsOfFile:iconPath] : [UIImage imageNamed:@"Icon.png"];
-        [self.appInfoHeaderView addSubview:self.previewIconView];
-
-        self.previewNameLabel = [[UILabel alloc] initWithFrame:CGRectZero];
-        self.previewNameLabel.backgroundColor = [UIColor clearColor];
-        self.previewNameLabel.text = @"Veteris";
-        self.previewNameLabel.font = [UIFont boldSystemFontOfSize:17.0];
-        self.previewNameLabel.minimumFontSize = 5.0;
-        self.previewNameLabel.adjustsFontSizeToFitWidth = YES;
-        self.previewNameLabel.userInteractionEnabled = NO;
-        [self.appInfoHeaderView addSubview:self.previewNameLabel];
-
-        self.previewDeveloperLabel = [[UILabel alloc] initWithFrame:CGRectZero];
-        self.previewDeveloperLabel.backgroundColor = [UIColor clearColor];
-        self.previewDeveloperLabel.text = @"Victor";
-        self.previewDeveloperLabel.alpha = 0.75;
-        self.previewDeveloperLabel.font = [UIFont fontWithName:@"Helvetica" size:12.0];
-        self.previewDeveloperLabel.minimumFontSize = 5.0;
-        self.previewDeveloperLabel.adjustsFontSizeToFitWidth = YES;
-        self.previewDeveloperLabel.userInteractionEnabled = NO;
-        [self.appInfoHeaderView addSubview:self.previewDeveloperLabel];
-
-        self.previewVersionsLabel = [[UILabel alloc] initWithFrame:CGRectZero];
-        self.previewVersionsLabel.backgroundColor = [UIColor clearColor];
-        self.previewVersionsLabel.text = @"12 versions";
-        self.previewVersionsLabel.alpha = 0.75;
-        self.previewVersionsLabel.font = [UIFont fontWithName:@"Helvetica" size:10.0];
-        self.previewVersionsLabel.userInteractionEnabled = NO;
-        [self.appInfoHeaderView addSubview:self.previewVersionsLabel];
-
-        self.previewIconView.hidden = YES;
-        self.previewNameLabel.hidden = YES;
-        self.previewDeveloperLabel.hidden = YES;
-        self.previewVersionsLabel.hidden = YES;
-        self.appInfoShadowView.hidden = YES;
 
         self.previewButton = [[VLInstallButton alloc] initWithFrame:CGRectMake(253.0, 62.0, 47.0, 28.0)
                                                                 style:VLInstallButtonStyleCloud
@@ -179,11 +125,6 @@ static NSArray *DownloadButtonSettingsStyles(void) {
     self.appInfoCanvasView.frame = CGRectMake(floor((contentWidth - canvasWidth) / 2.0), 0.0, canvasWidth, contentHeight);
 
     self.appInfoHeaderView.frame = CGRectMake(0.0, 0.0, canvasWidth, contentHeight);
-    self.appInfoShadowView.frame = CGRectMake(0.0, 111.0, canvasWidth, 44.0);
-    self.previewIconView.frame = CGRectMake(20.0, 20.0, 70.0, 70.0);
-    self.previewNameLabel.frame = CGRectMake(100.0, 20.0, 179.0, 23.0);
-    self.previewDeveloperLabel.frame = CGRectMake(100.0, 44.0, 138.0, 21.0);
-    self.previewVersionsLabel.frame = CGRectMake(100.0, 69.0, 138.0, 21.0);
 
     UIControl *activeButton = self.cloudPreviewButton.hidden
         ? (self.nativePreviewButton.hidden ? self.previewButton : self.nativePreviewButton)

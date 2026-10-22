@@ -1356,6 +1356,11 @@ static CGSize AppInfoScreenshotDisplaySize(CGSize pixelSize, CGFloat height, CGF
 
 - (void)dealloc {
     [[NSNotificationCenter defaultCenter] removeObserver:self];
+
+    versionsTableView.dataSource = nil;
+    versionsTableView.delegate = nil;
+    relatedTableView.dataSource = nil;
+    relatedTableView.delegate = nil;
 }
 
 - (VLInstallButtonStyle)configuredInstallButtonStyle {

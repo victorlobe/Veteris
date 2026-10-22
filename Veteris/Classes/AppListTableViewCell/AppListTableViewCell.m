@@ -42,7 +42,7 @@ static CGFloat const VeterisRankIconGap = 2.0;
     self.rankLabel.font = [UIFont boldSystemFontOfSize:11.0];
     self.rankLabel.textColor = [UIColor colorWithWhite:0.35 alpha:0.75];
     self.rankLabel.adjustsFontSizeToFitWidth = YES;
-    self.rankLabel.minimumScaleFactor = 0.75;
+    self.rankLabel.minimumFontSize = 8.0;
     self.rankLabel.hidden = YES;
     [self.contentView addSubview:self.rankLabel];
     [self captureDefaultFramesIfNeeded];
