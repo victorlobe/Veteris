@@ -4,6 +4,7 @@
 - (bool)deviceSupportsThemes;
 - (UIColor*)tintColorForTheme:(NSString*)themeName;
 - (UIColor*)tintColorForCurrentTheme;
+- (UIColor*)previewColorForTheme:(NSString*)themeName;
 - (UIColor*)homeShimmerColorForCurrentTheme;
 - (NSArray*)gradientColorsForTheme:(NSString*)themeName;
 - (NSArray*)gradientColorsForCurrentTheme;

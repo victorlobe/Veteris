@@ -3,15 +3,48 @@
 #import "../Convenience/Convenience.h"
 #import "../../AppDelegate.h"
 #import <QuartzCore/QuartzCore.h>
+#import <objc/runtime.h>
 #import "InAppSettingsKit/Models/IASKSettingsReader.h"
 
 #define UIColorFromRGB(rgbValue) [UIColor colorWithRed:((float)((rgbValue & 0xFF0000) >> 16))/255.0 green:((float)((rgbValue & 0xFF00) >> 8))/255.0 blue:((float)(rgbValue & 0xFF))/255.0 alpha:1.0]
 #define KILL_IF_UNSUPPORTED if (THEME_KILLSWITCH == 1) { return; }
 
+static NSString * const kThemeArtworkDirectory = @"ThemeArtwork";
+static char kAppliedThemeKey;
+static char kLeftBarButtonItemKey;
+static char kArtworkButtonKey;
+static char kArtworkButtonItemKey;
+static char kContentTopInsetKey;
+
+static NSValue *ThemeInsets(CGFloat top, CGFloat left, CGFloat bottom, CGFloat right) {
+    return [NSValue valueWithUIEdgeInsets:UIEdgeInsetsMake(top, left, bottom, right)];
+}
+
+static NSValue *ThemeSize(CGFloat width, CGFloat height) {
+    return [NSValue valueWithCGSize:CGSizeMake(width, height)];
+}
+
+static NSValue *ThemeOffset(CGFloat horizontal, CGFloat vertical) {
+    return [NSValue valueWithUIOffset:UIOffsetMake(horizontal, vertical)];
+}
+
+@interface ThemeArtworkButtonItemReference : NSObject
+@property (nonatomic, weak) UIBarButtonItem *item;
+@end
+
+@implementation ThemeArtworkButtonItemReference
+@end
+
 @implementation ThemeManager {
     NSDictionary *themeInfo;
     NSString *currentTheme;
     bool THEME_KILLSWITCH;
+    BOOL artworkThemeWasUsed;
+    NSString *artworkAssetsTheme;
+    NSDictionary *artworkAssets;
+    NSString *artworkAppearanceTheme;
+    NSHashTable *styledBarButtonItems;
+    NSMutableDictionary *artworkPreviewColors;
 }
 
 + (ThemeManager *)sharedInstance {
@@ -57,6 +90,130 @@
         @"gradientColors": gradientColors,
         @"tabBarUsesGradient": @(tabBarUsesGradient),
         @"usesSystemAppearance": @(usesSystemAppearance)
+    };
+}
+
+
+
+- (NSDictionary*)artworkThemeInfoWithName:(NSString*)name folder:(NSString*)folder tintColor:(UIColor*)tintColor homeColor:(UIColor*)homeColor artwork:(NSDictionary*)artwork {
+    NSMutableDictionary *info = [[self themeInfoWithName:name tintColor:tintColor gradientColors:@[] tabBarUsesGradient:NO] mutableCopy];
+    NSMutableDictionary *artworkInfo = [artwork mutableCopy];
+    [artworkInfo setObject:folder forKey:@"folder"];
+    [info setObject:artworkInfo forKey:@"artwork"];
+    [info setObject:homeColor forKey:@"homeColor"];
+    return info;
+}
+
+- (NSDictionary*)artworkThemeInfo {
+    UIColor *white = [UIColor whiteColor];
+    NSValue *shadowUp = ThemeOffset(0, -1);
+    NSValue *shadowDown = ThemeOffset(0, 1);
+
+    UIColor *notesPaper = UIColorFromRGB(0xFAF693);
+    NSValue *notesButtonInsets = ThemeInsets(0, 5, 0, 5);
+    NSValue *notesBackInsets = ThemeInsets(0, 14, 0, 4);
+    NSDictionary *notes = [self artworkThemeInfoWithName:@"Notes" folder:@"Notes" tintColor:UIColorFromRGB(0x5B3F36) homeColor:notesPaper artwork:@{
+        @"navigationBar": @{@"file": @"top bar@2x~iphone.png"},
+        @"tabBar": @{@"file": @"SearchBar@2x~iphone.png", @"capInsets": ThemeInsets(2, 0, 2, 0), @"size": ThemeSize(320, 49)},
+        @"button": @{@"file": @"header button@2x~iphone.png", @"capInsets": notesButtonInsets},
+        @"buttonPressed": @{@"file": @"header button pressed@2x~iphone.png", @"capInsets": notesButtonInsets},
+        @"backButton": @{@"file": @"header back@2x.png", @"capInsets": notesBackInsets},
+        @"backButtonPressed": @{@"file": @"header back pressed@2x.png", @"capInsets": notesBackInsets},
+        @"titleColor": white,
+        @"buttonTitleColor": white,
+        @"tabTitleColor": UIColorFromRGB(0xC9B7A6),
+        @"tabSelectedTitleColor": notesPaper,
+        @"tabSelectedImageColor": notesPaper,
+        @"shadowColor": [UIColor colorWithWhite:0 alpha:0.5],
+        @"shadowOffset": shadowUp
+    }];
+
+
+
+    UIColor *remindersTitle = [UIColor colorWithWhite:0.808 alpha:1];
+    NSValue *remindersButtonInsets = ThemeInsets(0, 9, 0, 9);
+    NSValue *remindersButtonAlignment = ThemeInsets(4, 3, 3, 3);
+    NSValue *remindersBackInsets = ThemeInsets(0, 16, 0, 7);
+    NSValue *remindersBackAlignment = ThemeInsets(4, 2, 2, 3);
+    NSDictionary *reminders = [self artworkThemeInfoWithName:@"Reminders" folder:@"Reminders" tintColor:UIColorFromRGB(0x383838) homeColor:UIColorFromRGB(0xDD2730) artwork:@{
+        @"navigationBar": @{@"layers": @[@[@"background@2x~iphone.png", @0]], @"size": ThemeSize(320, 44)},
+        @"tabBar": @{@"layers": @[@[@"background@2x~iphone.png", @(-300)]], @"size": ThemeSize(320, 49)},
+        @"leftButton": @{@"file": @"ButtonLeft@2x~iphone.png", @"capInsets": remindersButtonInsets, @"alignmentInsets": remindersButtonAlignment},
+        @"leftButtonPressed": @{@"file": @"ButtonLeftDown@2x~iphone.png", @"capInsets": remindersButtonInsets, @"alignmentInsets": remindersButtonAlignment},
+        @"button": @{@"file": @"ButtonRight@2x~iphone.png", @"capInsets": remindersButtonInsets, @"alignmentInsets": remindersButtonAlignment},
+        @"buttonPressed": @{@"file": @"ButtonRightDown@2x~iphone.png", @"capInsets": remindersButtonInsets, @"alignmentInsets": remindersButtonAlignment},
+        @"backButton": @{@"file": @"backButton@2x~iphone.png", @"capInsets": remindersBackInsets, @"alignmentInsets": remindersBackAlignment},
+        @"backButtonPressed": @{@"file": @"backButtonPressed@2x~iphone.png", @"capInsets": remindersBackInsets, @"alignmentInsets": remindersBackAlignment},
+        @"titleColor": remindersTitle,
+        @"buttonTitleColor": remindersTitle,
+        @"buttonTitleFont": [UIFont boldSystemFontOfSize:12],
+        // Keep Reminders' custom bar buttons at their full 36 pt height.
+        @"buttonsAsCustomViews": @YES,
+        @"buttonContentInsets": ThemeInsets(0, 8, 0, 8),
+        @"buttonMinimumWidth": @54,
+        @"actionButtonImage": @{@"file": @"UIButtonBarAction.png"},
+        @"tabTitleColor": UIColorFromRGB(0x9A9A9A),
+        @"tabSelectedTitleColor": white,
+        @"tabSelectedImageColor": UIColorFromRGB(0xDD2730),
+        @"shadowColor": [UIColor colorWithWhite:0 alpha:0.75],
+        @"shadowOffset": shadowUp
+    }];
+	
+
+    NSValue *gameCenterButtonInsets = ThemeInsets(0, 6, 0, 6);
+    NSValue *gameCenterBackInsets = ThemeInsets(0, 15, 0, 4);
+    NSDictionary *gameCenter = [self artworkThemeInfoWithName:@"Game Center" folder:@"GameCenter" tintColor:UIColorFromRGB(0x935337) homeColor:UIColorFromRGB(0x33935E) artwork:@{
+        @"navigationBar": @{@"file": @"GKNavbarPortrait@2x.png"},
+        @"navigationBarShadow": @{@"file": @"GKNavbarShadow@2x.png"},
+        @"tabBar": @{@"file": @"GKTabbarPortrait@2x.png"},
+        @"tabBarSelection": @{@"file": @"GKTabbarActiveTab@2x~iphone.png"},
+        @"button": @{@"file": @"GKNavbarButtonNormal@2x.png", @"capInsets": gameCenterButtonInsets},
+        @"buttonPressed": @{@"file": @"GKNavbarButtonPressed@2x.png", @"capInsets": gameCenterButtonInsets},
+        @"backButton": @{@"file": @"GKNavbarBackButtonNormal@2x.png", @"capInsets": gameCenterBackInsets},
+        @"backButtonPressed": @{@"file": @"GKNavbarBackButtonPressed@2x.png", @"capInsets": gameCenterBackInsets},
+        @"titleColor": white,
+        @"buttonTitleColor": white,
+        @"tabTitleColor": UIColorFromRGB(0xF2DFC4),
+        @"tabSelectedTitleColor": white,
+        @"tabSelectedImageColor": UIColorFromRGB(0xEDD999),
+        @"shadowColor": [UIColor colorWithWhite:0 alpha:0.6],
+        @"shadowOffset": shadowUp
+    }];
+
+
+
+    UIColor *findMyFriendsBrown = UIColorFromRGB(0x503815);
+    UIColor *findMyFriendsHighlight = [UIColor colorWithWhite:1 alpha:0.5];
+    NSValue *findMyFriendsButtonInsets = ThemeInsets(0, 12, 0, 12);
+    NSValue *findMyFriendsBackInsets = ThemeInsets(0, 15, 0, 5);
+    NSDictionary *findMyFriends = [self artworkThemeInfoWithName:@"Find My Friends" folder:@"FindMyFriends" tintColor:UIColorFromRGB(0x956635) homeColor:UIColorFromRGB(0xCAA86D) artwork:@{
+        @"navigationBar": @{@"file": @"navbar_top@2x.png"},
+        @"navigationBarShadow": @{@"file": @"navbar_bottom@2x.png"},
+        @"contentTopInset": @10,
+        @"tabBar": @{@"file": @"toolbar_noshadow@2x.png", @"capInsets": ThemeInsets(4, 0, 4, 0), @"size": ThemeSize(320, 49)},
+        @"tabBarSelection": @{@"file": @"icon_rectangle_selected@2x.png", @"capInsets": ThemeInsets(8, 8, 8, 8), @"size": ThemeSize(62, 47)},
+        @"button": @{@"file": @"btn_normal@2x.png", @"capInsets": findMyFriendsButtonInsets},
+        @"buttonPressed": @{@"file": @"btn_pressed@2x.png", @"capInsets": findMyFriendsButtonInsets},
+        @"backButton": @{@"file": @"btn_back_normal@2x.png", @"capInsets": findMyFriendsBackInsets},
+        @"backButtonPressed": @{@"file": @"btn_back_pressed@2x.png", @"capInsets": findMyFriendsBackInsets},
+        @"titleColor": findMyFriendsBrown,
+        @"titleShadowColor": findMyFriendsHighlight,
+        @"titleShadowOffset": shadowDown,
+        @"buttonTitleColor": white,
+        @"tabTitleColor": UIColorFromRGB(0x7F552A),
+        @"tabTitleShadowColor": findMyFriendsHighlight,
+        @"tabTitleShadowOffset": shadowDown,
+        @"tabSelectedTitleColor": UIColorFromRGB(0xF2E2C2),
+        @"tabSelectedImageColor": UIColorFromRGB(0xD2B581),
+        @"shadowColor": [UIColor colorWithWhite:0 alpha:0.4],
+        @"shadowOffset": shadowUp
+    }];
+
+    return @{
+        @"Notes": notes,
+        @"Reminders": reminders,
+        @"GameCenter": gameCenter,
+        @"FindMyFriends": findMyFriends
     };
 }
 
@@ -170,7 +327,7 @@
         (id)UIColorFromRGB(0x39395E).CGColor,
         (id)UIColorFromRGB(0x292941).CGColor
     ];
-    return @{
+    NSMutableDictionary *themes = [NSMutableDictionary dictionaryWithDictionary:@{
         @"StockIOS": [self themeInfoWithName:@"Stock iOS" tintColor:stockIOSTint gradientColors:@[] tabBarUsesGradient:NO usesSystemAppearance:YES],
         @"Default": [self themeInfoWithName:@"Midnight (Standard)" tintColor:defaultTint gradientColors:defaultGradient],
         @"Jungle": [self themeInfoWithName:@"Jungle" tintColor:jungleTint gradientColors:jungleGradient],
@@ -201,7 +358,9 @@
         @"AutumnBlack": [self themeInfoWithName:@"Autumn (Black)" tintColor:autumnTint gradientColors:autumnGradient tabBarUsesGradient:NO],
         @"SpookyBlack": [self themeInfoWithName:@"Spooky (Black)" tintColor:spookyTint gradientColors:spookyGradient tabBarUsesGradient:NO],
         @"PeriwinkleBlack": [self themeInfoWithName:@"Periwinkle (Black)" tintColor:periwinkleTint gradientColors:periwinkleGradient tabBarUsesGradient:NO]
-    };
+    }];
+    [themes addEntriesFromDictionary:[self artworkThemeInfo]];
+    return themes;
 }
 
 - (bool)deviceSupportsThemes {
@@ -218,9 +377,39 @@
     return [self tintColorForTheme:currentTheme];
 }
 
+- (UIColor*)previewColorForTheme:(NSString*)themeName {
+    NSDictionary *artwork = [self artworkForTheme:themeName];
+    if (artwork == nil) {
+        return [self tintColorForTheme:themeName];
+    }
+    UIColor *previewColor = [artworkPreviewColors objectForKey:themeName];
+    if (previewColor != nil) {
+        return previewColor;
+    }
+    UIImage *navigationBarImage = [self artworkImageForSpec:[artwork objectForKey:@"navigationBar"] folder:[artwork objectForKey:@"folder"]];
+    if (navigationBarImage == nil) {
+        return [self tintColorForTheme:themeName];
+    }
+    CGSize size = CGSizeMake(22, 22);
+    UIGraphicsBeginImageContextWithOptions(size, YES, 2.0);
+    [navigationBarImage drawAtPoint:CGPointMake(floorf((size.width - navigationBarImage.size.width) / 2), floorf((size.height - navigationBarImage.size.height) / 2))];
+    UIImage *swatch = UIGraphicsGetImageFromCurrentImageContext();
+    UIGraphicsEndImageContext();
+    previewColor = [UIColor colorWithPatternImage:swatch];
+    if (artworkPreviewColors == nil) {
+        artworkPreviewColors = [NSMutableDictionary dictionary];
+    }
+    [artworkPreviewColors setObject:previewColor forKey:themeName];
+    return previewColor;
+}
+
 - (UIColor*)homeShimmerColorForCurrentTheme {
     if (![self deviceSupportsThemes] || [currentTheme isEqualToString:@"Default"]) {
         return [UIColor purpleColor];
+    }
+    UIColor *homeColor = [[themeInfo objectForKey:currentTheme] objectForKey:@"homeColor"];
+    if (homeColor != nil) {
+        return homeColor;
     }
     return [self tintColorForCurrentTheme];
 }
@@ -242,6 +431,13 @@
     return [[[themeInfo objectForKey:currentTheme] objectForKey:@"usesSystemAppearance"] boolValue];
 }
 
+- (NSDictionary*)artworkForTheme:(NSString*)themeName {
+    if (themeName == nil) {
+        return nil;
+    }
+    return [[themeInfo objectForKey:themeName] objectForKey:@"artwork"];
+}
+
 #pragma mark - Theme Application
 - (void)applyTintToTabBar:(UITabBar *)tabBar {
     if ([self themeUsesSystemAppearanceForCurrentTheme]) {
@@ -250,6 +446,19 @@
         for (UITabBarItem *item in tabBar.items) {
             [item setTitleTextAttributes:nil forState:UIControlStateNormal];
             [item setTitleTextAttributes:nil forState:UIControlStateSelected];
+        }
+        return;
+    }
+    NSDictionary *artwork = [self artworkForTheme:currentTheme];
+    if (artwork != nil) {
+        UIColor *selectedImageColor = [artwork objectForKey:@"tabSelectedImageColor"];
+        NSDictionary *normalAttributes = [self textAttributesForArtwork:artwork prefix:@"tabTitle"];
+        NSDictionary *selectedAttributes = [self textAttributesForArtwork:artwork prefix:@"tabSelectedTitle"];
+        [tabBar setTintColor:selectedImageColor];
+        [tabBar setSelectedImageTintColor:selectedImageColor];
+        for (UITabBarItem *item in tabBar.items) {
+            [item setTitleTextAttributes:normalAttributes forState:UIControlStateNormal];
+            [item setTitleTextAttributes:selectedAttributes forState:UIControlStateSelected];
         }
         return;
     }
@@ -272,9 +481,22 @@
         [bgView setNeedsDisplay];
         return;
     }
+    NSDictionary *artworkAssetImages = [self artworkAssetsForCurrentTheme];
+    if (artworkAssetImages != nil) {
+        UIImage *selectionImage = [artworkAssetImages objectForKey:@"tabBarSelection"];
+        if (selectionImage == nil) {
+            selectionImage = [[UIImage alloc] init];
+        }
+        tabBar.backgroundImage = [artworkAssetImages objectForKey:@"tabBar"];
+        tabBar.selectionIndicatorImage = selectionImage;
+        [bgView setNeedsDisplay];
+        return;
+    }
     tabBar.backgroundImage = [UIImage imageNamed:@"UITabBarBG"];
     if (SYSTEM_VERSION_LESS_THAN(@"7.0")) {
         tabBar.selectionIndicatorImage = [[UIImage alloc] init];
+    } else if (artworkThemeWasUsed) {
+        tabBar.selectionIndicatorImage = nil;
     }
     if (![self tabBarUsesGradientForCurrentTheme]) {
         [bgView setNeedsDisplay];
@@ -298,6 +520,20 @@
         }
         return;
     }
+    NSDictionary *artwork = [self artworkForTheme:currentTheme];
+    if (artwork != nil) {
+        UIColor *selectedImageColor = [artwork objectForKey:@"tabSelectedImageColor"];
+        [UITabBar.appearance setBackgroundImage:[[self artworkAssetsForCurrentTheme] objectForKey:@"tabBar"]];
+        [UITabBar.appearance setTintColor:selectedImageColor];
+        [UITabBar.appearance setSelectedImageTintColor:selectedImageColor];
+        [UITabBarItem.appearance setTitleTextAttributes:[self textAttributesForArtwork:artwork prefix:@"tabTitle"] forState:UIControlStateNormal];
+        [UITabBarItem.appearance setTitleTextAttributes:[self textAttributesForArtwork:artwork prefix:@"tabSelectedTitle"] forState:UIControlStateSelected];
+        UITabBarController *tabBarController = (UITabBarController *)getDelegate().window.rootViewController;
+        if ([tabBarController isKindOfClass:[UITabBarController class]]) {
+            [self applyTintToTabBar:tabBarController.tabBar];
+        }
+        return;
+    }
     [UITabBar.appearance setBackgroundImage:[UIImage imageNamed:@"UITabBarBG"]];
     [UITabBar.appearance setTintColor:[self tintColorForCurrentTheme]];
     [UITabBar.appearance setSelectedImageTintColor:[self tintColorForCurrentTheme]];
@@ -313,11 +549,20 @@
     KILL_IF_UNSUPPORTED;
     UIView *bgView = [self findNavigationBarBackgroundView:navigationBar];
     [self cleanViewOfGradientLayers:bgView];
+    [self applyArtworkToNavigationBar:navigationBar];
     if ([self themeUsesSystemAppearanceForCurrentTheme]) {
         [navigationBar setBackgroundImage:nil forBarMetrics:UIBarMetricsDefault];
         [navigationBar setBarStyle:UIBarStyleDefault];
         [navigationBar setTintColor:nil];
         [bgView setNeedsDisplay];
+        return;
+    }
+    NSDictionary *artworkAssetImages = [self artworkAssetsForCurrentTheme];
+    if (artworkAssetImages != nil) {
+        [navigationBar setBackgroundImage:[artworkAssetImages objectForKey:@"navigationBar"] forBarMetrics:UIBarMetricsDefault];
+        [navigationBar setBarStyle:UIBarStyleBlack];
+        [bgView setNeedsDisplay];
+        [navigationBar setTintColor:[self tintColorForCurrentTheme]];
         return;
     }
     [navigationBar setBackgroundImage:[UIImage imageNamed:@"UITitleBarBG"] forBarMetrics:UIBarMetricsDefault];
@@ -331,15 +576,394 @@
 
 - (void)applyTintToNavigationBars {
     KILL_IF_UNSUPPORTED;
+    [self updateArtworkAppearanceIfNeeded];
     if ([self themeUsesSystemAppearanceForCurrentTheme]) {
         [UINavigationBar.appearance setBackgroundImage:nil forBarMetrics:UIBarMetricsDefault];
         [UINavigationBar.appearance setBarStyle:UIBarStyleDefault];
         [UINavigationBar.appearance setTintColor:nil];
         return;
     }
+    NSDictionary *artworkAssetImages = [self artworkAssetsForCurrentTheme];
+    if (artworkAssetImages != nil) {
+        [UINavigationBar.appearance setBackgroundImage:[artworkAssetImages objectForKey:@"navigationBar"] forBarMetrics:UIBarMetricsDefault];
+        [UINavigationBar.appearance setBarStyle:UIBarStyleBlack];
+        [UINavigationBar.appearance setTintColor:[self tintColorForCurrentTheme]];
+        return;
+    }
     [UINavigationBar.appearance setBackgroundImage:[UIImage imageNamed:@"UITitleBarBG"] forBarMetrics:UIBarMetricsDefault];
     [UINavigationBar.appearance setBarStyle:UIBarStyleBlack];
     [UINavigationBar.appearance setTintColor:[self tintColorForCurrentTheme]];
+}
+
+#pragma mark - Artwork Themes
+- (UIImage *)artworkImageNamed:(NSString *)fileName folder:(NSString *)folder {
+    NSString *directory = [kThemeArtworkDirectory stringByAppendingPathComponent:folder];
+    NSString *path = [[NSBundle mainBundle] pathForResource:fileName ofType:nil inDirectory:directory];
+    UIImage *image = path != nil ? [UIImage imageWithContentsOfFile:path] : nil;
+    if (image.CGImage == NULL) {
+        debugLog(@"Missing theme artwork %@/%@", folder, fileName);
+        return nil;
+    }
+    return [UIImage imageWithCGImage:image.CGImage scale:2.0 orientation:UIImageOrientationUp];
+}
+
+- (UIImage *)stretchableImage:(UIImage *)image capInsets:(UIEdgeInsets)capInsets {
+    if ([image respondsToSelector:@selector(resizableImageWithCapInsets:resizingMode:)]) {
+        return [image resizableImageWithCapInsets:capInsets resizingMode:UIImageResizingModeStretch];
+    }
+    return [image resizableImageWithCapInsets:capInsets];
+}
+
+- (UIImage *)artworkImageForSpec:(NSDictionary *)spec folder:(NSString *)folder {
+    NSArray *layers = [spec objectForKey:@"layers"];
+    NSString *file = [spec objectForKey:@"file"];
+    if (layers == nil && file != nil) {
+        layers = @[@[file, @0]];
+    }
+    if (layers.count == 0) {
+        return nil;
+    }
+    NSValue *capInsets = [spec objectForKey:@"capInsets"];
+    NSValue *sizeValue = [spec objectForKey:@"size"];
+    NSMutableArray *images = [NSMutableArray arrayWithCapacity:layers.count];
+    for (NSArray *layer in layers) {
+        UIImage *image = [self artworkImageNamed:[layer objectAtIndex:0] folder:folder];
+        if (image == nil) {
+            return nil;
+        }
+        if (capInsets != nil) {
+            image = [self stretchableImage:image capInsets:[capInsets UIEdgeInsetsValue]];
+        }
+        [images addObject:image];
+    }
+    if (sizeValue == nil) {
+        UIImage *image = [images objectAtIndex:0];
+        NSValue *alignmentInsets = [spec objectForKey:@"alignmentInsets"];
+        if (alignmentInsets != nil && [image respondsToSelector:@selector(imageWithAlignmentRectInsets:)]) {
+            image = [image imageWithAlignmentRectInsets:[alignmentInsets UIEdgeInsetsValue]];
+        }
+        return image;
+    }
+    CGSize size = [sizeValue CGSizeValue];
+    UIGraphicsBeginImageContextWithOptions(size, NO, 2.0);
+    for (NSUInteger index = 0; index < images.count; index++) {
+        UIImage *image = [images objectAtIndex:index];
+        CGFloat y = [[[layers objectAtIndex:index] objectAtIndex:1] floatValue];
+        if (capInsets != nil) {
+            [image drawInRect:CGRectMake(0, y, size.width, size.height)];
+        } else {
+            [image drawAtPoint:CGPointMake(0, y)];
+        }
+    }
+    UIImage *result = UIGraphicsGetImageFromCurrentImageContext();
+    UIGraphicsEndImageContext();
+    return result;
+}
+
+- (NSDictionary *)artworkAssetsForCurrentTheme {
+    NSDictionary *artwork = [self artworkForTheme:currentTheme];
+    if (artwork == nil) {
+        artworkAssets = nil;
+        artworkAssetsTheme = nil;
+        return nil;
+    }
+    if (artworkAssets != nil && [artworkAssetsTheme isEqualToString:currentTheme]) {
+        return artworkAssets;
+    }
+    artworkThemeWasUsed = YES;
+    NSString *folder = [artwork objectForKey:@"folder"];
+    NSMutableDictionary *assets = [NSMutableDictionary dictionary];
+    for (NSString *key in @[@"navigationBar", @"navigationBarShadow", @"tabBar", @"tabBarSelection", @"button", @"buttonPressed", @"leftButton", @"leftButtonPressed", @"backButton", @"backButtonPressed", @"actionButtonImage"]) {
+        UIImage *image = [self artworkImageForSpec:[artwork objectForKey:key] folder:folder];
+        if (image != nil) {
+            [assets setObject:image forKey:key];
+        }
+    }
+    artworkAssets = assets;
+    artworkAssetsTheme = currentTheme;
+    return artworkAssets;
+}
+
+- (NSDictionary *)textAttributesForArtwork:(NSDictionary *)artwork prefix:(NSString *)prefix {
+    UIColor *color = [artwork objectForKey:[prefix stringByAppendingString:@"Color"]];
+    if (color == nil) {
+        return nil;
+    }
+    UIColor *shadowColor = [artwork objectForKey:[prefix stringByAppendingString:@"ShadowColor"]] ?: [artwork objectForKey:@"shadowColor"];
+    NSValue *shadowOffset = [artwork objectForKey:[prefix stringByAppendingString:@"ShadowOffset"]] ?: [artwork objectForKey:@"shadowOffset"];
+    NSMutableDictionary *attributes = [NSMutableDictionary dictionaryWithObject:color forKey:UITextAttributeTextColor];
+    if (shadowColor != nil) {
+        [attributes setObject:shadowColor forKey:UITextAttributeTextShadowColor];
+    }
+    if (shadowOffset != nil) {
+        [attributes setObject:shadowOffset forKey:UITextAttributeTextShadowOffset];
+    }
+    UIFont *font = [artwork objectForKey:[prefix stringByAppendingString:@"Font"]];
+    if (font != nil) {
+        [attributes setObject:font forKey:UITextAttributeFont];
+    }
+    return attributes;
+}
+
+- (void)applyButtonArtworkToBarButtonItem:(UIBarButtonItem *)item left:(BOOL)left {
+    NSDictionary *artwork = [self artworkForTheme:currentTheme];
+    NSDictionary *assets = [self artworkAssetsForCurrentTheme];
+    NSDictionary *titleAttributes = [self textAttributesForArtwork:artwork prefix:@"buttonTitle"];
+    NSString *buttonKey = (left && [assets objectForKey:@"leftButton"] != nil) ? @"leftButton" : @"button";
+    [item setBackgroundImage:[assets objectForKey:buttonKey] forState:UIControlStateNormal barMetrics:UIBarMetricsDefault];
+    [item setBackgroundImage:[assets objectForKey:[buttonKey stringByAppendingString:@"Pressed"]] forState:UIControlStateHighlighted barMetrics:UIBarMetricsDefault];
+    [item setBackButtonBackgroundImage:[assets objectForKey:@"backButton"] forState:UIControlStateNormal barMetrics:UIBarMetricsDefault];
+    [item setBackButtonBackgroundImage:[assets objectForKey:@"backButtonPressed"] forState:UIControlStateHighlighted barMetrics:UIBarMetricsDefault];
+    [item setTitleTextAttributes:titleAttributes forState:UIControlStateNormal];
+    [item setTitleTextAttributes:titleAttributes forState:UIControlStateHighlighted];
+}
+
+- (void)applyArtworkToBarButtonItem:(UIBarButtonItem *)item left:(BOOL)left {
+    UIButton *artworkButton = objc_getAssociatedObject(item, &kArtworkButtonKey);
+    BOOL hasArtworkButton = artworkButton != nil && item.customView == artworkButton;
+    if (item.customView != nil && !hasArtworkButton) {
+        return;
+    }
+    objc_setAssociatedObject(item, &kLeftBarButtonItemKey, @(left), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    NSDictionary *artwork = [self artworkForTheme:currentTheme];
+    if ([[artwork objectForKey:@"buttonsAsCustomViews"] boolValue] && [self installArtworkButtonOnItem:item left:left]) {
+        [self applyButtonArtworkToBarButtonItem:item left:left];
+    } else {
+        if (hasArtworkButton) {
+            item.customView = nil;
+            objc_setAssociatedObject(item, &kArtworkButtonKey, nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        }
+        [self applyButtonArtworkToBarButtonItem:item left:left];
+    }
+    if (styledBarButtonItems == nil) {
+        styledBarButtonItems = [NSHashTable weakObjectsHashTable];
+    }
+    [styledBarButtonItems addObject:item];
+}
+
+
+- (BOOL)installArtworkButtonOnItem:(UIBarButtonItem *)item left:(BOOL)left {
+    NSDictionary *artwork = [self artworkForTheme:currentTheme];
+    NSDictionary *assets = [self artworkAssetsForCurrentTheme];
+    NSString *buttonKey = (left && [assets objectForKey:@"leftButton"] != nil) ? @"leftButton" : @"button";
+    UIImage *background = [assets objectForKey:buttonKey];
+    UIImage *pressedBackground = [assets objectForKey:[buttonKey stringByAppendingString:@"Pressed"]];
+    if (background == nil) {
+        return NO;
+    }
+    NSString *title = nil;
+    UIImage *image = nil;
+    BOOL isSystemItem = [item respondsToSelector:NSSelectorFromString(@"isSystemItem")] && [[item valueForKey:@"isSystemItem"] boolValue];
+    if (isSystemItem) {
+        if ([[item valueForKey:@"systemItem"] integerValue] != UIBarButtonSystemItemAction) {
+            return NO;
+        }
+        image = [assets objectForKey:@"actionButtonImage"];
+        if (image == nil) {
+            return NO;
+        }
+    } else if (item.image == nil && item.title.length > 0) {
+        title = item.title;
+    } else {
+        return NO;
+    }
+
+    UIButton *button = objc_getAssociatedObject(item, &kArtworkButtonKey);
+    if (button == nil) {
+        button = [UIButton buttonWithType:UIButtonTypeCustom];
+        [button addTarget:self action:@selector(artworkButtonTapped:forEvent:) forControlEvents:UIControlEventTouchUpInside];
+        ThemeArtworkButtonItemReference *reference = [[ThemeArtworkButtonItemReference alloc] init];
+        reference.item = item;
+        objc_setAssociatedObject(button, &kArtworkButtonItemKey, reference, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        objc_setAssociatedObject(item, &kArtworkButtonKey, button, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    }
+    NSValue *contentInsets = [artwork objectForKey:@"buttonContentInsets"];
+    if (contentInsets != nil) {
+        button.contentEdgeInsets = [contentInsets UIEdgeInsetsValue];
+    }
+    [button setBackgroundImage:background forState:UIControlStateNormal];
+    [button setBackgroundImage:background forState:UIControlStateDisabled];
+    [button setBackgroundImage:pressedBackground forState:UIControlStateHighlighted];
+    [button setTitle:title forState:UIControlStateNormal];
+    [button setImage:image forState:UIControlStateNormal];
+    NSDictionary *titleAttributes = [self textAttributesForArtwork:artwork prefix:@"buttonTitle"];
+    [button setTitleColor:[titleAttributes objectForKey:UITextAttributeTextColor] forState:UIControlStateNormal];
+    [button setTitleShadowColor:[titleAttributes objectForKey:UITextAttributeTextShadowColor] forState:UIControlStateNormal];
+    NSValue *shadowOffset = [titleAttributes objectForKey:UITextAttributeTextShadowOffset];
+    if (shadowOffset != nil) {
+        UIOffset offset = [shadowOffset UIOffsetValue];
+        button.titleLabel.shadowOffset = CGSizeMake(offset.horizontal, offset.vertical);
+    }
+    UIFont *font = [titleAttributes objectForKey:UITextAttributeFont];
+    if (font != nil) {
+        button.titleLabel.font = font;
+    }
+    button.enabled = item.enabled;
+    [button sizeToFit];
+    CGRect frame = button.frame;
+    frame.size.width = MAX(frame.size.width, [[artwork objectForKey:@"buttonMinimumWidth"] floatValue]);
+    button.frame = frame;
+    if (item.customView != button) {
+        item.customView = button;
+    }
+    return YES;
+}
+
+
+
+- (void)artworkButtonTapped:(UIButton *)button forEvent:(UIEvent *)event {
+    UIBarButtonItem *item = [(ThemeArtworkButtonItemReference *)objc_getAssociatedObject(button, &kArtworkButtonItemKey) item];
+    if (item != nil && item.action != NULL) {
+        [[UIApplication sharedApplication] sendAction:item.action to:item.target from:item forEvent:event];
+    }
+}
+
+
+
+- (void)updateArtworkAppearanceIfNeeded {
+    if ([artworkAppearanceTheme isEqualToString:currentTheme]) {
+        return;
+    }
+    artworkAppearanceTheme = currentTheme;
+    NSDictionary *artwork = [self artworkForTheme:currentTheme];
+    NSDictionary *assets = [self artworkAssetsForCurrentTheme];
+    if (artwork == nil && !artworkThemeWasUsed) {
+        return;
+    }
+    UINavigationBar *navigationBarAppearance = [UINavigationBar appearance];
+    [navigationBarAppearance setTitleTextAttributes:[self textAttributesForArtwork:artwork prefix:@"title"]];
+    if ([UINavigationBar instancesRespondToSelector:@selector(setShadowImage:)]) {
+        [navigationBarAppearance setShadowImage:[assets objectForKey:@"navigationBarShadow"]];
+    }
+    [self applyButtonArtworkToBarButtonItem:[UIBarButtonItem appearanceWhenContainedIn:[UINavigationBar class], nil] left:NO];
+    for (UIBarButtonItem *item in [styledBarButtonItems allObjects]) {
+        [self applyArtworkToBarButtonItem:item left:[objc_getAssociatedObject(item, &kLeftBarButtonItemKey) boolValue]];
+    }
+}
+
+- (void)applyArtworkToNavigationBar:(UINavigationBar *)navigationBar {
+    [self updateArtworkAppearanceIfNeeded];
+    NSDictionary *artwork = [self artworkForTheme:currentTheme];
+    NSDictionary *assets = [self artworkAssetsForCurrentTheme];
+    NSString *appliedTheme = objc_getAssociatedObject(navigationBar, &kAppliedThemeKey);
+    objc_setAssociatedObject(navigationBar, &kAppliedThemeKey, currentTheme, OBJC_ASSOCIATION_COPY_NONATOMIC);
+    if (artwork == nil && !artworkThemeWasUsed) {
+        return;
+    }
+    navigationBar.titleTextAttributes = [self textAttributesForArtwork:artwork prefix:@"title"];
+    if ([navigationBar respondsToSelector:@selector(setShadowImage:)]) {
+        navigationBar.shadowImage = [assets objectForKey:@"navigationBarShadow"];
+    }
+    [self applyContentTopInsetBelowNavigationBar:navigationBar];
+    [self applyArtworkToBarButtonItemsOfNavigationBar:navigationBar];
+    if (appliedTheme != nil && ![appliedTheme isEqualToString:currentTheme]) {
+        [self recreateBackButtonsOfNavigationBar:navigationBar];
+    }
+    if ([artwork objectForKey:@"contentTopInset"] != nil) {
+        [self applyContentTopInsetBelowNavigationBarLater:navigationBar];
+    }
+    if ([[artwork objectForKey:@"buttonsAsCustomViews"] boolValue]) {
+        __weak UINavigationBar *weakNavigationBar = navigationBar;
+        NSString *theme = currentTheme;
+        dispatch_async(dispatch_get_main_queue(), ^{
+            UINavigationBar *bar = weakNavigationBar;
+            if (bar != nil && [theme isEqualToString:currentTheme]) {
+                [self applyArtworkToBarButtonItemsOfNavigationBar:bar];
+            }
+        });
+    }
+}
+
+
+
+- (UIScrollView *)topScrollViewBelowNavigationBar:(UINavigationBar *)navigationBar {
+    UINavigationController *navigationController = (UINavigationController *)navigationBar.delegate;
+    if (![navigationController isKindOfClass:[UINavigationController class]] || ![navigationController.topViewController isViewLoaded]) {
+        return nil;
+    }
+    UIView *view = navigationController.topViewController.view;
+    if ([view isKindOfClass:[UIScrollView class]]) {
+        return (UIScrollView *)view;
+    }
+    for (UIView *subview in view.subviews) {
+        if ([subview isKindOfClass:[UIScrollView class]] && !subview.hidden && CGRectGetMinY(subview.frame) <= 0) {
+            return (UIScrollView *)subview;
+        }
+    }
+    return nil;
+}
+
+- (void)applyContentTopInsetBelowNavigationBar:(UINavigationBar *)navigationBar {
+    UIScrollView *scrollView = [self topScrollViewBelowNavigationBar:navigationBar];
+    if (scrollView == nil) {
+        return;
+    }
+    CGFloat extraInset = [[[self artworkForTheme:currentTheme] objectForKey:@"contentTopInset"] floatValue];
+    NSArray *applied = objc_getAssociatedObject(scrollView, &kContentTopInsetKey);
+    UIEdgeInsets contentInset = scrollView.contentInset;
+    UIEdgeInsets indicatorInsets = scrollView.scrollIndicatorInsets;
+    CGFloat baseTop = contentInset.top;
+    CGFloat baseIndicatorTop = indicatorInsets.top;
+    if (applied != nil) {
+        if (contentInset.top == [[applied objectAtIndex:1] floatValue]) {
+            baseTop -= [[applied objectAtIndex:0] floatValue];
+        }
+        if (indicatorInsets.top == [[applied objectAtIndex:2] floatValue]) {
+            baseIndicatorTop -= [[applied objectAtIndex:0] floatValue];
+        }
+    } else if (extraInset == 0) {
+        return;
+    }
+    if (contentInset.top == baseTop + extraInset && indicatorInsets.top == baseIndicatorTop + extraInset) {
+        return;
+    }
+    BOOL wasAtTop = scrollView.contentOffset.y <= -contentInset.top;
+    contentInset.top = baseTop + extraInset;
+    indicatorInsets.top = baseIndicatorTop + extraInset;
+    scrollView.contentInset = contentInset;
+    scrollView.scrollIndicatorInsets = indicatorInsets;
+    if (wasAtTop) {
+        scrollView.contentOffset = CGPointMake(scrollView.contentOffset.x, -contentInset.top);
+    }
+    objc_setAssociatedObject(scrollView, &kContentTopInsetKey, (extraInset == 0 ? nil : (id)@[@(extraInset), @(contentInset.top), @(indicatorInsets.top)]), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+}
+
+- (void)applyContentTopInsetBelowNavigationBarLater:(UINavigationBar *)navigationBar {
+    __weak UINavigationBar *weakNavigationBar = navigationBar;
+    dispatch_async(dispatch_get_main_queue(), ^{
+        UINavigationBar *bar = weakNavigationBar;
+        if (bar != nil) {
+            [self applyContentTopInsetBelowNavigationBar:bar];
+        }
+    });
+}
+
+- (void)applyArtworkToBarButtonItemsOfNavigationBar:(UINavigationBar *)navigationBar {
+    for (UINavigationItem *item in navigationBar.items) {
+        for (UIBarButtonItem *button in item.leftBarButtonItems) {
+            [self applyArtworkToBarButtonItem:button left:YES];
+        }
+        for (UIBarButtonItem *button in item.rightBarButtonItems) {
+            [self applyArtworkToBarButtonItem:button left:NO];
+        }
+        if (item.backBarButtonItem != nil) {
+            [self applyArtworkToBarButtonItem:item.backBarButtonItem left:YES];
+        }
+    }
+}
+
+
+
+- (void)recreateBackButtonsOfNavigationBar:(UINavigationBar *)navigationBar {
+    NSArray *items = navigationBar.items;
+    for (NSUInteger index = 0; index + 1 < items.count; index++) {
+        UINavigationItem *item = [items objectAtIndex:index];
+        if (item.backBarButtonItem != nil) {
+            continue;
+        }
+        item.backBarButtonItem = [[UIBarButtonItem alloc] initWithTitle:item.title style:UIBarButtonItemStyleBordered target:nil action:NULL];
+        item.backBarButtonItem = nil;
+    }
 }
 
 #pragma mark - View Helpers

@@ -32,6 +32,19 @@ static bool decode_string(pb_istream_t *stream, const pb_field_t *field, void **
     return true;
 }
 
+static NSMutableArray *decoded_array(void **arg) {
+    if (*arg == NULL) {
+        *arg = (__bridge_retained void *)[NSMutableArray array];
+    }
+    return (__bridge NSMutableArray *)(*arg);
+}
+
+static void release_decoded_array(void *arg) {
+    if (arg != NULL) {
+        CFRelease(arg);
+    }
+}
+
 static void free_version_msg_strings(VersionMsg version) {
     free(version.version.arg);
     free(version.fileName.arg);
@@ -93,13 +106,7 @@ static bool decode_versions(pb_istream_t *stream, const pb_field_t *field, void 
         free_version_msg_strings(version);
         return false;
     }
-    Version *versionObj = [[Version alloc] initFromVersionProto:version];
-    NSMutableArray *versions = (__bridge NSMutableArray *)(*arg);
-    if (versions == nil) {
-        versions = [NSMutableArray array];
-    }
-    [versions addObject:versionObj];
-    *arg = (__bridge_retained void *)versions;
+    [decoded_array(arg) addObject:[[Version alloc] initFromVersionProto:version]];
     free_version_msg_strings(version);
     return true;
 }
@@ -115,12 +122,7 @@ static bool decode_info_fields(pb_istream_t *stream, const pb_field_t *field, vo
         free(infoField.value.arg);
         return false;
     }
-    NSMutableArray *fields = (__bridge NSMutableArray *)(*arg);
-    if (fields == nil) {
-        fields = [NSMutableArray array];
-    }
-    [fields addObject:[[ApplicationInfoField alloc] initFromInfoFieldProto:infoField]];
-    *arg = (__bridge_retained void *)fields;
+    [decoded_array(arg) addObject:[[ApplicationInfoField alloc] initFromInfoFieldProto:infoField]];
     free(infoField.label.arg);
     free(infoField.value.arg);
     return true;
@@ -133,19 +135,32 @@ static bool decode_info_blocks(pb_istream_t *stream, const pb_field_t *field, vo
     block.fields.funcs.decode = &decode_info_fields;
     if (!pb_decode(stream, InfoBlockMsg_fields, &block)) {
         const char *error = PB_GET_ERROR(stream);
-        debugLog(@"Error decoding InfoBlockMsg: %s — freeing partial allocs", error);
+        debugLog(@"Error decoding InfoBlockMsg: %s", error);
         free(block.title.arg);
         free(block.body.arg);
+        release_decoded_array(block.fields.arg);
         return false;
     }
-    NSMutableArray *blocks = (__bridge NSMutableArray *)(*arg);
-    if (blocks == nil) {
-        blocks = [NSMutableArray array];
-    }
-    [blocks addObject:[[ApplicationInfoBlock alloc] initFromInfoBlockProto:block]];
-    *arg = (__bridge_retained void *)blocks;
+    [decoded_array(arg) addObject:[[ApplicationInfoBlock alloc] initFromInfoBlockProto:block]];
     free(block.title.arg);
     free(block.body.arg);
+    return true;
+}
+
+static bool decode_screenshots(pb_istream_t *stream, const pb_field_t *field, void **arg) {
+    ScreenshotMsg screenshot = ScreenshotMsg_init_zero;
+    setDecFS(screenshot.url);
+    setDecFS(screenshot.retinaURL);
+    if (!pb_decode(stream, ScreenshotMsg_fields, &screenshot)) {
+        const char *error = PB_GET_ERROR(stream);
+        debugLog(@"Error decoding ScreenshotMsg: %s — freeing partial allocs", error);
+        free(screenshot.url.arg);
+        free(screenshot.retinaURL.arg);
+        return false;
+    }
+    [decoded_array(arg) addObject:[[ApplicationScreenshot alloc] initFromScreenshotProto:screenshot]];
+    free(screenshot.url.arg);
+    free(screenshot.retinaURL.arg);
     return true;
 }
 
@@ -166,12 +181,7 @@ static bool decode_suggestions(pb_istream_t *stream, const pb_field_t *field, vo
         free(suggestion.fallback_iconurl.arg);
         return false;
     }
-    NSMutableArray *suggestionsArray = (__bridge NSMutableArray *)(*arg);
-    if (suggestionsArray == nil) {
-        suggestionsArray = [NSMutableArray array];
-    }
-    [suggestionsArray addObject:[[Suggestion alloc] initFromSuggestionProto:suggestion]];
-    *arg = (__bridge_retained void *)suggestionsArray;
+    [decoded_array(arg) addObject:[[Suggestion alloc] initFromSuggestionProto:suggestion]];
     free(suggestion.name.arg);
     free(suggestion.bundleid.arg);
     free(suggestion.developer.arg);
@@ -188,6 +198,7 @@ static bool decode_vtable_entries(pb_istream_t *stream, const pb_field_t *field,
     setDecFS(entry.version);
     setDecFS(entry.iconurl);
     setDecFS(entry.fallback_iconurl);
+    setDecFS(entry.installed_bundleid);
     if (!pb_decode(stream, VTableEntryMsg_fields, &entry)) {
         const char *error = PB_GET_ERROR(stream);
         debugLog(@"Error decoding VTableEntryMsg: %s — freeing partial allocs", error);
@@ -197,20 +208,17 @@ static bool decode_vtable_entries(pb_istream_t *stream, const pb_field_t *field,
         free(entry.version.arg);
         free(entry.iconurl.arg);
         free(entry.fallback_iconurl.arg);
+        free(entry.installed_bundleid.arg);
         return false;
     }
-    NSMutableArray *entries = (__bridge NSMutableArray *)(*arg);
-    if (entries == nil) {
-        entries = [NSMutableArray array];
-    }
-    [entries addObject:[[Application alloc] initFromVTableEntryProto:entry]];
-    *arg = (__bridge_retained void *)entries;
+    [decoded_array(arg) addObject:[[Application alloc] initFromVTableEntryProto:entry]];
     free(entry.name.arg);
     free(entry.developer.arg);
     free(entry.bundleid.arg);
     free(entry.version.arg);
     free(entry.iconurl.arg);
     free(entry.fallback_iconurl.arg);
+    free(entry.installed_bundleid.arg);
     return true;
 }
 
@@ -225,12 +233,7 @@ static bool decode_categories_entries(pb_istream_t *stream, const pb_field_t *fi
         free(entry.name.arg);
         return false;
     }
-    NSMutableArray *entries = (__bridge NSMutableArray *)(*arg);
-    if (entries == nil) {
-        entries = [NSMutableArray array];
-    }
-    [entries addObject:[[CategoryProt alloc] initFromCategoryProto:entry]];
-    *arg = (__bridge_retained void *)entries;
+    [decoded_array(arg) addObject:[[CategoryProt alloc] initFromCategoryProto:entry]];
     free(entry.id.arg);
     free(entry.name.arg);
     return true;
@@ -253,12 +256,7 @@ static bool decode_news_entries(pb_istream_t *stream, const pb_field_t *field, v
         free(entry.link.arg);
         return false;
     }
-    NSMutableArray *entries = (__bridge NSMutableArray *)(*arg);
-    if (entries == nil) {
-        entries = [NSMutableArray array];
-    }
-    [entries addObject:[[NewsPost alloc] initFromNewsEntryProto:entry]];
-    *arg = (__bridge_retained void *)entries;
+    [decoded_array(arg) addObject:[[NewsPost alloc] initFromNewsEntryProto:entry]];
     free(entry.author.arg);
     free(entry.title.arg);
     free(entry.body.arg);
@@ -289,20 +287,35 @@ void ___(uint8_t* dest, const char* src, size_t len) {
     dest[len] = '\0';
 }
 
-void* decode(const void* data, size_t data_len, ProtoType type) {
-    if (data == NULL) {
-        debugLog(@"Data is nil");
-        return NULL;
-    }
-    uint8_t decoded_key[sizeof(__)];
-    ___(decoded_key, __, sizeof(__) - 1);
-    uint8_t *____ = _(data, data_len, decoded_key);
-    if (____ == NULL) {
-        debugLog(@"Failed to decrypt data");
-        return NULL;
-    }
-    debugLog(@"Decoding data of type %d", type);
-    pb_istream_t stream = pb_istream_from_buffer(____, data_len);
+static void free_app_msg_strings(AppMsg app) {
+    free(app.name.arg);
+    free(app.developer.arg);
+    free(app.bundleid.arg);
+    free(app.iconurl.arg);
+    free(app.fallback_iconurl.arg);
+    free(app.description.arg);
+    free(app.category.arg);
+    free(app.minIOS.arg);
+    free(app.deviceFamily.arg);
+    free(app.archFlags.arg);
+    free(app.backgroundModes.arg);
+    free(app.executable.arg);
+    free(app.releaseDate.arg);
+    free(app.contentRating.arg);
+    free(app.price.arg);
+    free(app.subgenres.arg);
+    free(app.copyrightText.arg);
+    free(app.gameCenter.arg);
+    free(app.newsstand.arg);
+    free(app.requiredCapabilities.arg);
+    free(app.primaryBundleID.arg);
+    free(app.websiteURL.arg);
+    free(app.descriptionDate.arg);
+    free(app.screenshotDate.arg);
+}
+
+static void* decode_plaintext(const uint8_t* plaintext, size_t data_len, ProtoType type) {
+    pb_istream_t stream = pb_istream_from_buffer(plaintext, data_len);
     switch (type) {
         case AppResponse: {
             AppMsg app = AppMsg_init_zero;
@@ -328,37 +341,25 @@ void* decode(const void* data, size_t data_len, ProtoType type) {
             setDecFS(app.requiredCapabilities);
             setDecFS(app.primaryBundleID);
             setDecFS(app.websiteURL);
+            setDecFS(app.descriptionDate);
+            setDecFS(app.screenshotDate);
             app.versions.funcs.decode = &decode_versions;
             app.customInfoBlocks.funcs.decode = &decode_info_blocks;
+            app.screenshots.funcs.decode = &decode_screenshots;
+            app.ipadScreenshots.funcs.decode = &decode_screenshots;
             bool success = pb_decode(&stream, AppMsg_fields, &app);
             if (!success) {
                 const char *error = PB_GET_ERROR(&stream);
                 debugLog(@"Error decoding AppMsg: %s — freeing partial allocs", error);
-                free(app.name.arg);
-                free(app.developer.arg);
-                free(app.bundleid.arg);
-                free(app.iconurl.arg);
-                free(app.fallback_iconurl.arg);
-                free(app.description.arg);
-                free(app.category.arg);
-                free(app.minIOS.arg);
-                free(app.deviceFamily.arg);
-                free(app.archFlags.arg);
-                free(app.backgroundModes.arg);
-                free(app.executable.arg);
-                free(app.releaseDate.arg);
-                free(app.contentRating.arg);
-                free(app.price.arg);
-                free(app.subgenres.arg);
-                free(app.copyrightText.arg);
-                free(app.gameCenter.arg);
-                free(app.newsstand.arg);
-                free(app.requiredCapabilities.arg);
-                free(app.primaryBundleID.arg);
-                free(app.websiteURL.arg);
+                free_app_msg_strings(app);
+                release_decoded_array(app.versions.arg);
+                release_decoded_array(app.customInfoBlocks.arg);
+                release_decoded_array(app.screenshots.arg);
+                release_decoded_array(app.ipadScreenshots.arg);
                 return NULL;
             }
             Application *application = [[Application alloc] initFromAppProto:app];
+            free_app_msg_strings(app);
             return (__bridge_retained void *)application;
         }
         case SuggestionsResponse: {
@@ -369,6 +370,7 @@ void* decode(const void* data, size_t data_len, ProtoType type) {
             if (!success) {
                 const char *error = PB_GET_ERROR(&stream);
                 debugLog(@"Error decoding SuggestionsMsg: %s", error);
+                release_decoded_array(suggestions.suggestions.arg);
                 return nil;
             }
             return suggestions.suggestions.arg;
@@ -380,6 +382,7 @@ void* decode(const void* data, size_t data_len, ProtoType type) {
             if (!success) {
                 const char *error = PB_GET_ERROR(&stream);
                 debugLog(@"Error decoding VTableResponseMsg: %s", error);
+                release_decoded_array(vtable.entries.arg);
                 return nil;
             }
             return vtable.entries.arg;
@@ -391,6 +394,7 @@ void* decode(const void* data, size_t data_len, ProtoType type) {
             if (!success) {
                 const char *error = PB_GET_ERROR(&stream);
                 debugLog(@"Error decoding CategoriesMsg: %s", error);
+                release_decoded_array(categories.categories.arg);
                 return nil;
             }
             return categories.categories.arg;
@@ -402,6 +406,7 @@ void* decode(const void* data, size_t data_len, ProtoType type) {
             if (!success) {
                 const char *error = PB_GET_ERROR(&stream);
                 debugLog(@"Error decoding NewsMsg: %s", error);
+                release_decoded_array(news.news.arg);
                 return nil;
             }
             return news.news.arg;
@@ -419,6 +424,8 @@ void* decode(const void* data, size_t data_len, ProtoType type) {
                 return nil;
             }
             Update *updateObj = [[Update alloc] initFromUpdateProto:update];
+            free(update.version.arg);
+            free(update.changelog.arg);
             return (__bridge_retained void *)updateObj;
         }
         default: {
@@ -426,6 +433,24 @@ void* decode(const void* data, size_t data_len, ProtoType type) {
             break;
         }
     }
+}
+
+void* decode(const void* data, size_t data_len, ProtoType type) {
+    if (data == NULL) {
+        debugLog(@"Data is nil");
+        return NULL;
+    }
+    uint8_t decoded_key[sizeof(__)];
+    ___(decoded_key, __, sizeof(__) - 1);
+    uint8_t *____ = _(data, data_len, decoded_key);
+    if (____ == NULL) {
+        debugLog(@"Failed to decrypt data");
+        return NULL;
+    }
+    debugLog(@"Decoding data of type %d", type);
+    void *result = decode_plaintext(____, data_len, type);
+    free(____);
+    return result;
 }
 
 static bool encode_bytes(pb_ostream_t *stream, const pb_field_t *field, void * const *arg) {

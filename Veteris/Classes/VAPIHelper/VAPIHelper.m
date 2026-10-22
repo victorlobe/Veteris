@@ -33,6 +33,8 @@
     BBHTTPExecutor *_apiExecutor;
     BBHTTPExecutor *_iconExecutor;
     NSInteger _VAPIErrorMask;
+    VeterisMemoryLevel _appliedMemoryLevel;
+    BOOL _memorySettingsApplied;
 }
 
 @synthesize VAPIDeviceString = _deviceString;
@@ -47,9 +49,6 @@ static NSString *const VAPI_CRASH_REPORTING_OPT_OUT_UUID_KEY = @"VAPICrashReport
 static NSString *const VAPI_DEV_MODE_ENABLED_KEY = @"veteris_dev_mode_enabled";
 static NSString *const VAPI_ANALYTICS_ENABLED_KEY = @"veteris_analytics_enabled";
 static NSString *const VAPI_CRASH_REPORTING_ENABLED_KEY = @"veteris_crash_reporting_enabled";
-static NSString *const VAPI_LOW_MEMORY_MODE_ENABLED_KEY = @"veteris_low_memory_mode_enabled";
-static NSString *const VAPI_LOW_MEMORY_MODE_STATUS_KEY = @"veteris_low_memory_mode_status";
-static NSString *const VAPI_ARCHIVE_DOWNLOAD_SEGMENTS_KEY = @"veteris_archive_download_segments";
 static NSString *const VAPI_SERVER_ENVIRONMENT_KEY = @"veteris_server_environment";
 static NSString *const VAPI_LANGUAGE_OVERRIDE_KEY = @"veteris_language_override";
 static NSString *const VAPI_LANGUAGE_OVERRIDE_SYSTEM = @"system";
@@ -59,43 +58,6 @@ static NSString *const VAPI_ANALYTICS_OPT_OUT_HEADER = @"X-Veteris-Analytics";
 static NSString *const VAPI_ANALYTICS_OPT_OUT_ID_HEADER = @"X-Veteris-Analytics-Opt-Out-ID";
 static NSString *const VAPI_CRASH_REPORTING_OPT_OUT_HEADER = @"X-Veteris-Crash-Reports";
 static NSString *const VAPI_CRASH_REPORTING_OPT_OUT_ID_HEADER = @"X-Veteris-Crash-Reports-Opt-Out-ID";
-
-static NSString *VAPIHardwareMachine(void) {
-    static NSString *machine = nil;
-    static dispatch_once_t onceToken;
-    dispatch_once(&onceToken, ^{
-        size_t size = 0;
-        if (sysctlbyname("hw.machine", NULL, &size, NULL, 0) != 0 || size == 0) {
-            machine = @"";
-            return;
-        }
-        char *buffer = malloc(size);
-        if (buffer == NULL) {
-            machine = @"";
-            return;
-        }
-        if (sysctlbyname("hw.machine", buffer, &size, NULL, 0) == 0) {
-            machine = [[NSString stringWithUTF8String:buffer] copy] ?: @"";
-        } else {
-            machine = @"";
-        }
-        free(buffer);
-    });
-    return machine;
-}
-
-static unsigned long long VAPIMemorySize(void) {
-    static unsigned long long memorySize = 0;
-    static dispatch_once_t onceToken;
-    dispatch_once(&onceToken, ^{
-        uint64_t value = 0;
-        size_t size = sizeof(value);
-        if (sysctlbyname("hw.memsize", &value, &size, NULL, 0) == 0) {
-            memorySize = value;
-        }
-    });
-    return memorySize;
-}
 
 + (VAPIHelper*)sharedInstance
 {
@@ -120,6 +82,10 @@ static unsigned long long VAPIMemorySize(void) {
                                              selector:@selector(userDefaultsDidChange:)
                                                  name:NSUserDefaultsDidChangeNotification
                                                object:[NSUserDefaults standardUserDefaults]];
+    [[NSNotificationCenter defaultCenter] addObserver:self
+                                             selector:@selector(applicationDidReceiveMemoryWarning:)
+                                                 name:UIApplicationDidReceiveMemoryWarningNotification
+                                               object:nil];
     NSURL *apiURL = [NSURL URLWithString:[VAPIHelper getApiBaseURL]];
     NSString *apiHost = [apiURL host];
     if ([apiHost isEqualToString:@"apis.yzu.moe"]) {
@@ -134,111 +100,30 @@ static unsigned long long VAPIMemorySize(void) {
     [self applyMemorySettings];
 }
 
+- (void)applicationDidReceiveMemoryWarning:(NSNotification *)notification {
+    debugLog(@"Memory warning: clearing memory caches");
+    [self clearMemoryCaches];
+}
+
+
 - (void)applyMemorySettings {
-    BOOL lowMemoryMode = [VAPIHelper isLowMemoryModeEnabled];
-    [_staticCache setTotalCostLimit:1024 * 1024 * (lowMemoryMode ? 5 : 50)];
-    [_staticCache setCountLimit:(lowMemoryMode ? 80 : 0)];
-    _apiExecutor.maxParallelRequests = lowMemoryMode ? 2 : 3;
-    _iconExecutor.maxParallelRequests = lowMemoryMode ? 1 : 4;
-    if (lowMemoryMode) {
-        [_staticCache removeAllObjects];
+    @synchronized (self) {
+        VeterisMemoryLevel level = [VeterisMemoryProfile activeLevel];
+        if (_memorySettingsApplied && level == _appliedMemoryLevel) {
+            return;
+        }
+        VeterisMemoryValues values = [VeterisMemoryProfile valuesForLevel:level smallMemory:[VeterisMemoryProfile isSmallMemoryDevice]];
+        [_staticCache setTotalCostLimit:values.iconCacheCostLimit];
+        [_staticCache setCountLimit:values.iconCacheCountLimit];
+        _apiExecutor.maxParallelRequests = values.apiParallelRequests;
+        _iconExecutor.maxParallelRequests = values.iconParallelRequests;
+        if (_memorySettingsApplied && level == VeterisMemoryLevelReduced) {
+            [_staticCache removeAllObjects];
+        }
+        _appliedMemoryLevel = level;
+        _memorySettingsApplied = YES;
     }
-    [VAPIHelper updateLowMemoryModeStatusPreference];
-}
-
-+ (BOOL)defaultLowMemoryModeEnabled {
-    if ([VAPIHelper isVeryLowMemoryDevice]) {
-        return YES;
-    }
-
-    unsigned long long memorySize = VAPIMemorySize();
-    return memorySize > 0 && memorySize <= 268435456ULL;
-}
-
-+ (BOOL)isLowMemoryModeEnabled {
-    id value = [[NSUserDefaults standardUserDefaults] objectForKey:VAPI_LOW_MEMORY_MODE_ENABLED_KEY];
-    if (value != nil) {
-        return [[NSUserDefaults standardUserDefaults] boolForKey:VAPI_LOW_MEMORY_MODE_ENABLED_KEY];
-    }
-    return [VAPIHelper defaultLowMemoryModeEnabled];
-}
-
-+ (BOOL)isVeryLowMemoryDevice {
-    NSString *machine = VAPIHardwareMachine();
-    return ([machine isEqualToString:@"iPad1,1"] ||
-            [machine isEqualToString:@"iPod3,1"] ||
-            [machine isEqualToString:@"iPod4,1"] ||
-            [machine isEqualToString:@"iPhone2,1"]);
-}
-
-+ (BOOL)isLowMemoryDevice {
-    NSString *machine = VAPIHardwareMachine();
-    return ([VAPIHelper isVeryLowMemoryDevice] ||
-            [machine hasPrefix:@"iPhone3,"] ||
-            [machine isEqualToString:@"iPhone4,1"] ||
-            [machine hasPrefix:@"iPad2,"]);
-}
-
-+ (BOOL)usesLowMemoryDownloadMode {
-    return [VAPIHelper isLowMemoryModeEnabled] || [VAPIHelper isLowMemoryDevice];
-}
-
-+ (NSString *)activeLowMemoryModeStatusTitle {
-    if ([VAPIHelper isVeryLowMemoryDevice]) {
-        return NSLocalizedString(@"Very Low", nil);
-    }
-    if ([VAPIHelper usesLowMemoryDownloadMode]) {
-        return NSLocalizedString(@"Low", nil);
-    }
-    return NSLocalizedString(@"Normal", nil);
-}
-
-+ (void)updateLowMemoryModeStatusPreference {
-    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
-    NSString *statusTitle = [VAPIHelper activeLowMemoryModeStatusTitle];
-    NSString *currentTitle = [defaults objectForKey:VAPI_LOW_MEMORY_MODE_STATUS_KEY];
-    if (![currentTitle isEqualToString:statusTitle]) {
-        [defaults setObject:statusTitle forKey:VAPI_LOW_MEMORY_MODE_STATUS_KEY];
-    }
-}
-
-+ (NSUInteger)archiveDownloadParallelSegments {
-    NSInteger configured = [[NSUserDefaults standardUserDefaults] integerForKey:VAPI_ARCHIVE_DOWNLOAD_SEGMENTS_KEY];
-    if (configured > 0) {
-        return (NSUInteger)MAX(1, MIN(12, configured));
-    }
-    if ([VAPIHelper usesLowMemoryDownloadMode]) {
-        return 4;
-    }
-    return 6;
-}
-
-+ (NSUInteger)archiveDownloadBufferSize {
-    if ([VAPIHelper isVeryLowMemoryDevice]) {
-        return 32 * 1024;
-    }
-    if ([VAPIHelper usesLowMemoryDownloadMode]) {
-        return 64 * 1024;
-    }
-    return 128 * 1024;
-}
-
-+ (int)archiveDownloadReceiveBufferSize {
-    if ([VAPIHelper isVeryLowMemoryDevice]) {
-        return 64 * 1024;
-    }
-    if ([VAPIHelper usesLowMemoryDownloadMode]) {
-        return 128 * 1024;
-    }
-    return 512 * 1024;
-}
-
-+ (NSTimeInterval)downloadProgressInterval {
-    return [VAPIHelper usesLowMemoryDownloadMode] ? 1.0 : 0.25;
-}
-
-+ (BOOL)shouldRetainDecodedIcons {
-    return ![VAPIHelper isLowMemoryModeEnabled];
+    [VeterisMemoryProfile updateActiveLevelPreference];
 }
 
 + (BOOL)isCrashReportingEnabled {
@@ -388,6 +273,9 @@ static unsigned long long VAPIMemorySize(void) {
     NSMutableDictionary *headers = [@{
         @"X-Veteris-Device" : [VAPISS VAPIDeviceString],
         @"X-Veteris-Version" : [[[NSBundle mainBundle] infoDictionary] objectForKey:@"CFBundleShortVersionString"],
+        @"X-Veteris-Build" : [[[NSBundle mainBundle] infoDictionary] objectForKey:@"CFBundleVersion"],
+        @"X-Veteris-Client" : @"Veteris",
+        @"X-Veteris-Retina" : ([[UIScreen mainScreen] respondsToSelector:@selector(scale)] && [UIScreen mainScreen].scale >= 2.0) ? @"1" : @"0",
         @"X-Veteris-Language" : [[NSLocale preferredLanguages] objectAtIndex:0],
     } mutableCopy];
     if (![VAPIHelper isAnalyticsEnabled]) {
@@ -527,8 +415,8 @@ static NSString *VAPIQueryEscape(NSString *value) {
 }
 #endif
 
-// this implements cached version for static assets
-// its fine to cache images like this because they are unique per bundleid
+
+
 - (void)getCached:(NSString *)endpoint path:(NSString *)path completion:(void (^)(NSData *data, NSError *error))completion {
     if (path == nil || [path length] == 0) {
         completion(nil, [NSError errorWithDomain:@"VAPIHelper"
@@ -536,7 +424,8 @@ static NSString *VAPIQueryEscape(NSString *value) {
                                         userInfo:@{NSLocalizedDescriptionKey: @"empty asset path"}]);
         return;
     }
-    bool isImage = [[path lastPathComponent] rangeOfString:@"png"].location != NSNotFound;
+    bool isImage = [[path lastPathComponent] rangeOfString:@"png"].location != NSNotFound
+        || [[[path pathExtension] lowercaseString] isEqualToString:@"jpg"];
     BOOL isAbsoluteURL = [path hasPrefix:@"http://"] || [path hasPrefix:@"https://"];
     NSString *endpointToUse = isAbsoluteURL ? @"" : endpoint;
     NSString *pathToUse = isAbsoluteURL ? path : [path stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding];
@@ -587,6 +476,42 @@ static NSString *VAPIQueryEscape(NSString *value) {
     [self get:[VAPIHelper getApiBaseURL] path:path completion:completion];
 }
 
+
+
+- (void)postMessage:(NSString *)path data:(NSData *)data contentType:(NSString *)contentType completion:(void (^)(NSData *data, NSError *error))completion {
+    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+        NSString *url = [NSString stringWithFormat:@"%@%@", [VAPIHelper getApiBaseURL], path];
+        BBHTTPRequest *request = [BBHTTPRequest createResource:url withData:data contentType:contentType];
+        if (request == nil) {
+            dispatch_async(dispatch_get_main_queue(), ^{
+                completion(nil, [NSError errorWithDomain:@"VAPIHelper" code:NSURLErrorBadURL userInfo:nil]);
+            });
+            return;
+        }
+
+
+        NSDictionary *reqHeaders = [VAPIHelper getHeaders];
+        for (id key in reqHeaders) {
+            [request setValue:[reqHeaders valueForKey:key] forHeader:key];
+        }
+        request.finishBlock = ^(BBHTTPRequest *request) {
+            NSData *content = nil;
+            NSError *error = nil;
+            if ([request hasSuccessfulResponse]) {
+                content = request.response.content ?: [NSData data];
+            } else {
+                debugLog(@"POST %@ failed: %ld %@", path, (long)request.responseStatusCode, request.error.localizedDescription);
+                error = request.error ?: [NSError errorWithDomain:@"VAPIHelper" code:request.responseStatusCode userInfo:nil];
+            }
+            dispatch_async(dispatch_get_main_queue(), ^{
+                completion(content, error);
+            });
+        };
+        [request downloadContentAsData];
+        [_apiExecutor executeRequest:request];
+    });
+}
+
 - (UIImage *)imageFromCache:(NSString *)url {
     BOOL isAbsoluteURL = [url hasPrefix:@"http://"] || [url hasPrefix:@"https://"];
     NSString *pathToUse = isAbsoluteURL ? url : [url stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding];
@@ -623,35 +548,50 @@ static NSString *VAPIQueryEscape(NSString *value) {
     debugLog(@"VAPI Device String: %@", _deviceString);
 }
 
-+ (void)checkForUpdates {
-    [VAPISS getMessage:@"client/updates" completion:^(NSData *data, NSError *error) {
-        if (error != nil) {
-            debugLog(@"Error contacting server: %@", error.localizedDescription);
-            alert(NSLocalizedString(@"Oops", nil), NSLocalizedString(@"ServerContactError", nil), VAPIHelperErrorNetwork);
-        } else if (data != nil && [data length] > 1) {
-            debugLog(@"Received update data");
-            Update *upd = (Update *)CFBridgingRelease(decode([data bytes], [data length], UpdateResponse));
-            if (upd == NULL) {
-                debugLog(@"Error decoding UpdateMsg");
-                return;
-            }
-            if (upd.version == nil || [upd.version length] == 0) {
-                debugLog(@"Ignoring empty UpdateMsg");
-                return;
-            }
-            if (upd.changelog == nil) {
-                upd.changelog = @"";
-            }
-            NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
-            [defaults setObject:[NSDictionary dictionaryWithObject:upd.changelog forKey:upd.version] forKey:@"latest_changelog"];
-            [defaults synchronize];
-            UIAlertView *alertView = [[UIAlertView alloc] initWithTitle:@"Update Available!" message:[NSString stringWithFormat:@"New version %@ is available! Update now?", upd.version] delegate:getDelegate() cancelButtonTitle:@"Later" otherButtonTitles:@"Ok", nil];
-            dispatch_async(dispatch_get_main_queue(), ^{
-                [alertView show];
-            });
-        } else {
-            debugLog(@"No data received");
+
++ (void)checkForRemoteAlert {
+    [VAPISS getMessage:@"client/alerts" completion:^(NSData *data, NSError *error) {
+        if (error != nil || data == nil || [data length] <= 1) {
+            return;
         }
+
+        NSArray *alerts = (NSArray *)(CFBridgingRelease(decode([data bytes], [data length], NewsResponse)));
+        NewsPost *remoteAlert = [alerts firstObject];
+        if (remoteAlert == nil || remoteAlert.title.length == 0 || remoteAlert.body.length == 0) {
+            return;
+        }
+
+        // Save alert ID before showing it to avoid duplicates
+        NSString *alertID = remoteAlert.date.length > 0 ? remoteAlert.date : remoteAlert.title;
+        NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+        @synchronized (defaults) {
+            NSMutableArray *seenAlertIDs = [NSMutableArray arrayWithArray:[defaults objectForKey:@"seen_remote_alert_ids"] ?: @[]];
+            // Migrate
+            NSString *legacyAlertID = [defaults objectForKey:@"last_remote_alert_id"];
+            if (legacyAlertID.length > 0 && ![seenAlertIDs containsObject:legacyAlertID]) {
+                [seenAlertIDs addObject:legacyAlertID];
+            }
+            if ([seenAlertIDs containsObject:alertID]) {
+                return;
+            }
+            [seenAlertIDs addObject:alertID];
+            while (seenAlertIDs.count > 100) {
+                [seenAlertIDs removeObjectAtIndex:0];
+            }
+            [defaults setObject:seenAlertIDs forKey:@"seen_remote_alert_ids"];
+            [defaults removeObjectForKey:@"last_remote_alert_id"];
+            [defaults synchronize];
+        }
+
+        dispatch_async(dispatch_get_main_queue(), ^{
+            UIAlertView *alertView = [[UIAlertView alloc]
+                initWithTitle:remoteAlert.title
+                      message:remoteAlert.body
+                     delegate:nil
+            cancelButtonTitle:@"OK"
+            otherButtonTitles:nil];
+            [alertView show];
+        });
     }];
 }
 

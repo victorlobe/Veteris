@@ -3,6 +3,11 @@
 #import "../../Clutch/ApplicationLister.h"
 #import "../../AppDelegate.h"
 #import <AppSupport/CPDistributedMessagingCenter.h>
+#import <unistd.h>
+
+static NSString *const YZHelperCenterName = @"com.victorlobe.veterishelper";
+static NSString *const YZHelperMessageBackgroundWorkBegin = @"com.victorlobe.veteris.BackgroundWorkBegin";
+static NSString *const YZHelperMessageBackgroundWorkEnd = @"com.victorlobe.veteris.BackgroundWorkEnd";
 
 static BOOL YZQueueReactorHasBundleID(NSString *bundleId) {
     return [bundleId isKindOfClass:[NSString class]] && [bundleId length] > 0;
@@ -13,6 +18,7 @@ static BOOL YZQueueReactorHasBundleID(NSString *bundleId) {
     YZQueueState *_state;
     NSMutableArray *_systemInstalledApps;
     dispatch_queue_t _queue;
+    dispatch_queue_t _helperQueue; // preserve the order of background begin/end messages
     CPDistributedMessagingCenter *_distributedMessageCenter;
 }
 
@@ -36,10 +42,11 @@ static BOOL YZQueueReactorHasBundleID(NSString *bundleId) {
 - (void)start {
     _systemInstalledApps = [NSMutableArray new];
     _queue = dispatch_queue_create("com.victorlobe.veteris.queue.reactor", DISPATCH_QUEUE_CONCURRENT);
+    _helperQueue = dispatch_queue_create("com.victorlobe.veteris.queue.helper", DISPATCH_QUEUE_SERIAL);
     dispatch_async(_queue, ^{
         _notificationCenter = [NSNotificationCenter defaultCenter];
         [_notificationCenter addObserver:self selector:@selector(handleNotification:) name:@"YZQueueRepStateChange" object:nil];
-        _distributedMessageCenter = [CPDistributedMessagingCenter centerNamed:@"com.victorlobe.veterishelper"];
+        _distributedMessageCenter = [CPDistributedMessagingCenter centerNamed:YZHelperCenterName];
         _state = [[YZQueueState alloc] init];
         [self refreshInstalledApps];
     });
@@ -51,18 +58,27 @@ static BOOL YZQueueReactorHasBundleID(NSString *bundleId) {
         return;
     }
     if (rep.state == YZRepStateInstalled) {
-        if ([_systemInstalledApps containsObject:rep.bundleID]) {
+        NSString *bundleID = rep.bundleID;
+        if (!YZQueueReactorHasBundleID(bundleID)) {
             return;
         }
-        [self markNewlyInstalled:rep.bundleID];
-        [_systemInstalledApps addObject:rep.bundleID];
+        @synchronized (_systemInstalledApps) {
+            if ([_systemInstalledApps containsObject:bundleID]) {
+                return;
+            }
+            [_systemInstalledApps addObject:bundleID];
+        }
+        [self markNewlyInstalled:bundleID];
     }
 }
 
 - (void)refreshInstalledApps {
-    for (NSString *key in [[[ApplicationLister sharedInstance] installedApps] allKeys]) {
-        if (![_systemInstalledApps containsObject:key]) {
-            [_systemInstalledApps addObject:key];
+    NSArray *installed = [[[ApplicationLister sharedInstance] installedApps] allKeys];
+    @synchronized (_systemInstalledApps) {
+        for (NSString *key in installed) {
+            if (![_systemInstalledApps containsObject:key]) {
+                [_systemInstalledApps addObject:key];
+            }
         }
     }
 }
@@ -85,6 +101,27 @@ static BOOL YZQueueReactorHasBundleID(NSString *bundleId) {
     }
     debugLog(@"Launching app: %@", bundleId);
     [_distributedMessageCenter sendMessageName:@"com.victorlobe.veteris.LaunchApp" userInfo:@{@"bundleIdentifier": bundleId}];
+}
+
+- (void)setBackgroundWorkActive:(BOOL)active completion:(void (^)(BOOL helperKeepsAlive))completion {
+    NSDictionary *userInfo = [NSDictionary dictionaryWithObject:[NSNumber numberWithInt:getpid()] forKey:@"pid"];
+    dispatch_async(_helperQueue, ^{
+        CPDistributedMessagingCenter *center = [CPDistributedMessagingCenter centerNamed:YZHelperCenterName];
+        BOOL keepsAlive = NO;
+        if (active) {
+            NSDictionary *reply = [center sendMessageAndReceiveReplyName:YZHelperMessageBackgroundWorkBegin userInfo:userInfo];
+            id value = [reply isKindOfClass:[NSDictionary class]] ? [reply objectForKey:@"keepAlive"] : nil;
+            keepsAlive = [value respondsToSelector:@selector(boolValue)] && [value boolValue];
+        } else {
+            [center sendMessageName:YZHelperMessageBackgroundWorkEnd userInfo:userInfo];
+        }
+        debugLog(@"Background work %@ reported to VeterisHelper (keep alive: %d)", active ? @"start" : @"end", keepsAlive);
+        if (completion != nil) {
+            dispatch_async(dispatch_get_main_queue(), ^{
+                completion(keepsAlive);
+            });
+        }
+    });
 }
 
 @end

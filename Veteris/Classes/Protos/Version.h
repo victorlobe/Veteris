@@ -28,5 +28,9 @@
 @property (nonatomic, strong) NSString *iconBundleID;
 @property (nonatomic, strong) NSString *bundleID;
 @property (nonatomic, assign) BOOL recommended;
+@property (nonatomic, assign) unsigned long long downloadCount;
+@property (nonatomic, assign) BOOL hasDownloadCount;
+@property (nonatomic, strong) NSString *displayName;
+@property (nonatomic, strong) NSString *bundleName;
 - (Version *)initFromVersionProto:(VersionMsg)versionProto;
 @end

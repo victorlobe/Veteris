@@ -16,4 +16,7 @@ PB_BIND(InfoFieldMsg, InfoFieldMsg, AUTO)
 PB_BIND(InfoBlockMsg, InfoBlockMsg, AUTO)
 
 
+PB_BIND(ScreenshotMsg, ScreenshotMsg, AUTO)
+
+
 PB_BIND(AppMsg, AppMsg, AUTO)

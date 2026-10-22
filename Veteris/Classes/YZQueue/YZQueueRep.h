@@ -15,12 +15,11 @@ typedef enum {
 } YZRepState;
 
 @interface YZQueueRep : NSObject
-+ (void)detachRepWithYZApp:(YZApplication *)yzApp andURL:(NSString *)url;
-+ (void)detachRepWithYZApp:(YZApplication *)yzApp andURL:(NSString *)url trackDownloadStart:(BOOL)trackDownloadStart;
-+ (void)detachPausedRepWithYZApp:(YZApplication *)yzApp andURL:(NSString *)url targetPath:(NSString *)targetPath;
-+ (void)detachDownloadOnlyRepWithYZApp:(YZApplication *)yzApp andURL:(NSString *)url targetPath:(NSString *)targetPath;
-+ (void)detachDownloadOnlyRepWithYZApp:(YZApplication *)yzApp andURL:(NSString *)url targetPath:(NSString *)targetPath trackDownloadStart:(BOOL)trackDownloadStart;
-+ (void)detachPausedDownloadOnlyRepWithYZApp:(YZApplication *)yzApp andURL:(NSString *)url targetPath:(NSString *)targetPath;
+- (instancetype)initWithApplication:(YZApplication *)application
+                          sourceURL:(NSString *)sourceURL
+                         targetPath:(NSString *)targetPath
+               installAfterDownload:(BOOL)installAfterDownload
+                 trackDownloadStart:(BOOL)trackDownloadStart;
 - (UIImage *)icon;
 - (NSString *)iconurl;
 - (NSString *)fallbackIconurl;
@@ -32,16 +31,30 @@ typedef enum {
 - (NSString *)minimumOS;
 - (NSString *)path;
 - (void)setPath:(NSString *)path;
+- (YZApplication *)application;
+// YES when Veteris owns the files at targetPath
+- (BOOL)ownsDownloadFiles;
+@property (nonatomic, readonly, copy) NSString *sourceURL;
+@property (nonatomic, readonly, copy) NSString *targetPath;
 @property (nonatomic) bool invalid;
 @property (nonatomic) BOOL installAfterDownload;
+@property (nonatomic) BOOL trackDownloadStart;
+@property (nonatomic) BOOL installScheduled;
 @property (nonatomic, assign) YZRepState state;
-@property (nonatomic) BOOL preservePartialOnCancel;
+@property (nonatomic, readonly) YZRepState previousState;
 @property (nonatomic, copy) NSString *errorDetails;
 @property (nonatomic) NSUInteger storedProgressCurrent;
 @property (nonatomic) NSUInteger storedProgressTotal;
+@property (nonatomic) NSUInteger downloadGeneration;
+@property (nonatomic) NSUInteger enqueueSequence;
 @property (nonatomic, weak) BBHTTPRequest *request;
 @property (nonatomic, strong) id downloadTask;
 @property (nonatomic, copy) void (^downloadProgressBlock)(NSUInteger current, NSUInteger total);
-@property (nonatomic, copy) void (^downloadSelf)(void);
+@property (nonatomic) BOOL downloadFinishing;
+// User-paused entries stay paused after a background relaunch.
+@property (nonatomic) BOOL userPaused;
+@property (nonatomic) BOOL interruptedBySystem;
 - (void)refreshStoredDownloadProgress;
+- (void)reportDownloadProgress:(unsigned long long)current total:(unsigned long long)total;
+- (double)downloadBytesPerSecond;
 @end

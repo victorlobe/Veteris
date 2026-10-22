@@ -6,8 +6,7 @@
 @implementation QueueTableViewCell {
     YZQueueRep *_rep;
     NSString *_imageFromURL;
-    NSUInteger _lastProgressBytes;
-    NSTimeInterval _lastProgressTimestamp;
+    NSString *_loadingIconURL;
 }
 @synthesize appNameLabel;
 @synthesize appVersionLabel;
@@ -126,36 +125,51 @@
     self.appProgressLabel.text = nil;
     self.appSpeedLabel.hidden = YES;
     self.appSpeedLabel.text = nil;
-    _lastProgressBytes = 0;
-    _lastProgressTimestamp = 0;
 }
 
 - (void)updateFromRep:(YZQueueRep *)rep {
     [rep refreshStoredDownloadProgress];
     appNameLabel.text = rep.name;
     appDeveloperLabel.text = VeterisAppCellSubtitle(rep.developer, rep.bundleID, VeterisAppCellSubtitleAreaQueue);
-    if (rep.icon == nil) {
-        if (rep.iconurl == nil || ![rep.iconurl isEqualToString:_imageFromURL]) {
-            appImageView.image = [VAPISS imageFromCache:rep.iconurl];
-            if (appImageView.image == nil) {
-                [VAPISS getStatic:rep.iconurl fallbackPath:rep.fallbackIconurl completion:^(NSData *data, NSError *error) {
-                    if (error == nil) {
-                        appImageView.image = [UIImage imageWithData:data];
-                        _imageFromURL = rep.iconurl;
-                    } else {
-                        debugLog(@"Failed to fetch image for %@: %@", rep.bundleID, [error localizedDescription]);
-                    }
-                }];
-            }
+
+
+    UIImage *icon = rep.icon;
+    if (icon == nil && [rep.iconurl length] > 0) {
+        icon = [VAPISS imageFromCache:rep.iconurl];
+        if (icon != nil) {
+            [rep application].icon = icon;
         }
+    }
+    if (icon != nil) {
+        appImageView.image = icon;
+        _imageFromURL = rep.iconurl;
     } else {
-        appImageView.image = rep.icon;
+        if (_rep != rep || ![rep.iconurl isEqualToString:_imageFromURL]) {
+            appImageView.image = nil;
+        }
+        if ([rep.iconurl length] > 0 && ![rep.iconurl isEqualToString:_loadingIconURL]) {
+            NSString *iconURL = [rep.iconurl copy];
+            _loadingIconURL = iconURL;
+            [VAPISS getStatic:rep.iconurl fallbackPath:rep.fallbackIconurl completion:^(NSData *data, NSError *error) {
+                if ([_loadingIconURL isEqualToString:iconURL]) {
+                    _loadingIconURL = nil;
+                }
+                UIImage *loadedIcon = (error == nil && data != nil) ? [UIImage imageWithData:data] : nil;
+                if (loadedIcon == nil) {
+                    debugLog(@"Failed to fetch image for %@: %@", rep.bundleID, [error localizedDescription]);
+                    return;
+                }
+                [rep application].icon = loadedIcon;
+                if (_rep == rep) {
+                    appImageView.image = loadedIcon;
+                    _imageFromURL = rep.iconurl;
+                }
+            }];
+        }
     }
 
     appVersionLabel.text = [self versionTextForRep:rep sizeText:[self sizeTextForRep:rep]];
     if (_rep != rep) {
-        _lastProgressBytes = 0;
-        _lastProgressTimestamp = 0;
         appSpeedLabel.text = nil;
     }
     [self setNeedsDisplay];
@@ -184,8 +198,6 @@
         appProgressLabel.hidden = YES;
         appSpeedLabel.text = nil;
         appSpeedLabel.hidden = YES;
-        _lastProgressBytes = current;
-        _lastProgressTimestamp = [NSDate timeIntervalSinceReferenceDate];
         [appDownloadActivityIndicator startAnimating];
         appVersionLabel.text = [self versionTextForRep:_rep sizeText:[QueueTableViewCell stringForByteCount:current]];
         return;
@@ -197,7 +209,7 @@
     appProgressView.progress = progress;
     appProgressLabel.text = [NSString stringWithFormat:@"%lu%%", (unsigned long)(progress * 100.0f + 0.5f)];
     appProgressLabel.hidden = NO;
-    NSString *speedText = [self speedTextForCurrent:current];
+    NSString *speedText = [self speedText];
     if ([speedText length] > 0) {
         appSpeedLabel.text = speedText;
         appSpeedLabel.hidden = NO;
@@ -242,19 +254,12 @@
     return [NSString stringWithFormat:@"%.1f %@", bytes, [units objectAtIndex:unitIndex]];
 }
 
-- (NSString *)speedTextForCurrent:(NSUInteger)current {
-    NSTimeInterval now = [NSDate timeIntervalSinceReferenceDate];
-    NSString *speedText = nil;
-    if (_lastProgressTimestamp > 0 && current >= _lastProgressBytes) {
-        NSTimeInterval elapsed = now - _lastProgressTimestamp;
-        NSUInteger delta = current - _lastProgressBytes;
-        if (elapsed >= 0.2 && delta > 0) {
-            speedText = [QueueTableViewCell stringForByteRate:(double)delta / elapsed];
-        }
+- (NSString *)speedText {
+    if (_rep.state == YZRepStateDownloading && _rep.downloadFinishing) {
+        return NSLocalizedStringWithDefaultValue(@"DownloadFinishing", nil, [NSBundle mainBundle], @"Finishing...", nil);
     }
-    _lastProgressBytes = current;
-    _lastProgressTimestamp = now;
-    return speedText;
+    double bytesPerSecond = [_rep downloadBytesPerSecond];
+    return bytesPerSecond >= 0 ? [QueueTableViewCell stringForByteRate:bytesPerSecond] : nil;
 }
 
 + (NSString *)stringForByteRate:(double)bytesPerSecond {

@@ -95,7 +95,7 @@
     if (cachedIcon == nil) {
         cachedIcon = [VAPISS imageFromCache:application.iconurl];
         if (cachedIcon != nil) {
-            if ([VAPIHelper shouldRetainDecodedIcons]) {
+            if ([VeterisMemoryProfile activeValues].retainsDecodedIcons) {
                 application.icon = cachedIcon;
             }
         }
@@ -131,7 +131,7 @@
 
     UIImage *cachedIcon = [VAPISS imageFromCache:application.iconurl];
     if (cachedIcon != nil) {
-        if ([VAPIHelper shouldRetainDecodedIcons]) {
+        if ([VeterisMemoryProfile activeValues].retainsDecodedIcons) {
             application.icon = cachedIcon;
         }
         SearchTableViewCell *cell = (SearchTableViewCell *)[self.tableView cellForRowAtIndexPath:indexPath];
@@ -158,7 +158,7 @@
                 application.nilIcon = YES;
                 return;
             }
-            if ([VAPIHelper shouldRetainDecodedIcons]) {
+            if ([VeterisMemoryProfile activeValues].retainsDecodedIcons) {
                 application.icon = image;
             }
             if (indexPath.row >= [applications count] || [applications objectAtIndex:indexPath.row] != application) {

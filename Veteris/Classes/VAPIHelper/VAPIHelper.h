@@ -9,15 +9,18 @@
 #import "../../Clutch/MobileInstallation.h"
 #import "../YZLog/YZLog.h"
 #import "../YZAlert/YZAlert.h"
+#import "../VeterisMemoryProfile/VeterisMemoryProfile.h"
 
 // VAPIHelper should not include any classes to avoid circular imports
 @class AppDelegate;
 @class YZApplication;
 
 #define getDelegate() ((AppDelegate*)[[UIApplication sharedApplication]delegate])
-#define downloadPath() @"/var/mobile/Media/Downloads/Veteris"
-#define downloadPathFor(string) [NSString stringWithFormat:@"/var/mobile/Media/Downloads/Veteris/%@.ipa", [string MD5Hash]]
-#define downloadOnlyPath() @"/var/mobile/Media/Downloads/Veteris/Download"
+#define legacyDownloadPath() @"/var/mobile/Media/Downloads/Veteris"
+#define downloadPath() @"/var/mobile/Library/Veteris"
+#define downloadPathFor(string) [NSString stringWithFormat:@"%@/%@.ipa", downloadPath(), [string MD5Hash]]
+#define downloadPathForVersion(bundleID, version) downloadPathFor(([NSString stringWithFormat:@"%@|%@", (bundleID) ?: @"", (version) ?: @""]))
+#define downloadOnlyPath() @"/var/mobile/Library/Veteris/Download"
 #define VAPISS [VAPIHelper sharedInstance]
 //#define alert(title,msg,target) [[[UIAlertView alloc] initWithTitle:title message:msg delegate:target cancelButtonTitle:@"OK" otherButtonTitles:nil, nil] show]
 #define alert(title,msg,typ) [YZAlert alert:title message:msg type:typ]
@@ -33,26 +36,15 @@
 + (NSString *)getServerEnvironment;
 + (void)setServerEnvironment:(NSString *)environment;
 + (void)resetNetworkState;
-+ (BOOL)isLowMemoryModeEnabled;
-+ (BOOL)defaultLowMemoryModeEnabled;
-+ (BOOL)isVeryLowMemoryDevice;
-+ (BOOL)isLowMemoryDevice;
-+ (BOOL)usesLowMemoryDownloadMode;
-+ (NSString *)activeLowMemoryModeStatusTitle;
-+ (void)updateLowMemoryModeStatusPreference;
-+ (NSUInteger)archiveDownloadParallelSegments;
-+ (NSUInteger)archiveDownloadBufferSize;
-+ (int)archiveDownloadReceiveBufferSize;
-+ (NSTimeInterval)downloadProgressInterval;
-+ (BOOL)shouldRetainDecodedIcons;
 + (BOOL)isCrashReportingEnabled;
 - (void)get:(NSString *)endpoint path:(NSString *)path completion:(void (^)(NSData *data, NSError *error))completion;
 - (void)getStatic:(NSString *)path completion:(void (^)(NSData *data, NSError *error))completion;
 - (void)getStatic:(NSString *)path fallbackPath:(NSString *)fallbackPath completion:(void (^)(NSData *data, NSError *error))completion;
 - (void)getMessage:(NSString *)path completion:(void (^)(NSData *data, NSError *error))completion;
+- (void)postMessage:(NSString *)path data:(NSData *)data contentType:(NSString *)contentType completion:(void (^)(NSData *data, NSError *error))completion;
 - (UIImage *)imageFromCache:(NSString *)url;
 - (void)clearMemoryCaches;
-+ (void)checkForUpdates;
++ (void)checkForRemoteAlert;
 + (NSDictionary *)getHeaders;
 + (void)trackDownloadStartForApplication:(YZApplication *)application url:(NSString *)url downloadOnly:(BOOL)downloadOnly;
 + (void)trackDownloadEvent:(NSString *)event

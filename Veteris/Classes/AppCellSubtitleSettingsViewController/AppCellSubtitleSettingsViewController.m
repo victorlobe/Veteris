@@ -29,6 +29,16 @@ static CGFloat const VeterisAppSubtitleModeControlInset = 10.0f;
     return NSLocalizedStringFromTableInBundle(key, @"Root", settingsBundle != nil ? settingsBundle : [NSBundle mainBundle], nil);
 }
 
+- (NSString *)tableView:(UITableView *)tableView titleForFooterInSection:(NSInteger)section
+{
+    NSInteger lastSection = [self numberOfSectionsInTableView:tableView] - 1;
+    if (section == lastSection) {
+        return [self settingsString:@"Bundle ID is used when no developer name is available."];
+    }
+
+    return nil;
+}
+
 - (void)centerModeControlInCell:(UITableViewCell *)cell
 {
     CGRect modeFrame = modeControl.frame;

@@ -15,6 +15,12 @@ static NSString *const VeterisAppCellSubtitleModeCustomValue = @"Custom";
 static NSString *const VeterisAppCellSubtitleGlobalPreferenceKey = @"search_results_subtitle_preference";
 static NSString *const VeterisAppCellSubtitleBundleIDValue = @"BundleID";
 static NSString *const VeterisAppCellSubtitleDeveloperNameValue = @"DeveloperName";
+static NSString *const VeterisShowGetLabelsPreferenceKey = @"veteris_show_get_labels";
+
+static inline BOOL VeterisShowGetLabels(void) {
+    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+    return [defaults boolForKey:VeterisShowGetLabelsPreferenceKey];
+}
 
 static inline NSString *VeterisTrimmedString(NSString *string) {
     if (![string isKindOfClass:[NSString class]]) {

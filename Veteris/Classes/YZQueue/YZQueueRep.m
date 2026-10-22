@@ -1,12 +1,18 @@
 #import "YZQueueRep.h"
 #import "YZQueueOps.h"
 #import "YZDownloadResumeStore.h"
+#import "YZTransferSpeedMeter.h"
 #import "../VAPIHelper/VAPIHelper.h"
+
+static const NSTimeInterval kYZDownloadSpeedWindow = 5.0;
+static const NSTimeInterval kYZDownloadProgressRefreshInterval = 1.0;
 
 @implementation YZQueueRep {
     YZApplication *_app;
-    NSString *_resumeSourceURL;
-    NSString *_resumeTargetPath;
+    YZTransferSpeedMeter *_speedMeter;
+    unsigned long long _progressCurrent;
+    unsigned long long _progressTotal;
+    BOOL _progressRefreshScheduled;
 }
 
 static unsigned long long YZQueueFileSizeAtPath(NSString *path) {
@@ -15,24 +21,6 @@ static unsigned long long YZQueueFileSizeAtPath(NSString *path) {
     }
     NSDictionary *attrs = [[NSFileManager defaultManager] attributesOfItemAtPath:path error:NULL];
     return attrs != nil ? [attrs fileSize] : 0;
-}
-
-static unsigned long long YZQueueParallelPartBytesForPath(NSString *targetPath) {
-    NSString *directory = [targetPath stringByDeletingLastPathComponent];
-    NSString *prefix = [[targetPath lastPathComponent] stringByAppendingString:@".part."];
-    NSArray *contents = [[NSFileManager defaultManager] contentsOfDirectoryAtPath:directory error:nil];
-    unsigned long long bytes = 0;
-    for (NSString *entry in contents) {
-        if (![entry hasPrefix:prefix]) {
-            continue;
-        }
-        NSString *suffix = [entry substringFromIndex:[prefix length]];
-        if ([suffix length] == 0 || [suffix rangeOfCharacterFromSet:[[NSCharacterSet decimalDigitCharacterSet] invertedSet]].location != NSNotFound) {
-            continue;
-        }
-        bytes += YZQueueFileSizeAtPath([directory stringByAppendingPathComponent:entry]);
-    }
-    return bytes;
 }
 
 static NSString *YZQueueStateLogName(YZRepState state) {
@@ -84,7 +72,6 @@ static void YZAppendQueueOperationLog(YZQueueRep *rep, YZRepState state) {
         @try {
             [handle seekToEndOfFile];
             [handle writeData:data];
-            [handle synchronizeFile];
         } @catch (NSException *exception) {
             debugLog(@"Could not append download log: %@", [exception reason]);
         } @finally {
@@ -93,118 +80,69 @@ static void YZAppendQueueOperationLog(YZQueueRep *rep, YZRepState state) {
     }
 }
 
-+ (void)detachRepWithYZApp:(YZApplication *)yzApp andURL:(NSString *)url {
-    [self detachRepWithYZApp:yzApp andURL:url trackDownloadStart:YES];
-}
-
-+ (void)detachRepWithYZApp:(YZApplication *)yzApp andURL:(NSString *)url trackDownloadStart:(BOOL)trackDownloadStart {
-    YZQueueRep *rep = [[YZQueueRep alloc] init];
-    rep->_app = yzApp;
-    rep->_invalid = NO;
-    rep->_installAfterDownload = YES;
-    rep->_resumeSourceURL = [url copy];
-    rep->_resumeTargetPath = [downloadPathFor(yzApp.bundleID) copy];
-    [rep refreshStoredDownloadProgress];
-    __typeof__(rep) weakSelf = rep;
-    rep->_downloadSelf = ^{
-        [weakSelf setState:YZRepStateDownloading];
-        if (trackDownloadStart) {
-            [VAPIHelper trackDownloadStartForApplication:yzApp url:url downloadOnly:NO];
+- (instancetype)initWithApplication:(YZApplication *)application
+                          sourceURL:(NSString *)sourceURL
+                         targetPath:(NSString *)targetPath
+               installAfterDownload:(BOOL)installAfterDownload
+                 trackDownloadStart:(BOOL)trackDownloadStart {
+    if ((self = [super init])) {
+        _app = application;
+        _sourceURL = [sourceURL copy];
+        _targetPath = [targetPath copy];
+        _invalid = NO;
+        _installAfterDownload = installAfterDownload;
+        _trackDownloadStart = trackDownloadStart;
+        _state = YZRepStateQueued;
+        _previousState = YZRepStateQueued;
+        if ([targetPath length] > 0 && [sourceURL length] > 0) {
+            _app.path = targetPath;
         }
-        [YZQueueOps downloadFileToPath:url pathFromString:yzApp.bundleID parent:weakSelf];
-    };
-    if (url != nil) {
-        rep->_app.path = url;
-        [YZDownloadResumeStore upsertRecordForApplication:yzApp sourceURL:url targetPath:rep->_resumeTargetPath installAfterDownload:YES];
-        [rep setState:YZRepStateQueued];
-    } else {
-        [rep setState:YZRepStateDownloaded];
+        [self refreshStoredDownloadProgress];
     }
+    return self;
 }
 
-+ (void)detachPausedRepWithYZApp:(YZApplication *)yzApp andURL:(NSString *)url targetPath:(NSString *)targetPath {
-    YZQueueRep *rep = [[YZQueueRep alloc] init];
-    rep->_app = yzApp;
-    rep->_invalid = NO;
-    rep->_installAfterDownload = YES;
-    rep->_resumeSourceURL = [url copy];
-    rep->_resumeTargetPath = [targetPath copy];
-    [rep refreshStoredDownloadProgress];
-    __typeof__(rep) weakSelf = rep;
-    rep->_downloadSelf = ^{
-        [weakSelf setState:YZRepStateDownloading];
-        [YZQueueOps downloadFileToPath:url pathFromString:yzApp.bundleID parent:weakSelf];
-    };
-    rep->_app.path = targetPath;
-    [rep setState:YZRepStatePaused];
-}
-
-+ (void)detachDownloadOnlyRepWithYZApp:(YZApplication *)yzApp andURL:(NSString *)url targetPath:(NSString *)targetPath {
-    [self detachDownloadOnlyRepWithYZApp:yzApp andURL:url targetPath:targetPath trackDownloadStart:YES];
-}
-
-+ (void)detachDownloadOnlyRepWithYZApp:(YZApplication *)yzApp andURL:(NSString *)url targetPath:(NSString *)targetPath trackDownloadStart:(BOOL)trackDownloadStart {
-    YZQueueRep *rep = [[YZQueueRep alloc] init];
-    rep->_app = yzApp;
-    rep->_invalid = NO;
-    rep->_installAfterDownload = NO;
-    rep->_resumeSourceURL = [url copy];
-    rep->_resumeTargetPath = [targetPath copy];
-    [rep refreshStoredDownloadProgress];
-    __typeof__(rep) weakSelf = rep;
-    rep->_downloadSelf = ^{
-        [weakSelf setState:YZRepStateDownloading];
-        if (trackDownloadStart) {
-            [VAPIHelper trackDownloadStartForApplication:yzApp url:url downloadOnly:YES];
-        }
-        [YZQueueOps downloadFileToPath:url targetPath:targetPath parent:weakSelf];
-    };
-    rep->_app.path = targetPath;
-    [YZDownloadResumeStore upsertRecordForApplication:yzApp sourceURL:url targetPath:targetPath installAfterDownload:NO];
-    [rep setState:YZRepStateQueued];
-}
-
-+ (void)detachPausedDownloadOnlyRepWithYZApp:(YZApplication *)yzApp andURL:(NSString *)url targetPath:(NSString *)targetPath {
-    YZQueueRep *rep = [[YZQueueRep alloc] init];
-    rep->_app = yzApp;
-    rep->_invalid = NO;
-    rep->_installAfterDownload = NO;
-    rep->_resumeSourceURL = [url copy];
-    rep->_resumeTargetPath = [targetPath copy];
-    [rep refreshStoredDownloadProgress];
-    __typeof__(rep) weakSelf = rep;
-    rep->_downloadSelf = ^{
-        [weakSelf setState:YZRepStateDownloading];
-        [YZQueueOps downloadFileToPath:url targetPath:targetPath parent:weakSelf];
-    };
-    rep->_app.path = targetPath;
-    [rep setState:YZRepStatePaused];
+- (BOOL)ownsDownloadFiles {
+    return [_sourceURL length] > 0 && [_targetPath hasPrefix:[downloadPath() stringByAppendingString:@"/"]];
 }
 
 - (void)setState:(YZRepState)state {
+    _previousState = _state;
     _state = state;
+    _downloadFinishing = NO;
+    [_speedMeter reset];
     YZAppendQueueOperationLog(self, state);
-    if (_resumeSourceURL != nil && _resumeTargetPath != nil) {
+    if ([self ownsDownloadFiles]) {
         BOOL keepResumeRecord = (state == YZRepStateQueued ||
                                  state == YZRepStateDownloading ||
                                  state == YZRepStatePaused ||
                                  (self.installAfterDownload && (state == YZRepStateDownloaded || state == YZRepStateInstalling)));
-        if (keepResumeRecord) {
+        if (keepResumeRecord && !self.invalid) {
             [YZDownloadResumeStore upsertRecordForApplication:_app
-                                                    sourceURL:_resumeSourceURL
-                                                   targetPath:_resumeTargetPath
-                                         installAfterDownload:self.installAfterDownload];
-        } else {
-            [YZDownloadResumeStore removeRecordForTargetPath:_resumeTargetPath];
+                                                    sourceURL:_sourceURL
+                                                   targetPath:_targetPath
+                                         installAfterDownload:self.installAfterDownload
+                                                   userPaused:(state == YZRepStatePaused && self.userPaused)];
+        } else if (!keepResumeRecord) {
+            [YZDownloadResumeStore removeRecordForTargetPath:_targetPath];
         }
     }
     [YZQueueOps notifyAppState:self];
 }
 
 - (void)refreshStoredDownloadProgress {
-    NSString *targetPath = _resumeTargetPath ?: _app.path;
-    unsigned long long current = YZQueueFileSizeAtPath(targetPath) + YZQueueParallelPartBytesForPath(targetPath);
+    NSString *targetPath = [_targetPath length] > 0 ? _targetPath : _app.path;
+    unsigned long long current = YZQueueFileSizeAtPath(targetPath);
     unsigned long long total = _app.sizeBytes;
+    if ([self ownsDownloadFiles]) {
+        for (NSString *partPath in [YZDownloadResumeStore existingPartPathsForTargetPath:targetPath]) {
+            current += YZQueueFileSizeAtPath(partPath);
+        }
+        unsigned long long knownTotal = [[[YZDownloadResumeStore resumeInfoForTargetPath:targetPath] objectForKey:YZResumeInfoTotalKey] unsignedLongLongValue];
+        if (knownTotal > 0) {
+            total = knownTotal;
+        }
+    }
     if (total > 0 && current > total) {
         current = total;
     }
@@ -212,19 +150,53 @@ static void YZAppendQueueOperationLog(YZQueueRep *rep, YZRepState state) {
     self.storedProgressTotal = (NSUInteger)MIN(total, (unsigned long long)NSUIntegerMax);
 }
 
-- (BOOL)isEqual:(id)object {
-    if (object == self) {
-        return true;
+- (void)reportDownloadProgress:(unsigned long long)current total:(unsigned long long)total {
+    if (_speedMeter == nil) {
+        _speedMeter = [[YZTransferSpeedMeter alloc] initWithWindow:kYZDownloadSpeedWindow];
     }
-    if (![object isKindOfClass:[YZQueueRep class]]) {
-        return false;
-    }
-    YZQueueRep *rep = (YZQueueRep *)object;
-    return [rep.bundleID isEqualToString:self.bundleID] && [rep.version isEqualToString:self.version];
+    [_speedMeter recordTotal:current at:[NSDate timeIntervalSinceReferenceDate]];
+    _progressCurrent = current;
+    _progressTotal = total;
+    [self forwardDownloadProgress];
+    [self scheduleProgressRefresh];
 }
 
-- (NSUInteger)hash {
-    return [self.bundleID hash] ^ [self.version hash];
+- (double)downloadBytesPerSecond {
+    if (self.state != YZRepStateDownloading || self.downloadFinishing || _speedMeter == nil) {
+        return -1.0;
+    }
+    return [_speedMeter bytesPerSecondAt:[NSDate timeIntervalSinceReferenceDate]];
+}
+
+- (void)forwardDownloadProgress {
+    if (self.downloadProgressBlock != nil) {
+        self.downloadProgressBlock((NSUInteger)MIN(_progressCurrent, (unsigned long long)NSUIntegerMax),
+                                   (NSUInteger)MIN(_progressTotal, (unsigned long long)NSUIntegerMax));
+    }
+}
+
+- (void)scheduleProgressRefresh {
+    if (_progressRefreshScheduled) {
+        return;
+    }
+    _progressRefreshScheduled = YES;
+    __weak YZQueueRep *weakSelf = self;
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(kYZDownloadProgressRefreshInterval * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        YZQueueRep *rep = weakSelf;
+        if (rep == nil) {
+            return;
+        }
+        rep->_progressRefreshScheduled = NO;
+        if (rep.invalid || rep.state != YZRepStateDownloading || rep.downloadFinishing) {
+            return;
+        }
+        [rep forwardDownloadProgress];
+        [rep scheduleProgressRefresh];
+    });
+}
+
+- (YZApplication *)application {
+    return _app;
 }
 
 - (UIImage *)icon {

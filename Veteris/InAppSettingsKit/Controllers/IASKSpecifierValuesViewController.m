@@ -232,7 +232,7 @@
                                    previewSize);
     NSArray *values = [_currentSpecifier multipleValues];
     NSString *themeName = [values objectAtIndex:indexPath.row];
-    UIColor *previewColor = [[ThemeManager sharedInstance] tintColorForTheme:themeName];
+    UIColor *previewColor = [[ThemeManager sharedInstance] previewColorForTheme:themeName];
     BOOL blackVariant = [themeName hasSuffix:@"Black"];
     previewView.image = [self themePreviewImageForColor:previewColor ?: [UIColor darkGrayColor]
                                            blackVariant:blackVariant

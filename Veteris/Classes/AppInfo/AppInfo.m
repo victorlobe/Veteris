@@ -14,12 +14,16 @@
 #import "../../AppDelegate.h"
 #import "../../SVProgressHUD/SVProgressHUD.h"
 #import "../Convenience/Convenience.h"
+#import "../AppsTableViewController/AppsTableViewController.h"
 #import "../ProtoStack.h"
 #import "../Protos/Application.h"
 #import "../VAPIHelper/VAPIHelper.h"
 #import "../YZQueue/YZQueueManager.h"
 #import "../SearchViewController/SearchTableViewCell.h"
 #import "../Favorites/VeterisFavoritesManager.h"
+#import "VLInstallButton.h"
+#import "../../Clutch/ApplicationLister.h"
+#import "../../InAppSettingsKit/Models/IASKSettingsReader.h"
 
 typedef NS_ENUM(NSInteger, AppInfoSection) {
     AppInfoSectionDetails = 0,
@@ -37,8 +41,68 @@ static NSInteger const AppInfoVersionActionInfoIndex = 2;
 static NSInteger const AppInfoActionFavoriteIndex = 0;
 static NSInteger const AppInfoActionCopyLinkIndex = 1;
 static NSInteger const AppInfoRecommendedBadgeTag = 5401;
+static NSInteger const AppInfoInstalledBadgeTag = 5402;
 static NSString * const AppInfoDownloadOnlyInfoShownDefaultsKey = @"AppInfoDownloadOnlyInfoShown";
 static char AppInfoFavoriteActivityApplicationKey;
+
+NSString * const AppInfoInstalledApplicationsDidRefreshNotification = @"AppInfoInstalledApplicationsDidRefreshNotification";
+
+static NSDictionary *AppInfoInstalledApplicationsCache = nil;
+static BOOL AppInfoInstalledApplicationsScanInProgress = NO;
+static BOOL AppInfoInstalledApplicationsRefreshPending = NO;
+
+@interface AppInfo () <UIGestureRecognizerDelegate>
+- (void)installedApplicationsDidRefresh:(NSNotification *)notification;
+- (void)downloadButtonSettingDidChange:(NSNotification *)notification;
+- (void)updateInstalledStatus;
+- (BOOL)shouldUseCloudInstallButton;
+- (VLInstallButtonStyle)configuredInstallButtonStyle;
+- (CGFloat)normalButtonWidthForStyle:(VLInstallButtonStyle)style;
+- (void)layoutInstalledLabel;
+- (void)updateInstallButtonForInstalledState:(BOOL)installed;
+@end
+
+@interface AppInfoDeveloperButton : UIButton
+@property (nonatomic, strong) UIFont *developerTitleFont;
+@end
+
+@implementation AppInfoDeveloperButton
+
+- (void)awakeFromNib {
+    [super awakeFromNib];
+    self.developerTitleFont = self.titleLabel.font;
+}
+
+- (CGSize)chevronSizeForContentRect:(CGRect)contentRect {
+    UIImage *image = self.currentImage;
+    if ([self.currentTitle length] == 0 || image == nil || image.size.height <= 0.0) {
+        return CGSizeZero;
+    }
+    CGFloat height = MIN(8.0, MAX(0.0, CGRectGetHeight(contentRect)));
+    CGFloat width = MIN(height * image.size.width / image.size.height,
+                        MAX(0.0, CGRectGetWidth(contentRect)));
+    return CGSizeMake(width, height);
+}
+
+- (CGRect)titleRectForContentRect:(CGRect)contentRect {
+    CGSize chevronSize = [self chevronSizeForContentRect:contentRect];
+    // On iOS 6, reading titleLabel here reenters the button's layout.
+    UIFont *font = self.developerTitleFont ?: [UIFont fontWithName:@"Helvetica" size:12.0];
+    CGSize titleSize = [self.currentTitle sizeWithFont:font];
+    CGFloat width = MIN(titleSize.width, MAX(0.0, CGRectGetWidth(contentRect) - chevronSize.width));
+    return CGRectMake(CGRectGetMinX(contentRect),
+                      CGRectGetMidY(contentRect) - titleSize.height / 2.0,
+                      width, titleSize.height);
+}
+
+- (CGRect)imageRectForContentRect:(CGRect)contentRect {
+    CGSize size = [self chevronSizeForContentRect:contentRect];
+    CGRect titleRect = [self titleRectForContentRect:contentRect];
+    return CGRectMake(CGRectGetMaxX(titleRect), CGRectGetMidY(contentRect) - size.height / 2.0,
+                      size.width, size.height);
+}
+
+@end
 
 @interface AppInfoRecommendedBadgeLabel : UILabel
 @end
@@ -96,11 +160,43 @@ static NSString *AppInfoStringForByteCount(unsigned long long bytes) {
     return [NSString stringWithFormat:@"%.1f %@", value, [units objectAtIndex:unitIndex]];
 }
 
+static NSString *AppInfoStringForDownloadCount(unsigned long long count) {
+    NSNumberFormatter *formatter = [[NSNumberFormatter alloc] init];
+    formatter.numberStyle = NSNumberFormatterDecimalStyle;
+    formatter.maximumFractionDigits = 0;
+    NSString *formatted = [formatter stringFromNumber:[NSNumber numberWithUnsignedLongLong:count]];
+    return formatted ?: [NSString stringWithFormat:@"%llu", count];
+}
+
 static NSString *AppInfoTrimmedString(NSString *value) {
     if (![value isKindOfClass:[NSString class]]) {
         return @"";
     }
     return [value stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+}
+
+static NSString *AppInfoDeveloperButtonTitle(NSString *developer) {
+    return AppInfoTrimmedString(developer);
+}
+
+static NSString *AppInfoDeveloperListingKey(NSString *developer) {
+    NSString *normalizedDeveloper = [AppInfoTrimmedString(developer) lowercaseString];
+    if ([normalizedDeveloper length] == 0 || [normalizedDeveloper isEqualToString:@"unknown developer"]) {
+        return nil;
+    }
+
+    NSData *developerData = [normalizedDeveloper dataUsingEncoding:NSUTF8StringEncoding];
+    if ([developerData length] == 0) {
+        return nil;
+    }
+
+    uint8_t digest[20];
+    sha1(digest, (uint8_t *)[developerData bytes], [developerData length]);
+    NSMutableString *key = [NSMutableString stringWithCapacity:40];
+    for (NSUInteger index = 0; index < sizeof(digest); index++) {
+        [key appendFormat:@"%02x", digest[index]];
+    }
+    return key;
 }
 
 static NSString *AppInfoDisplayBundleIDForApplication(Application *application) {
@@ -160,7 +256,7 @@ static UILabel *AppInfoRecommendedBadge(void) {
     return badge;
 }
 
-static void AppInfoConfigureRecommendedBadge(UITableViewCell *cell, BOOL recommended) {
+static void AppInfoConfigureRecommendedBadge(UITableViewCell *cell, BOOL recommended, BOOL installed) {
     UILabel *badge = (UILabel *)[cell.contentView viewWithTag:AppInfoRecommendedBadgeTag];
     if (!recommended) {
         [badge removeFromSuperview];
@@ -174,11 +270,48 @@ static void AppInfoConfigureRecommendedBadge(UITableViewCell *cell, BOOL recomme
     CGFloat width = 78.0;
     CGFloat height = 14.0;
     CGFloat x = MAX(0.0, cell.contentView.bounds.size.width - width - 12.0);
-    CGFloat labelCenterY = CGRectGetMidY(cell.detailTextLabel.frame);
-    if (labelCenterY <= 0.0) {
-        labelCenterY = 38.0;
+    CGFloat y = installed ? 5.0 : floor(CGRectGetMidY(cell.detailTextLabel.frame) - height / 2.0);
+    if (y <= 0.0) {
+        y = 5.0;
     }
-    badge.frame = CGRectMake(x, floor(labelCenterY - height / 2.0), width, height);
+    badge.frame = CGRectMake(x, y, width, height);
+}
+
+static UILabel *AppInfoInstalledBadge(void) {
+    UIColor *accentColor = [UIColor colorWithRed:53.0 / 255.0 green:118.0 / 255.0 blue:65.0 / 255.0 alpha:1.0];
+    UILabel *badge = [[AppInfoRecommendedBadgeLabel alloc] initWithFrame:CGRectMake(0.0, 0.0, 62.0, 14.0)];
+    badge.tag = AppInfoInstalledBadgeTag;
+    badge.text = NSLocalizedString(@"Installed", nil);
+    badge.textAlignment = NSTextAlignmentCenter;
+    badge.font = [UIFont systemFontOfSize:8.5];
+    badge.textColor = accentColor;
+    badge.backgroundColor = [UIColor clearColor];
+    badge.layer.cornerRadius = 7.0;
+    badge.layer.masksToBounds = YES;
+    badge.layer.borderColor = [accentColor CGColor];
+    badge.layer.borderWidth = 1.0;
+    return badge;
+}
+
+static void AppInfoConfigureInstalledBadge(UITableViewCell *cell, BOOL installed, BOOL recommended) {
+    UILabel *badge = (UILabel *)[cell.contentView viewWithTag:AppInfoInstalledBadgeTag];
+    if (!installed) {
+        [badge removeFromSuperview];
+        return;
+    }
+    if (badge == nil) {
+        badge = AppInfoInstalledBadge();
+        badge.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin;
+        [cell.contentView addSubview:badge];
+    }
+    CGFloat width = 62.0;
+    CGFloat height = 14.0;
+    CGFloat x = MAX(0.0, cell.contentView.bounds.size.width - width - 12.0);
+    CGFloat y = recommended ? 34.0 : floor(CGRectGetMidY(cell.detailTextLabel.frame) - height / 2.0);
+    if (y <= 0.0) {
+        y = 34.0;
+    }
+    badge.frame = CGRectMake(x, y, width, height);
 }
 
 static UIImage *AppInfoFavoriteActivityImage(void) {
@@ -319,6 +452,16 @@ static NSArray *AppInfoExcludedSystemActivityTypes(void) {
 
 @interface AppInfoSectionBarBackground : UIView
 @property (nonatomic, assign) CGRect cutoutFrame;
+@end
+
+@interface AppInfoScreenshotStripView : UIView
+@property (nonatomic, copy) void (^tapHandler)(NSUInteger index);
+- (void)setScreenshots:(NSArray *)screenshots;
++ (CGFloat)preferredHeight;
+@end
+
+@interface AppInfoScreenshotViewer : UIViewController <UIScrollViewDelegate>
+- (id)initWithScreenshots:(NSArray *)screenshots index:(NSUInteger)index;
 @end
 
 @implementation AppInfoTabButton
@@ -831,10 +974,251 @@ static NSArray *AppInfoExcludedSystemActivityTypes(void) {
 
 @end
 
+static NSArray *AppInfoScreenshotsForApplication(Application *application) {
+    BOOL pad = (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad);
+    NSArray *primary = pad ? application.ipadScreenshots : application.screenshots;
+    NSArray *secondary = pad ? application.screenshots : application.ipadScreenshots;
+    if ([primary count] > 0) {
+        return primary;
+    }
+    return secondary ?: [NSArray array];
+}
+
+static BOOL AppInfoUsesRetinaScreenshots(void) {
+    return [[UIScreen mainScreen] scale] > 1.0 && [VeterisMemoryProfile activeLevel] == VeterisMemoryLevelNormal;
+}
+
+static void AppInfoLoadScreenshot(ApplicationScreenshot *screenshot, BOOL retina, void (^completion)(UIImage *image)) {
+    NSString *path = (retina && [screenshot.retinaURL length] > 0) ? screenshot.retinaURL : screenshot.url;
+    NSString *fallbackPath = [path isEqualToString:screenshot.url] ? nil : screenshot.url;
+    if ([path length] == 0) {
+        return;
+    }
+    [VAPISS getStatic:path fallbackPath:fallbackPath completion:^(NSData *data, NSError *error) {
+        if (error != nil || data == nil) {
+            debugLog(@"Failed to fetch screenshot %@", path);
+            return;
+        }
+        UIImage *image = [UIImage imageWithData:data];
+        dispatch_async(dispatch_get_main_queue(), ^{
+            completion(image);
+        });
+    }];
+}
+
+static CGSize AppInfoScreenshotDisplaySize(CGSize pixelSize, CGFloat height, CGFloat maxWidth) {
+    CGFloat aspect = (pixelSize.width > 0.0 && pixelSize.height > 0.0) ? pixelSize.width / pixelSize.height : 2.0 / 3.0;
+    CGFloat width = round(height * aspect);
+    if (width > maxWidth) {
+        width = maxWidth;
+        height = round(width / aspect);
+    }
+    return CGSizeMake(width, height);
+}
+
+@implementation AppInfoScreenshotStripView {
+    UIScrollView *stripScrollView;
+    NSMutableArray *imageViews;
+    NSArray *shownScreenshots;
+}
+
++ (CGFloat)preferredHeight {
+    return (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad) ? 360.0 : 240.0;
+}
+
+- (id)initWithFrame:(CGRect)frame {
+    self = [super initWithFrame:frame];
+    if (self) {
+        self.backgroundColor = [UIColor clearColor];
+        stripScrollView = [[UIScrollView alloc] initWithFrame:self.bounds];
+        stripScrollView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+        stripScrollView.showsHorizontalScrollIndicator = NO;
+        stripScrollView.showsVerticalScrollIndicator = NO;
+        stripScrollView.alwaysBounceHorizontal = YES;
+        stripScrollView.scrollsToTop = NO;
+        stripScrollView.decelerationRate = UIScrollViewDecelerationRateFast;
+        stripScrollView.backgroundColor = [UIColor clearColor];
+        [self addSubview:stripScrollView];
+        imageViews = [[NSMutableArray alloc] init];
+    }
+    return self;
+}
+
+- (void)setScreenshots:(NSArray *)screenshots {
+    for (UIView *view in imageViews) {
+        [view removeFromSuperview];
+    }
+    [imageViews removeAllObjects];
+    shownScreenshots = [screenshots copy];
+    BOOL retina = AppInfoUsesRetinaScreenshots();
+    NSArray *expectedScreenshots = shownScreenshots;
+    __weak AppInfoScreenshotStripView *weakSelf = self;
+    for (NSUInteger index = 0; index < [shownScreenshots count]; index++) {
+        UIImageView *imageView = [[UIImageView alloc] initWithFrame:CGRectZero];
+        imageView.contentMode = UIViewContentModeScaleAspectFill;
+        imageView.clipsToBounds = YES;
+        imageView.backgroundColor = [UIColor colorWithWhite:0.86 alpha:1.0];
+        imageView.layer.borderColor = [UIColor colorWithWhite:0.70 alpha:1.0].CGColor;
+        imageView.layer.borderWidth = 1.0;
+        imageView.userInteractionEnabled = YES;
+        imageView.tag = (NSInteger)index;
+        [imageView addGestureRecognizer:[[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(screenshotTapped:)]];
+        [stripScrollView addSubview:imageView];
+        [imageViews addObject:imageView];
+
+        __weak UIImageView *weakImageView = imageView;
+        AppInfoLoadScreenshot([shownScreenshots objectAtIndex:index], retina, ^(UIImage *image) {
+            AppInfoScreenshotStripView *strongSelf = weakSelf;
+            // Ignore this response if the app has changed.
+            if (strongSelf == nil || strongSelf->shownScreenshots != expectedScreenshots) {
+                return;
+            }
+            weakImageView.image = image;
+        });
+    }
+    stripScrollView.contentOffset = CGPointZero;
+    [self setNeedsLayout];
+}
+
+- (void)screenshotTapped:(UITapGestureRecognizer *)gestureRecognizer {
+    if (self.tapHandler != nil) {
+        self.tapHandler((NSUInteger)gestureRecognizer.view.tag);
+    }
+}
+
+- (void)layoutSubviews {
+    [super layoutSubviews];
+    stripScrollView.frame = self.bounds;
+    CGFloat margin = 20.0;
+    CGFloat gap = 10.0;
+    CGFloat height = self.bounds.size.height;
+    CGFloat maxWidth = MAX(1.0, self.bounds.size.width - margin * 2.0);
+    CGFloat x = margin;
+    for (NSUInteger index = 0; index < [imageViews count]; index++) {
+        ApplicationScreenshot *screenshot = [shownScreenshots objectAtIndex:index];
+        CGSize size = AppInfoScreenshotDisplaySize(screenshot.pixelSize, height, maxWidth);
+        UIImageView *imageView = [imageViews objectAtIndex:index];
+        imageView.frame = CGRectMake(x, floor((height - size.height) / 2.0), size.width, size.height);
+        x += size.width + gap;
+    }
+    stripScrollView.contentSize = CGSizeMake(MAX(self.bounds.size.width, x - gap + margin), height);
+}
+
+@end
+
+@implementation AppInfoScreenshotViewer {
+    NSArray *viewerScreenshots;
+    NSUInteger startIndex;
+    BOOL startIndexApplied;
+    BOOL statusBarWasHidden;
+    UIScrollView *pagerView;
+    UIPageControl *pageControl;
+    NSMutableArray *pageViews;
+}
+
+- (id)initWithScreenshots:(NSArray *)screenshots index:(NSUInteger)index {
+    self = [super initWithNibName:nil bundle:nil];
+    if (self) {
+        viewerScreenshots = [screenshots copy];
+        startIndex = index;
+        pageViews = [[NSMutableArray alloc] init];
+        if ([self respondsToSelector:@selector(setWantsFullScreenLayout:)]) {
+            self.wantsFullScreenLayout = YES;
+        }
+    }
+    return self;
+}
+
+- (void)loadView {
+    UIView *view = [[UIView alloc] initWithFrame:[[UIScreen mainScreen] bounds]];
+    view.backgroundColor = [UIColor blackColor];
+    view.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+
+    pagerView = [[UIScrollView alloc] initWithFrame:view.bounds];
+    pagerView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+    pagerView.pagingEnabled = YES;
+    pagerView.showsHorizontalScrollIndicator = NO;
+    pagerView.showsVerticalScrollIndicator = NO;
+    pagerView.scrollsToTop = NO;
+    pagerView.backgroundColor = [UIColor blackColor];
+    pagerView.delegate = self;
+    [view addSubview:pagerView];
+
+    BOOL retina = AppInfoUsesRetinaScreenshots();
+    for (ApplicationScreenshot *screenshot in viewerScreenshots) {
+        UIImageView *imageView = [[UIImageView alloc] initWithFrame:CGRectZero];
+        imageView.contentMode = UIViewContentModeScaleAspectFit;
+        imageView.backgroundColor = [UIColor blackColor];
+        [pagerView addSubview:imageView];
+        [pageViews addObject:imageView];
+        __weak UIImageView *weakImageView = imageView;
+        AppInfoLoadScreenshot(screenshot, retina, ^(UIImage *image) {
+            weakImageView.image = image;
+        });
+    }
+
+    pageControl = [[UIPageControl alloc] initWithFrame:CGRectZero];
+    pageControl.numberOfPages = (NSInteger)[viewerScreenshots count];
+    pageControl.currentPage = (NSInteger)startIndex;
+    pageControl.hidesForSinglePage = YES;
+    pageControl.userInteractionEnabled = NO;
+    pageControl.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleTopMargin;
+    [view addSubview:pageControl];
+
+    [view addGestureRecognizer:[[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(close)]];
+    self.view = view;
+}
+
+- (void)viewWillAppear:(BOOL)animated {
+    [super viewWillAppear:animated];
+    statusBarWasHidden = [UIApplication sharedApplication].statusBarHidden;
+    [[UIApplication sharedApplication] setStatusBarHidden:YES withAnimation:UIStatusBarAnimationFade];
+}
+
+- (void)viewWillDisappear:(BOOL)animated {
+    [super viewWillDisappear:animated];
+    [[UIApplication sharedApplication] setStatusBarHidden:statusBarWasHidden withAnimation:UIStatusBarAnimationFade];
+}
+
+- (BOOL)prefersStatusBarHidden {
+    return YES;
+}
+
+- (void)viewDidLayoutSubviews {
+    [super viewDidLayoutSubviews];
+    CGSize size = pagerView.bounds.size;
+    for (NSUInteger index = 0; index < [pageViews count]; index++) {
+        UIImageView *imageView = [pageViews objectAtIndex:index];
+        imageView.frame = CGRectMake(size.width * index, 0.0, size.width, size.height);
+    }
+    pagerView.contentSize = CGSizeMake(size.width * [pageViews count], size.height);
+    if (!startIndexApplied && size.width > 0.0) {
+        pagerView.contentOffset = CGPointMake(size.width * startIndex, 0.0);
+        startIndexApplied = YES;
+    }
+    pageControl.frame = CGRectMake(0.0, self.view.bounds.size.height - 36.0, self.view.bounds.size.width, 36.0);
+}
+
+- (void)scrollViewDidScroll:(UIScrollView *)scrollView {
+    CGFloat width = scrollView.bounds.size.width;
+    if (width > 0.0) {
+        pageControl.currentPage = (NSInteger)floor((scrollView.contentOffset.x + width / 2.0) / width);
+    }
+}
+
+- (void)close {
+    [self dismissViewControllerAnimated:YES completion:nil];
+}
+
+@end
+
 @implementation AppInfo {
     AppDelegate *delegate;
     UIImage *appImage;
+    UILabel *installedLabel;
     BOOL initialized;
+    BOOL installButtonInstalledStateKnown;
+    BOOL installButtonInstalledState;
     Application *app;
     UIView *sectionBar;
     AppInfoSectionBarBackground *sectionBarBackgroundView;
@@ -847,9 +1231,15 @@ static NSArray *AppInfoExcludedSystemActivityTypes(void) {
     UILabel *relatedStatusLabel;
     UILabel *appVersionsLabel;
     NSMutableArray *detailBadgeViews;
+    NSMutableArray *downloadInfoRowViews;
     NSMutableArray *detailRowViews;
     NSMutableArray *customInfoBlockViews;
-    UILabel *infoHeaderLabel;
+    UILabel *informationHeaderLabel;
+    UILabel *appInformationHeaderLabel;
+    UILabel *descriptionDateLabel;
+    UILabel *screenshotsHeaderLabel;
+    UILabel *screenshotsDateLabel;
+    AppInfoScreenshotStripView *screenshotStripView;
     NSMutableArray *relatedApps;
     NSMutableSet *relatedLoadingIconURLs;
     UIPopoverController *activityPopover;
@@ -860,29 +1250,364 @@ static NSArray *AppInfoExcludedSystemActivityTypes(void) {
     NSInteger pendingVersionActionIndex;
     BOOL versionInfoMode;
     Version *selectedVersion;
+    CGFloat installButtonRightMargin;
+    CGFloat installButtonNormalWidth;
+    BOOL installButtonPositionKnown;
 }
 @synthesize getButton;
 @synthesize appNameLabel;
 @synthesize appUIImage;
-@synthesize appDeveloperNameLabel;
+@synthesize appDeveloperNameButton;
 @synthesize activityIndicator;
 @synthesize descriptionLabel;
 
++ (void)refreshInstalledApplicationCache {
+    @synchronized(self) {
+        if (AppInfoInstalledApplicationsScanInProgress) {
+            AppInfoInstalledApplicationsRefreshPending = YES;
+            return;
+        }
+        AppInfoInstalledApplicationsScanInProgress = YES;
+    }
+
+    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+        NSDictionary *installedApplications = [[ApplicationLister sharedInstance] installedApps];
+        NSDictionary *snapshot = [installedApplications isKindOfClass:[NSDictionary class]]
+            ? [installedApplications copy]
+            : @{};
+
+        dispatch_async(dispatch_get_main_queue(), ^{
+            BOOL refreshAgain = NO;
+            @synchronized(self) {
+                AppInfoInstalledApplicationsCache = snapshot;
+                AppInfoInstalledApplicationsScanInProgress = NO;
+                refreshAgain = AppInfoInstalledApplicationsRefreshPending;
+                AppInfoInstalledApplicationsRefreshPending = NO;
+            }
+            [[NSNotificationCenter defaultCenter] postNotificationName:AppInfoInstalledApplicationsDidRefreshNotification
+                                                                object:nil];
+            if (refreshAgain) {
+                [AppInfo refreshInstalledApplicationCache];
+            }
+        });
+    });
+}
+
++ (NSDictionary *)installedApplicationsSnapshot {
+    @synchronized(self) {
+        return AppInfoInstalledApplicationsCache;
+    }
+}
+
++ (BOOL)isApplicationInstalled:(Application *)application {
+    NSString *bundleID = AppInfoDisplayBundleIDForApplication(application);
+    NSDictionary *installedInfo;
+    @synchronized(self) {
+        installedInfo = [AppInfoInstalledApplicationsCache objectForKey:bundleID];
+    }
+    return [installedInfo isKindOfClass:[NSDictionary class]];
+}
+
++ (BOOL)isVersionInstalled:(Version *)version forApplication:(Application *)application {
+    NSString *bundleID;
+    NSDictionary *installedInfo;
+    NSString *installedShortVersion;
+    NSString *installedBuildVersion;
+    NSString *catalogVersion;
+    NSString *catalogBuildVersion;
+
+    if (application == nil || version == nil) {
+        return NO;
+    }
+
+    bundleID = AppInfoDisplayBundleIDForVersion(application, version);
+    if ([bundleID length] == 0) {
+        return NO;
+    }
+
+    @synchronized(self) {
+        installedInfo = [AppInfoInstalledApplicationsCache objectForKey:bundleID];
+    }
+    if (![installedInfo isKindOfClass:[NSDictionary class]]) {
+        return NO;
+    }
+
+    installedShortVersion = [installedInfo objectForKey:@"CFBundleShortVersionString"];
+    if (![installedShortVersion isKindOfClass:[NSString class]] || [installedShortVersion length] == 0) {
+        installedShortVersion = [installedInfo objectForKey:@"CFBundleVersion"];
+    }
+    catalogVersion = AppInfoTrimmedString(version.version);
+    if (![installedShortVersion isKindOfClass:[NSString class]] ||
+        [catalogVersion length] == 0 ||
+        ![catalogVersion isEqualToString:installedShortVersion]) {
+        return NO;
+    }
+
+    catalogBuildVersion = AppInfoTrimmedString(version.buildVersion);
+    installedBuildVersion = [installedInfo objectForKey:@"CFBundleVersion"];
+    if ([catalogBuildVersion length] > 0 &&
+        [installedBuildVersion isKindOfClass:[NSString class]] &&
+        [installedBuildVersion length] > 0 &&
+        ![catalogBuildVersion isEqualToString:installedBuildVersion]) {
+        return NO;
+    }
+    return YES;
+}
+
+- (void)dealloc {
+    [[NSNotificationCenter defaultCenter] removeObserver:self];
+}
+
+- (VLInstallButtonStyle)configuredInstallButtonStyle {
+    id storedStyle = [[NSUserDefaults standardUserDefaults] objectForKey:VLDownloadButtonStylePreferenceKey];
+    VLInstallButtonStyle buttonStyle = storedStyle == nil ? VLInstallButtonDefaultStyleForCurrentSystem() : (VLInstallButtonStyle)[storedStyle integerValue];
+    if (buttonStyle < VLInstallButtonStyleCloud || buttonStyle > VLInstallButtonStyleUIButton) {
+        buttonStyle = VLInstallButtonStyleUIButton;
+    }
+    return buttonStyle;
+}
+
+- (CGFloat)normalButtonWidthForStyle:(VLInstallButtonStyle)style {
+    return [VLInstallButton buttonWidthForText:VLInstallButtonNormalTitle(style) style:style];
+}
+
+- (void)installStoreButton {
+    VLInstallButton *button;
+    UIView *legacyButton = (UIView *)self.getButton;
+    UIView *superview = legacyButton.superview;
+    CGRect legacyFrame = legacyButton.frame;
+    VLInstallButtonStyle configuredStyle = [self configuredInstallButtonStyle];
+    VLInstallButtonStyle buttonStyle = configuredStyle;
+    if (!installButtonPositionKnown) {
+        installButtonRightMargin = superview != nil ? CGRectGetWidth(superview.bounds) - CGRectGetMaxX(legacyFrame) : 20.0;
+        installButtonPositionKnown = YES;
+    }
+    if ([self shouldUseCloudInstallButton]) {
+        buttonStyle = VLInstallButtonStyleCloud;
+    }
+
+    if (buttonStyle == VLInstallButtonStyleCloud) {
+        UIButton *cloudButton;
+        CGFloat rightMargin = installButtonRightMargin;
+
+        if ([legacyButton isKindOfClass:[UIButton class]] &&
+            [(UIButton *)legacyButton buttonType] == UIButtonTypeCustom) {
+            cloudButton = (UIButton *)legacyButton;
+        } else {
+            cloudButton = [UIButton buttonWithType:UIButtonTypeCustom];
+            cloudButton.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleBottomMargin;
+            if (superview != nil) {
+                NSUInteger index = [superview.subviews indexOfObject:legacyButton];
+                if (index == NSNotFound) {
+                    [superview addSubview:cloudButton];
+                } else {
+                    [superview insertSubview:cloudButton atIndex:index];
+                }
+            }
+            [legacyButton removeFromSuperview];
+            self.getButton = cloudButton;
+        }
+
+        legacyFrame.size.width = [VLInstallButton buttonWidthForText:@"" style:VLInstallButtonStyleCloud];
+        legacyFrame.size.height = 28.0;
+        if (superview != nil) {
+            legacyFrame.origin.x = CGRectGetWidth(superview.bounds) - rightMargin - legacyFrame.size.width;
+            installButtonRightMargin = rightMargin;
+        }
+        installButtonNormalWidth = legacyFrame.size.width;
+        cloudButton.frame = legacyFrame;
+        [cloudButton setTitle:@"" forState:UIControlStateNormal];
+        [cloudButton setBackgroundImage:[UIImage imageNamed:@"DownloadButton.png"] forState:UIControlStateNormal];
+        [cloudButton removeTarget:nil action:nil forControlEvents:UIControlEventTouchUpInside];
+        [cloudButton addTarget:self action:@selector(getButtonPressed:) forControlEvents:UIControlEventTouchUpInside];
+        return;
+    }
+
+    if (buttonStyle == VLInstallButtonStyleUIButton) {
+        NSString *normalTitle = VLInstallButtonNormalTitle(buttonStyle);
+        CGFloat normalButtonWidth = [VLInstallButton buttonWidthForText:normalTitle style:buttonStyle];
+        UIButton *nativeButton = [UIButton buttonWithType:UIButtonTypeRoundedRect];
+        CGFloat nativeButtonX = legacyFrame.origin.x;
+        if (superview != nil) {
+            nativeButtonX = CGRectGetWidth(superview.bounds) -
+                            (CGRectGetWidth(superview.bounds) - CGRectGetMaxX(legacyFrame)) -
+                            normalButtonWidth;
+        }
+        nativeButton.frame = CGRectMake(nativeButtonX,
+                                        legacyFrame.origin.y,
+                                        normalButtonWidth,
+                                        30.0);
+        nativeButton.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleBottomMargin;
+        [nativeButton setTitle:normalTitle forState:UIControlStateNormal];
+        if (superview != nil) {
+            NSUInteger index = [superview.subviews indexOfObject:legacyButton];
+            if (index == NSNotFound) {
+                [superview addSubview:nativeButton];
+            } else {
+                [superview insertSubview:nativeButton atIndex:index];
+            }
+            [legacyButton removeFromSuperview];
+        }
+        self.getButton = nativeButton;
+        [nativeButton addTarget:self action:@selector(getButtonPressed:) forControlEvents:UIControlEventTouchUpInside];
+        return;
+    }
+
+    if ([legacyButton isKindOfClass:[VLInstallButton class]]) {
+        button = (VLInstallButton *)legacyButton;
+        installButtonNormalWidth = [self normalButtonWidthForStyle:buttonStyle];
+        [button setButtonStyle:buttonStyle];
+        [button removeTarget:nil action:nil forControlEvents:UIControlEventTouchUpInside];
+    } else {
+        CGFloat normalButtonWidth = legacyFrame.size.width;
+        CGFloat selectedButtonWidth = normalButtonWidth;
+        CGFloat buttonHeight = legacyFrame.size.height;
+        if (buttonStyle != VLInstallButtonStyleCloud) {
+            normalButtonWidth = [VLInstallButton buttonWidthForText:VLInstallButtonNormalTitle(buttonStyle) style:buttonStyle];
+            selectedButtonWidth = [VLInstallButton buttonWidthForText:VLInstallButtonSelectedTitle(buttonStyle) style:buttonStyle];
+            buttonHeight = buttonStyle == VLInstallButtonStyleIOS6 ? 27.0 : (buttonStyle == VLInstallButtonStyleModern ? 32.0 : 25.0);
+        }
+        installButtonNormalWidth = normalButtonWidth;
+        button = [[VLInstallButton alloc] initWithFrame:CGRectMake(legacyFrame.origin.x,
+                                                                    legacyFrame.origin.y,
+                                                                    normalButtonWidth,
+                                                                    buttonHeight)
+                                             style:buttonStyle
+                                       expandsLeft:YES
+                                        normalWidth:normalButtonWidth
+                                       selectedWidth:selectedButtonWidth];
+        button.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleBottomMargin;
+        if (superview != nil) {
+            NSUInteger index = [superview.subviews indexOfObject:legacyButton];
+            if (index == NSNotFound) {
+                [superview addSubview:button];
+            } else {
+                [superview insertSubview:button atIndex:index];
+            }
+            [legacyButton removeFromSuperview];
+        }
+        self.getButton = button;
+    }
+
+    [button addTarget:self action:@selector(getButtonPressed:) forControlEvents:UIControlEventTouchUpInside];
+}
+
+- (void)resetInstallButtonIfNeeded {
+    if ([self.getButton isKindOfClass:[VLInstallButton class]]) {
+        [(VLInstallButton *)self.getButton reset];
+    }
+}
+
+- (void)setupDescriptionLabels {
+    if (self.descriptionLabel == nil) {
+        UILabel *label = [[UILabel alloc] initWithFrame:CGRectZero];
+        label.backgroundColor = [UIColor clearColor];
+        label.opaque = NO;
+        label.clipsToBounds = YES;
+        label.userInteractionEnabled = NO;
+        label.contentMode = UIViewContentModeLeft;
+        label.autoresizingMask = UIViewAutoresizingFlexibleRightMargin | UIViewAutoresizingFlexibleBottomMargin;
+        label.font = [UIFont boldSystemFontOfSize:19.0];
+        label.textColor = [UIColor darkTextColor];
+        label.lineBreakMode = NSLineBreakByTruncatingTail;
+        label.baselineAdjustment = UIBaselineAdjustmentAlignBaselines;
+        label.adjustsFontSizeToFitWidth = NO;
+        self.descriptionLabel = label;
+        [self.scrollView addSubview:label];
+    }
+
+    if (self.appDescriptionLabel == nil) {
+        UILabel *label = [[UILabel alloc] initWithFrame:CGRectZero];
+        label.backgroundColor = [UIColor clearColor];
+        label.opaque = NO;
+        label.clipsToBounds = YES;
+        label.userInteractionEnabled = NO;
+        label.contentMode = UIViewContentModeLeft;
+        label.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleBottomMargin;
+        label.font = [UIFont fontWithName:@"HelveticaNeue" size:15.0];
+        label.textColor = [UIColor darkTextColor];
+        label.numberOfLines = 0;
+        label.lineBreakMode = NSLineBreakByWordWrapping;
+        label.baselineAdjustment = UIBaselineAdjustmentAlignBaselines;
+        label.minimumFontSize = 5.0;
+        self.appDescriptionLabel = label;
+        [self.scrollView addSubview:label];
+    }
+
+    if (descriptionDateLabel == nil) {
+        UILabel *label = [[UILabel alloc] initWithFrame:CGRectZero];
+        label.backgroundColor = [UIColor clearColor];
+        label.opaque = NO;
+        label.userInteractionEnabled = NO;
+        label.font = [UIFont fontWithName:@"HelveticaNeue" size:13.0];
+        label.textColor = [UIColor colorWithWhite:0.45 alpha:1.0];
+        label.textAlignment = NSTextAlignmentRight;
+        label.lineBreakMode = NSLineBreakByTruncatingTail;
+        label.adjustsFontSizeToFitWidth = YES;
+        label.minimumFontSize = 10.0;
+        label.hidden = YES;
+        descriptionDateLabel = label;
+        [self.scrollView addSubview:label];
+    }
+
+    if ([self.descriptionLabel respondsToSelector:@selector(setAdjustsLetterSpacingToFitWidth:)]) {
+        self.descriptionLabel.adjustsLetterSpacingToFitWidth = YES;
+        self.appDescriptionLabel.adjustsLetterSpacingToFitWidth = YES;
+    }
+    self.scrollView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+    self.scrollView.contentInset = UIEdgeInsetsMake(0.0, 0.0, 30.0, 0.0);
+}
+
 - (void)viewDidLoad {
     [super viewDidLoad];
+    [self setupDescriptionLabels];
+    [self installStoreButton];
+    UIView *buttonSuperview = self.getButton.superview;
+    if (buttonSuperview != nil) {
+        installedLabel = [[UILabel alloc] initWithFrame:CGRectZero];
+        installedLabel.text = NSLocalizedString(@"Installed", nil);
+        installedLabel.textAlignment = NSTextAlignmentCenter;
+        installedLabel.font = [UIFont systemFontOfSize:10.0];
+        installedLabel.textColor = [UIColor colorWithWhite:0.42 alpha:1.0];
+        installedLabel.shadowColor = [UIColor whiteColor];
+        installedLabel.shadowOffset = CGSizeMake(0.0, 1.0);
+        installedLabel.backgroundColor = [UIColor clearColor];
+        installedLabel.hidden = YES;
+        installedLabel.userInteractionEnabled = NO;
+        [buttonSuperview addSubview:installedLabel];
+    }
+    [[NSNotificationCenter defaultCenter] addObserver:self
+                                             selector:@selector(installedApplicationsDidRefresh:)
+                                                 name:AppInfoInstalledApplicationsDidRefreshNotification
+                                               object:nil];
+    [[NSNotificationCenter defaultCenter] addObserver:self
+                                             selector:@selector(downloadButtonSettingDidChange:)
+                                                 name:kIASKAppSettingChanged
+                                               object:nil];
+    UITapGestureRecognizer *collapseInstallButtonGestureRecognizer = [[UITapGestureRecognizer alloc] initWithTarget:self
+                                                                                                                 action:@selector(collapseInstallButtonOnTap:)];
+    collapseInstallButtonGestureRecognizer.delegate = self;
+    collapseInstallButtonGestureRecognizer.cancelsTouchesInView = NO;
+    [self.view addGestureRecognizer:collapseInstallButtonGestureRecognizer];
+    [self.appDeveloperNameButton addTarget:self
+                                   action:@selector(developerNameButtonPressed:)
+                         forControlEvents:UIControlEventTouchUpInside];
+    [self.appDeveloperNameButton setImage:[UIImage imageNamed:@"chevron.right.png"] forState:UIControlStateNormal];
+    self.appDeveloperNameButton.imageView.contentMode = UIViewContentModeScaleAspectFit;
     delegate = getDelegate();
     selectedSection = AppInfoSectionDetails;
     pendingVersionActionIndex = AppInfoNoPendingVersionIndex;
     relatedApps = [[NSMutableArray alloc] init];
     relatedLoadingIconURLs = [[NSMutableSet alloc] init];
     detailBadgeViews = [[NSMutableArray alloc] init];
+    downloadInfoRowViews = [[NSMutableArray alloc] init];
     detailRowViews = [[NSMutableArray alloc] init];
     customInfoBlockViews = [[NSMutableArray alloc] init];
     self.view.backgroundColor = [UIColor colorWithRed:245.0 / 255.0 green:245.0 / 255.0 blue:245.0 / 255.0 alpha:1.0];
     appUIImage.layer.masksToBounds = YES;
     appUIImage.layer.cornerRadius = 13.0;
     activityIndicator.hidden = YES;
-    self.navigationItem.title = NSLocalizedString(versionInfoMode ? @"VersionSingular" : @"Info", nil);
+    self.navigationItem.title = NSLocalizedString(versionInfoMode ? @"VersionDetails" : @"AppDetails", nil);
     self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemAction target:self action:@selector(actionsButtonPressed:)];
     self.descriptionLabel.text = NSLocalizedString(@"Description", nil);
     self.scrollView.backgroundColor = [UIColor colorWithRed:235.0 / 255.0 green:235.0 / 255.0 blue:235.0 / 255.0 alpha:1.0];
@@ -897,9 +1622,124 @@ static NSArray *AppInfoExcludedSystemActivityTypes(void) {
     if (versionInfoMode) {
         [self configureVersionInfoMode];
     }
+    [self updateInstalledStatus];
     if (app == nil) {
         [self populateLoadingContent];
         [self layoutDetailsContent];
+    }
+}
+
+- (void)installedApplicationsDidRefresh:(NSNotification *)notification {
+    (void)notification;
+    [self updateInstalledStatus];
+    if (app != nil) {
+        [versionsTableView reloadData];
+    }
+}
+
+- (void)updateInstalledStatus {
+    BOOL installed = NO;
+    if (app != nil) {
+        installed = versionInfoMode
+            ? [AppInfo isVersionInstalled:selectedVersion forApplication:app]
+            : [AppInfo isApplicationInstalled:app];
+        [self updateInstallButtonForInstalledState:installed];
+    }
+    installedLabel.hidden = !installed;
+}
+
+- (BOOL)shouldUseCloudInstallButton {
+    if (app == nil) {
+        return NO;
+    }
+    BOOL installed = versionInfoMode
+        ? [AppInfo isVersionInstalled:selectedVersion forApplication:app]
+        : [AppInfo isApplicationInstalled:app];
+    if (!installed) {
+        return NO;
+    }
+    return [self configuredInstallButtonStyle] == VLInstallButtonStyleCloud || VLInstalledAppsCloudButtonEnabled();
+}
+
+- (void)updateInstallButtonForInstalledState:(BOOL)installed {
+    if (self.getButton == nil ||
+        (installButtonInstalledStateKnown && installButtonInstalledState == installed)) {
+        return;
+    }
+    installButtonInstalledStateKnown = YES;
+    installButtonInstalledState = installed;
+    [self installStoreButton];
+    [self layoutInstalledLabel];
+}
+
+- (void)layoutInstalledLabel {
+    if (installedLabel == nil || self.getButton.superview == nil) {
+        return;
+    }
+    CGRect buttonFrame = self.getButton.frame;
+    CGFloat labelWidth = MAX(62.0, buttonFrame.size.width);
+    CGFloat labelX = CGRectGetMidX(buttonFrame) - (labelWidth / 2.0);
+    installedLabel.frame = CGRectMake(labelX,
+                                      CGRectGetMaxY(buttonFrame) + 1.0,
+                                      labelWidth,
+                                      14.0);
+}
+
+- (void)downloadButtonSettingDidChange:(NSNotification *)notification {
+    if (![notification.object isEqual:VLDownloadButtonStylePreferenceKey] &&
+        ![notification.object isEqual:VLInstalledAppsCloudButtonPreferenceKey]) {
+        return;
+    }
+    installButtonInstalledStateKnown = NO;
+    [self updateInstalledStatus];
+    [self.view setNeedsLayout];
+}
+
+- (void)developerNameButtonPressed:(UIButton *)sender {
+    (void)sender;
+
+    NSString *developer = AppInfoTrimmedString(app.developer);
+    if ([developer length] == 0) {
+        developer = AppInfoTrimmedString([self.appDeveloperNameButton titleForState:UIControlStateNormal]);
+    }
+    NSString *developerKey = AppInfoDeveloperListingKey(developer);
+    if ([developerKey length] == 0) {
+        return;
+    }
+
+    UIStoryboard *storyboard = self.storyboard;
+    if (storyboard == nil) {
+        storyboard = [UIStoryboard storyboardWithName:@"MainStoryboard" bundle:[NSBundle mainBundle]];
+    }
+    AppsTableViewController *developerAppsController = [storyboard instantiateViewControllerWithIdentifier:@"AppsTableViewController"];
+    developerAppsController.listingTitle = developer;
+    developerAppsController.listingEndpoint = [NSString stringWithFormat:@"listing/developer/%@", developerKey];
+    [self.navigationController pushViewController:developerAppsController animated:YES];
+}
+
+- (BOOL)gestureRecognizer:(UIGestureRecognizer *)gestureRecognizer shouldReceiveTouch:(UITouch *)touch {
+    if ([self.getButton isKindOfClass:[VLInstallButton class]]) {
+        UIView *touchedView = [touch view];
+        if (touchedView == self.getButton || [touchedView isDescendantOfView:self.getButton]) {
+            return NO;
+        }
+    }
+    UIView *touchedView = [touch view];
+    if (touchedView == self.appDeveloperNameButton || [touchedView isDescendantOfView:self.appDeveloperNameButton]) {
+        return NO;
+    }
+    return YES;
+}
+
+- (void)collapseInstallButtonOnTap:(UITapGestureRecognizer *)gestureRecognizer {
+    if (gestureRecognizer.state != UIGestureRecognizerStateEnded ||
+        ![self.getButton isKindOfClass:[VLInstallButton class]]) {
+        return;
+    }
+
+    VLInstallButton *installButton = (VLInstallButton *)self.getButton;
+    if ([installButton buttonStyle] != VLInstallButtonStyleCloud && [installButton isInstallSelected]) {
+        [installButton reset];
     }
 }
 
@@ -916,6 +1756,16 @@ static NSArray *AppInfoExcludedSystemActivityTypes(void) {
 
 - (void)viewDidLayoutSubviews {
     [super viewDidLayoutSubviews];
+    if ([self.getButton isKindOfClass:[VLInstallButton class]] && ![(VLInstallButton *)self.getButton isInstallSelected]) {
+        UIView *buttonSuperview = self.getButton.superview;
+        if (buttonSuperview != nil) {
+            CGRect frame = self.getButton.frame;
+            frame.size.width = installButtonNormalWidth;
+            frame.origin.x = CGRectGetWidth(buttonSuperview.bounds) - installButtonRightMargin - frame.size.width;
+            self.getButton.frame = frame;
+        }
+    }
+    [self layoutInstalledLabel];
     [self layoutSectionViews];
     [self layoutDetailsContent];
 }
@@ -1170,10 +2020,10 @@ static NSArray *AppInfoExcludedSystemActivityTypes(void) {
     versionInfoMode = YES;
     initialized = (app != nil && selectedVersion != nil);
     selectedSection = AppInfoSectionDetails;
-    self.navigationItem.title = NSLocalizedString(@"Info", nil);
+    self.navigationItem.title = NSLocalizedString(@"VersionDetails", nil);
     self.navigationItem.rightBarButtonItem = nil;
     if (app != nil && selectedVersion != nil) {
-        self.appDeveloperNameLabel.text = app.developer;
+        [self.appDeveloperNameButton setTitle:AppInfoDeveloperButtonTitle(app.developer) forState:UIControlStateNormal];
         self.appNameLabel.text = app.name;
         if (self.appUIImage.image == nil) {
             self.appUIImage.image = app.icon;
@@ -1281,6 +2131,16 @@ static NSArray *AppInfoExcludedSystemActivityTypes(void) {
     [detailRowViews addObject:row];
 }
 
+- (void)addDownloadInfoRowWithCaption:(NSString *)caption value:(NSString *)value {
+    if ([value length] == 0) {
+        return;
+    }
+    AppInfoDetailRowView *row = [[AppInfoDetailRowView alloc] initWithFrame:CGRectZero];
+    [row setCaption:caption value:value];
+    [self.scrollView addSubview:row];
+    [downloadInfoRowViews addObject:row];
+}
+
 - (void)addCopyableDetailRowWithCaption:(NSString *)caption value:(NSString *)value {
     if ([value length] == 0) {
         return;
@@ -1327,13 +2187,20 @@ static NSArray *AppInfoExcludedSystemActivityTypes(void) {
     if ([sizeText length] > 0) {
         [subtitleParts addObject:sizeText];
     }
+    NSString *familyText = [self deviceFamilyDisplayName:version.platform];
+    if ([familyText length] > 0) {
+        [subtitleParts addObject:familyText];
+    }
     NSString *versionBundleID = AppInfoDistinctBundleIDForVersion(app, version);
     if ([versionBundleID length] > 0) {
         [subtitleParts addObject:versionBundleID];
     }
-    cell.detailTextLabel.text = [subtitleParts componentsJoinedByString:@" - "];
+    cell.detailTextLabel.text = [subtitleParts componentsJoinedByString:@" • "];
     [cell layoutIfNeeded];
-    AppInfoConfigureRecommendedBadge(cell, AppInfoVersionIsRecommended(app, version));
+    BOOL recommended = AppInfoVersionIsRecommended(app, version);
+    BOOL installed = [AppInfo isVersionInstalled:version forApplication:app];
+    AppInfoConfigureRecommendedBadge(cell, recommended, installed);
+    AppInfoConfigureInstalledBadge(cell, installed, recommended);
 }
 
 - (void)clearDetailGeneratedViews {
@@ -1341,6 +2208,10 @@ static NSArray *AppInfoExcludedSystemActivityTypes(void) {
         [view removeFromSuperview];
     }
     [detailBadgeViews removeAllObjects];
+    for (UIView *view in downloadInfoRowViews) {
+        [view removeFromSuperview];
+    }
+    [downloadInfoRowViews removeAllObjects];
     for (UIView *view in detailRowViews) {
         [view removeFromSuperview];
     }
@@ -1349,8 +2220,63 @@ static NSArray *AppInfoExcludedSystemActivityTypes(void) {
         [view removeFromSuperview];
     }
     [customInfoBlockViews removeAllObjects];
-    [infoHeaderLabel removeFromSuperview];
-    infoHeaderLabel = nil;
+    [informationHeaderLabel removeFromSuperview];
+    informationHeaderLabel = nil;
+    [appInformationHeaderLabel removeFromSuperview];
+    appInformationHeaderLabel = nil;
+    [screenshotsHeaderLabel removeFromSuperview];
+    screenshotsHeaderLabel = nil;
+    [screenshotsDateLabel removeFromSuperview];
+    screenshotsDateLabel = nil;
+    [screenshotStripView removeFromSuperview];
+    screenshotStripView = nil;
+}
+
+- (void)addScreenshotsForApplication:(Application *)application {
+    NSArray *screenshots = AppInfoScreenshotsForApplication(application);
+    if ([screenshots count] == 0) {
+        return;
+    }
+    screenshotsHeaderLabel = [[UILabel alloc] initWithFrame:CGRectZero];
+    screenshotsHeaderLabel.backgroundColor = [UIColor clearColor];
+    screenshotsHeaderLabel.font = self.descriptionLabel.font;
+    screenshotsHeaderLabel.textColor = self.descriptionLabel.textColor;
+    screenshotsHeaderLabel.text = NSLocalizedString(@"Screenshots", nil);
+    [self.scrollView addSubview:screenshotsHeaderLabel];
+
+    NSString *dateText = [self descriptionDateTextForBackendDate:application.screenshotDate];
+    if ([dateText length] > 0) {
+        screenshotsDateLabel = [[UILabel alloc] initWithFrame:CGRectZero];
+        screenshotsDateLabel.backgroundColor = [UIColor clearColor];
+        screenshotsDateLabel.opaque = NO;
+        screenshotsDateLabel.userInteractionEnabled = NO;
+        screenshotsDateLabel.font = descriptionDateLabel.font;
+        screenshotsDateLabel.textColor = descriptionDateLabel.textColor;
+        screenshotsDateLabel.textAlignment = NSTextAlignmentRight;
+        screenshotsDateLabel.lineBreakMode = NSLineBreakByTruncatingTail;
+        screenshotsDateLabel.adjustsFontSizeToFitWidth = YES;
+        screenshotsDateLabel.minimumFontSize = 10.0;
+        screenshotsDateLabel.text = dateText;
+        [self.scrollView addSubview:screenshotsDateLabel];
+    }
+
+    screenshotStripView = [[AppInfoScreenshotStripView alloc] initWithFrame:CGRectZero];
+    __weak AppInfo *weakSelf = self;
+    screenshotStripView.tapHandler = ^(NSUInteger index) {
+        [weakSelf showScreenshotAtIndex:index];
+    };
+    [screenshotStripView setScreenshots:screenshots];
+    [self.scrollView addSubview:screenshotStripView];
+}
+
+- (void)showScreenshotAtIndex:(NSUInteger)index {
+    NSArray *screenshots = AppInfoScreenshotsForApplication(app);
+    if (index >= [screenshots count]) {
+        return;
+    }
+    AppInfoScreenshotViewer *viewer = [[AppInfoScreenshotViewer alloc] initWithScreenshots:screenshots index:index];
+    viewer.modalTransitionStyle = UIModalTransitionStyleCrossDissolve;
+    [self presentViewController:viewer animated:YES completion:nil];
 }
 
 - (void)addCustomInfoBlocks:(NSArray *)blocks {
@@ -1370,6 +2296,7 @@ static NSArray *AppInfoExcludedSystemActivityTypes(void) {
 
 - (void)populateLoadingContent {
     [self clearDetailGeneratedViews];
+    descriptionDateLabel.text = nil;
 
     self.appDescriptionLabel.text = NSLocalizedString(@"Loading", nil);
     self.appDescriptionLabel.font = [UIFont fontWithName:@"HelveticaNeue-Italic" size:13.0];
@@ -1380,22 +2307,32 @@ static NSArray *AppInfoExcludedSystemActivityTypes(void) {
     [self addDetailBadgeWithCaption:NSLocalizedString(@"DetailsBadgeDevices", nil) value:loadingValue];
     [self addDetailBadgeWithCaption:NSLocalizedString(@"DetailsBadgeRequires", nil) value:loadingValue];
 
+    informationHeaderLabel = [[UILabel alloc] initWithFrame:CGRectZero];
+    informationHeaderLabel.backgroundColor = [UIColor clearColor];
+    informationHeaderLabel.font = self.descriptionLabel.font;
+    informationHeaderLabel.textColor = [UIColor colorWithWhite:0.45 alpha:1.0];
+    informationHeaderLabel.text = NSLocalizedString(@"Information", nil);
+    [self.scrollView addSubview:informationHeaderLabel];
+    [self addDownloadInfoRowWithCaption:NSLocalizedString(@"Downloads", nil) value:loadingValue];
+    [(AppInfoDetailRowView *)[downloadInfoRowViews lastObject] setShowsSeparator:NO];
+
     [self addDetailRowWithCaption:NSLocalizedString(@"DetailsBundleID", nil) value:loadingValue];
     [self addDetailRowWithCaption:NSLocalizedString(@"DetailsArchitectures", nil) value:loadingValue];
     [self addDetailRowWithCaption:NSLocalizedString(@"DetailsBackgroundModes", nil) value:loadingValue];
     [self addDetailRowWithCaption:NSLocalizedString(@"DetailsExecutable", nil) value:loadingValue];
     [(AppInfoDetailRowView *)[detailRowViews lastObject] setShowsSeparator:NO];
 
-    infoHeaderLabel = [[UILabel alloc] initWithFrame:CGRectZero];
-    infoHeaderLabel.backgroundColor = [UIColor clearColor];
-    infoHeaderLabel.font = self.descriptionLabel.font;
-    infoHeaderLabel.textColor = [UIColor colorWithWhite:0.45 alpha:1.0];
-    infoHeaderLabel.text = NSLocalizedString(@"Information", nil);
-    [self.scrollView addSubview:infoHeaderLabel];
+    appInformationHeaderLabel = [[UILabel alloc] initWithFrame:CGRectZero];
+    appInformationHeaderLabel.backgroundColor = [UIColor clearColor];
+    appInformationHeaderLabel.font = self.descriptionLabel.font;
+    appInformationHeaderLabel.textColor = [UIColor colorWithWhite:0.45 alpha:1.0];
+    appInformationHeaderLabel.text = NSLocalizedString(@"App Details", nil);
+    [self.scrollView addSubview:appInformationHeaderLabel];
 }
 
 - (void)populateDetailsContent {
     [self clearDetailGeneratedViews];
+    descriptionDateLabel.text = nil;
 
     if (app == nil) {
         return;
@@ -1411,8 +2348,22 @@ static NSArray *AppInfoExcludedSystemActivityTypes(void) {
         self.appDescriptionLabel.text = app.app_description;
         self.appDescriptionLabel.font = [UIFont fontWithName:@"HelveticaNeue" size:15.0];
         self.appDescriptionLabel.textColor = [UIColor darkTextColor];
+        descriptionDateLabel.text = [self descriptionDateTextForBackendDate:app.descriptionDate];
     }
+    [self addScreenshotsForApplication:app];
     [self addCustomInfoBlocks:app.customInfoBlocks];
+
+    if (app.hasDownloadCount) {
+        informationHeaderLabel = [[UILabel alloc] initWithFrame:CGRectZero];
+        informationHeaderLabel.backgroundColor = [UIColor clearColor];
+        informationHeaderLabel.font = self.descriptionLabel.font;
+        informationHeaderLabel.textColor = self.descriptionLabel.textColor;
+        informationHeaderLabel.text = NSLocalizedString(@"Information", nil);
+        [self.scrollView addSubview:informationHeaderLabel];
+        [self addDownloadInfoRowWithCaption:NSLocalizedString(@"Downloads", nil)
+                                      value:AppInfoStringForDownloadCount(app.downloadCount)];
+        [(AppInfoDetailRowView *)[downloadInfoRowViews lastObject] setShowsSeparator:NO];
+    }
 
     [self addDetailBadgeWithCaption:NSLocalizedString(@"DetailsBadgeCategory", nil)
                               value:[self localizedCategoryDisplayName:app.category]];
@@ -1444,15 +2395,40 @@ static NSArray *AppInfoExcludedSystemActivityTypes(void) {
     [(AppInfoDetailRowView *)[detailRowViews lastObject] setShowsSeparator:NO];
 
     if ([detailRowViews count] > 0) {
-        if (infoHeaderLabel == nil) {
-            infoHeaderLabel = [[UILabel alloc] initWithFrame:CGRectZero];
+        if (appInformationHeaderLabel == nil) {
+            appInformationHeaderLabel = [[UILabel alloc] initWithFrame:CGRectZero];
         }
-        infoHeaderLabel.backgroundColor = [UIColor clearColor];
-        infoHeaderLabel.font = self.descriptionLabel.font;
-        infoHeaderLabel.textColor = self.descriptionLabel.textColor;
-        infoHeaderLabel.text = NSLocalizedString(@"Information", nil);
-        [self.scrollView addSubview:infoHeaderLabel];
+        appInformationHeaderLabel.backgroundColor = [UIColor clearColor];
+        appInformationHeaderLabel.font = self.descriptionLabel.font;
+        appInformationHeaderLabel.textColor = self.descriptionLabel.textColor;
+        appInformationHeaderLabel.text = NSLocalizedString(@"App Details", nil);
+        [self.scrollView addSubview:appInformationHeaderLabel];
     }
+}
+
+- (NSString *)descriptionDateTextForDate:(NSDate *)capturedAt {
+    if (capturedAt == nil) {
+        return [[NSBundle mainBundle] localizedStringForKey:@"DescriptionDateCurrent" value:@"Current" table:nil];
+    }
+    NSDateFormatter *formatter = [[NSDateFormatter alloc] init];
+    formatter.dateFormat = [NSDateFormatter dateFormatFromTemplate:@"MMMMyyyy" options:0 locale:[NSLocale currentLocale]];
+    formatter.timeZone = [NSTimeZone timeZoneWithAbbreviation:@"UTC"];
+    return [formatter stringFromDate:capturedAt];
+}
+
+- (NSString *)descriptionDateTextForBackendDate:(NSString *)value {
+    if ([value isEqualToString:@"current"]) {
+        return [self descriptionDateTextForDate:nil];
+    }
+    if ([value length] < 10) {
+        return nil;
+    }
+    NSDateFormatter *parser = [[NSDateFormatter alloc] init];
+    parser.dateFormat = @"yyyy-MM-dd";
+    parser.locale = [[NSLocale alloc] initWithLocaleIdentifier:@"en_US_POSIX"];
+    parser.timeZone = [NSTimeZone timeZoneWithAbbreviation:@"UTC"];
+    NSDate *date = [parser dateFromString:[value substringToIndex:10]];
+    return date ? [self descriptionDateTextForDate:date] : nil;
 }
 
 - (NSString *)displayMetadataSource:(NSString *)metadataSource {
@@ -1480,6 +2456,7 @@ static NSArray *AppInfoExcludedSystemActivityTypes(void) {
 
 - (void)populateVersionInfoContent {
     [self clearDetailGeneratedViews];
+    descriptionDateLabel.text = nil;
 
     if (app == nil || selectedVersion == nil) {
         return;
@@ -1489,6 +2466,18 @@ static NSArray *AppInfoExcludedSystemActivityTypes(void) {
     self.appDescriptionLabel.text = [NSString stringWithFormat:NSLocalizedString(@"VersionFormat", nil), selectedVersion.version];
     self.appDescriptionLabel.font = [UIFont fontWithName:@"HelveticaNeue" size:15.0];
     self.appDescriptionLabel.textColor = [UIColor darkTextColor];
+
+    if (selectedVersion.hasDownloadCount) {
+        informationHeaderLabel = [[UILabel alloc] initWithFrame:CGRectZero];
+        informationHeaderLabel.backgroundColor = [UIColor clearColor];
+        informationHeaderLabel.font = self.descriptionLabel.font;
+        informationHeaderLabel.textColor = self.descriptionLabel.textColor;
+        informationHeaderLabel.text = NSLocalizedString(@"Information", nil);
+        [self.scrollView addSubview:informationHeaderLabel];
+        [self addDownloadInfoRowWithCaption:NSLocalizedString(@"Downloads", nil)
+                                      value:AppInfoStringForDownloadCount(selectedVersion.downloadCount)];
+        [(AppInfoDetailRowView *)[downloadInfoRowViews lastObject] setShowsSeparator:NO];
+    }
 
     [self addDetailBadgeWithCaption:NSLocalizedString(@"DetailsReleased", nil)
                               value:[self displayReleaseDate:selectedVersion.releaseDate]];
@@ -1503,6 +2492,8 @@ static NSArray *AppInfoExcludedSystemActivityTypes(void) {
     if ([selectedVersion.buildVersion length] > 0 && ![selectedVersion.buildVersion isEqualToString:selectedVersion.version]) {
         [self addDetailRowWithCaption:NSLocalizedString(@"VersionInfoBuild", nil) value:selectedVersion.buildVersion];
     }
+    [self addDetailRowWithCaption:NSLocalizedString(@"VersionInfoDisplayName", nil) value:selectedVersion.displayName];
+    [self addDetailRowWithCaption:NSLocalizedString(@"VersionInfoBundleName", nil) value:selectedVersion.bundleName];
     [self addDetailRowWithCaption:NSLocalizedString(@"VersionInfoITunesMetadata", nil)
                             value:([self versionHasITunesMetadata:selectedVersion] ? NSLocalizedString(@"DetailsYes", nil) : NSLocalizedString(@"VersionInfoNotAvailable", nil))];
     [self addDetailRowWithCaption:NSLocalizedString(@"DetailsReleased", nil) value:[self displayReleaseDate:selectedVersion.releaseDate]];
@@ -1536,14 +2527,14 @@ static NSArray *AppInfoExcludedSystemActivityTypes(void) {
     [(AppInfoDetailRowView *)[detailRowViews lastObject] setShowsSeparator:NO];
 
     if ([detailRowViews count] > 0) {
-        if (infoHeaderLabel == nil) {
-            infoHeaderLabel = [[UILabel alloc] initWithFrame:CGRectZero];
+        if (appInformationHeaderLabel == nil) {
+            appInformationHeaderLabel = [[UILabel alloc] initWithFrame:CGRectZero];
         }
-        infoHeaderLabel.backgroundColor = [UIColor clearColor];
-        infoHeaderLabel.font = self.descriptionLabel.font;
-        infoHeaderLabel.textColor = self.descriptionLabel.textColor;
-        infoHeaderLabel.text = NSLocalizedString(@"Information", nil);
-        [self.scrollView addSubview:infoHeaderLabel];
+        appInformationHeaderLabel.backgroundColor = [UIColor clearColor];
+        appInformationHeaderLabel.font = self.descriptionLabel.font;
+        appInformationHeaderLabel.textColor = self.descriptionLabel.textColor;
+        appInformationHeaderLabel.text = NSLocalizedString(@"App Details", nil);
+        [self.scrollView addSubview:appInformationHeaderLabel];
     }
 }
 
@@ -1577,7 +2568,17 @@ static NSArray *AppInfoExcludedSystemActivityTypes(void) {
         y += badgeHeight + sectionGap;
     }
 
+    if (screenshotStripView != nil) {
+        screenshotsHeaderLabel.frame = CGRectMake(margin, y, contentWidth, 30.0);
+        [self layoutDateLabel:screenshotsDateLabel nextToTitleLabel:screenshotsHeaderLabel y:y margin:margin contentWidth:contentWidth];
+        y += 34.0;
+        CGFloat stripHeight = [AppInfoScreenshotStripView preferredHeight];
+        screenshotStripView.frame = CGRectMake(0.0, y, width, stripHeight);
+        y += stripHeight + sectionGap;
+    }
+
     self.descriptionLabel.frame = CGRectMake(margin, y, contentWidth, 30.0);
+    [self layoutDateLabel:descriptionDateLabel nextToTitleLabel:self.descriptionLabel y:y margin:margin contentWidth:contentWidth];
     y += 34.0;
     CGFloat descriptionHeight = 0.0;
     if ([self.appDescriptionLabel.text length] > 0) {
@@ -1596,9 +2597,20 @@ static NSArray *AppInfoExcludedSystemActivityTypes(void) {
         y += blockHeight;
     }
 
+    if ([downloadInfoRowViews count] > 0) {
+        y += sectionGap;
+        informationHeaderLabel.frame = CGRectMake(margin, y, contentWidth, 30.0);
+        y += 34.0;
+        for (AppInfoDetailRowView *row in downloadInfoRowViews) {
+            CGFloat rowHeight = [row heightForWidth:contentWidth];
+            row.frame = CGRectMake(margin, y, contentWidth, rowHeight);
+            y += rowHeight;
+        }
+    }
+
     if ([detailRowViews count] > 0) {
         y += sectionGap;
-        infoHeaderLabel.frame = CGRectMake(margin, y, contentWidth, 30.0);
+        appInformationHeaderLabel.frame = CGRectMake(margin, y, contentWidth, 30.0);
         y += 34.0;
         for (AppInfoDetailRowView *row in detailRowViews) {
             CGFloat rowHeight = [row heightForWidth:contentWidth];
@@ -1610,11 +2622,27 @@ static NSArray *AppInfoExcludedSystemActivityTypes(void) {
     self.scrollView.contentSize = CGSizeMake(width, y + 20.0);
 }
 
+- (void)layoutDateLabel:(UILabel *)dateLabel nextToTitleLabel:(UILabel *)titleLabel y:(CGFloat)y margin:(CGFloat)margin contentWidth:(CGFloat)contentWidth {
+    if ([dateLabel.text length] == 0) {
+        dateLabel.hidden = YES;
+        return;
+    }
+    CGFloat titleWidth = ceil([titleLabel.text sizeWithFont:titleLabel.font].width);
+    CGFloat dateX = margin + MIN(titleWidth + 8.0, contentWidth);
+    UIFont *titleFont = titleLabel.font;
+    UIFont *dateFont = dateLabel.font;
+    CGFloat baselineShift = round((titleFont.ascender - titleFont.lineHeight / 2.0) - (dateFont.ascender - dateFont.lineHeight / 2.0));
+    dateLabel.frame = CGRectMake(dateX, y + baselineShift, margin + contentWidth - dateX, 30.0);
+    dateLabel.hidden = NO;
+}
+
 - (void)initialize:(NSString *)bundleID developer:(NSString *)developer name:(NSString *)name image:(UIImage *)image {
     debugLog(@"Initializing with bundleID: %@ developer: %@ name: %@", bundleID, developer, name);
     debugLog(@"Versions: %@", app.versions);
     initialized = NO;
     app = nil;
+    installButtonInstalledStateKnown = NO;
+    [self updateInstalledStatus];
     if ([self isViewLoaded]) {
         [self selectSection:AppInfoSectionDetails];
     }
@@ -1631,7 +2659,7 @@ static NSArray *AppInfoExcludedSystemActivityTypes(void) {
         activityIndicator.hidden = NO;
         [activityIndicator startAnimating];
         if (developer != nil || name != nil || image != NULL) {
-            self.appDeveloperNameLabel.text = developer;
+            [self.appDeveloperNameButton setTitle:AppInfoDeveloperButtonTitle(developer) forState:UIControlStateNormal];
             self.appNameLabel.text = name;
             self.appUIImage.image = image;
         }
@@ -1646,12 +2674,13 @@ static NSArray *AppInfoExcludedSystemActivityTypes(void) {
         [self populateDetailsContent];
         [self layoutDetailsContent];
         [self loadImageIfNeeded];
-        self.appDeveloperNameLabel.text = app.developer;
+        [self.appDeveloperNameButton setTitle:AppInfoDeveloperButtonTitle(app.developer) forState:UIControlStateNormal];
         self.appNameLabel.text = app.name;
         NSString *versionCountText = [self versionCountTextForApplication:app];
         appVersionsLabel.text = versionCountText;
         appVersionsLabel.hidden = ([versionCountText length] == 0);
         [versionsTableView reloadData];
+        [self updateInstalledStatus];
         if (selectedSection == AppInfoSectionRelated) {
             [self loadRelatedAppsIfNeeded];
         }
@@ -1679,13 +2708,14 @@ static NSArray *AppInfoExcludedSystemActivityTypes(void) {
         return;
     }
 
-    self.appDeveloperNameLabel.text = app.developer;
+    [self.appDeveloperNameButton setTitle:AppInfoDeveloperButtonTitle(app.developer) forState:UIControlStateNormal];
     self.appNameLabel.text = app.name;
     self.appUIImage.image = image ?: app.icon;
     appVersionsLabel.text = [NSString stringWithFormat:NSLocalizedString(@"VersionFormat", nil), selectedVersion.version];
     appVersionsLabel.hidden = NO;
     [activityIndicator stopAnimating];
     activityIndicator.hidden = YES;
+    [self updateInstalledStatus];
     [self configureVersionInfoMode];
     [self loadImageIfNeeded];
 }
@@ -1700,7 +2730,7 @@ static NSArray *AppInfoExcludedSystemActivityTypes(void) {
             UIImage *image = [UIImage imageWithData:data];
             dispatch_async(dispatch_get_main_queue(), ^{
                 appUIImage.image = image;
-                if ([VAPIHelper shouldRetainDecodedIcons]) {
+                if ([VeterisMemoryProfile activeValues].retainsDecodedIcons) {
                     app.icon = image;
                 }
                 [activityIndicator stopAnimating];
@@ -1742,13 +2772,13 @@ static NSArray *AppInfoExcludedSystemActivityTypes(void) {
 }
 
 - (UILabel *)findAppVersionsLabel {
-    UIView *headerView = self.appDeveloperNameLabel.superview;
+    UIView *headerView = self.appDeveloperNameButton.superview;
     UILabel *bestLabel = nil;
-    CGFloat developerBottom = CGRectGetMaxY(self.appDeveloperNameLabel.frame);
+    CGFloat developerBottom = CGRectGetMaxY(self.appDeveloperNameButton.frame);
     CGFloat bestDistance = CGFLOAT_MAX;
 
     for (UIView *subview in headerView.subviews) {
-        if (![subview isKindOfClass:[UILabel class]] || subview == self.appNameLabel || subview == self.appDeveloperNameLabel) {
+        if (![subview isKindOfClass:[UILabel class]] || subview == self.appNameLabel) {
             continue;
         }
 
@@ -1761,7 +2791,7 @@ static NSArray *AppInfoExcludedSystemActivityTypes(void) {
 
     if (bestLabel != nil) {
         CGRect frame = bestLabel.frame;
-        frame.size.width = MAX(frame.size.width, self.appDeveloperNameLabel.frame.size.width);
+        frame.size.width = MAX(frame.size.width, self.appDeveloperNameButton.frame.size.width);
         bestLabel.frame = frame;
     }
 
@@ -1785,7 +2815,7 @@ static NSArray *AppInfoExcludedSystemActivityTypes(void) {
     if (cachedIcon == nil) {
         cachedIcon = [VAPISS imageFromCache:relatedApp.iconurl];
         if (cachedIcon != nil) {
-            if ([VAPIHelper shouldRetainDecodedIcons]) {
+            if ([VeterisMemoryProfile activeValues].retainsDecodedIcons) {
                 relatedApp.icon = cachedIcon;
             }
         }
@@ -1809,7 +2839,7 @@ static NSArray *AppInfoExcludedSystemActivityTypes(void) {
 
     UIImage *cachedIcon = [VAPISS imageFromCache:relatedApp.iconurl];
     if (cachedIcon != nil) {
-        if ([VAPIHelper shouldRetainDecodedIcons]) {
+        if ([VeterisMemoryProfile activeValues].retainsDecodedIcons) {
             relatedApp.icon = cachedIcon;
         }
         SearchTableViewCell *cell = (SearchTableViewCell *)[relatedTableView cellForRowAtIndexPath:indexPath];
@@ -1836,7 +2866,7 @@ static NSArray *AppInfoExcludedSystemActivityTypes(void) {
                 relatedApp.nilIcon = YES;
                 return;
             }
-            if ([VAPIHelper shouldRetainDecodedIcons]) {
+            if ([VeterisMemoryProfile activeValues].retainsDecodedIcons) {
                 relatedApp.icon = image;
             }
             if (indexPath.row >= [relatedApps count] || [relatedApps objectAtIndex:indexPath.row] != relatedApp) {
@@ -1881,6 +2911,15 @@ static NSArray *AppInfoExcludedSystemActivityTypes(void) {
     if (!initialized) {
         alert(NSLocalizedString(@"Oops", nil), NSLocalizedString(@"WaitForAppFinishLoading", nil), VAPIHelperErrorUnknown);
         return;
+    }
+    if ([self.getButton isKindOfClass:[VLInstallButton class]]) {
+        VLInstallButton *installButton = (VLInstallButton *)self.getButton;
+        if ([installButton buttonStyle] != VLInstallButtonStyleCloud &&
+            [installButton buttonStyle] != VLInstallButtonStyleModern &&
+            ![installButton isInstallSelected]) {
+            [installButton activate];
+            return;
+        }
     }
     if (versionInfoMode) {
         NSUInteger versionIndex = [app.versions indexOfObjectIdenticalTo:selectedVersion];
@@ -2073,6 +3112,7 @@ static NSArray *AppInfoExcludedSystemActivityTypes(void) {
 
     if (actionSheet.tag == AppInfoVersionCellActionSheetTag) {
         if (buttonIndex == actionSheet.cancelButtonIndex) {
+            [self resetInstallButtonIfNeeded];
             pendingVersionActionIndex = AppInfoNoPendingVersionIndex;
             return;
         }
@@ -2083,13 +3123,16 @@ static NSArray *AppInfoExcludedSystemActivityTypes(void) {
         } else if (buttonIndex == AppInfoVersionActionInfoIndex) {
             [self showVersionInfoAtIndex:pendingVersionActionIndex];
         }
+        [self resetInstallButtonIfNeeded];
         pendingVersionActionIndex = AppInfoNoPendingVersionIndex;
         return;
     }
 
     if (buttonIndex == [app.versions count]) {
+        [self resetInstallButtonIfNeeded];
         return;
     }
+    [self resetInstallButtonIfNeeded];
     [self enqueueVersionAtIndex:buttonIndex];
 }
 
@@ -2118,6 +3161,7 @@ static NSArray *AppInfoExcludedSystemActivityTypes(void) {
 
         Application *relatedApp = [relatedApps objectAtIndex:indexPath.row];
         cell.appNameLabel.text = relatedApp.name;
+        cell.getLabel.hidden = !VeterisShowGetLabels();
         cell.developerNameLabel.text = [self subtitleForRelatedApp:relatedApp];
         NSString *versionCountText = [self versionCountTextForApplication:relatedApp];
         cell.versionLabel.text = versionCountText;

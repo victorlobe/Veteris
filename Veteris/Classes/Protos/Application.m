@@ -17,7 +17,7 @@
     if (self) {
         self.title = [ApplicationInfoBlock stringFromProtoArg:blockProto.title.arg];
         self.body = [ApplicationInfoBlock stringFromProtoArg:blockProto.body.arg];
-        self.fields = (__bridge NSMutableArray *)blockProto.fields.arg;
+        self.fields = (__bridge_transfer NSMutableArray *)blockProto.fields.arg;
     }
     return self;
 }
@@ -45,6 +45,30 @@
 
 @end
 
+@implementation ApplicationScreenshot
+
++ (NSString *)stringFromProtoArg:(void *)arg {
+    if (arg == NULL) {
+        return @"";
+    }
+    NSString *value = [NSString stringWithUTF8String:(const char *)arg];
+    return value ?: @"";
+}
+
+- (ApplicationScreenshot *)initFromScreenshotProto:(ScreenshotMsg)screenshotProto {
+    self = [super init];
+    if (self) {
+        self.url = [ApplicationScreenshot stringFromProtoArg:screenshotProto.url.arg];
+        self.retinaURL = [ApplicationScreenshot stringFromProtoArg:screenshotProto.retinaURL.arg];
+        self.pixelSize = (screenshotProto.has_width && screenshotProto.has_height)
+            ? CGSizeMake(screenshotProto.width, screenshotProto.height)
+            : CGSizeZero;
+    }
+    return self;
+}
+
+@end
+
 @implementation Application // This class is only used in instances where app icon is usually wanted, so even
 // though its bad design to update delegate cache in the geticon method, we do it anyway because im the santa claus of this codebase
 
@@ -59,7 +83,7 @@
 - (Application *)initFromAppProto:(AppMsg)app {
     self = [super init];
     if (self) {
-        self.versions = (__bridge NSMutableArray *)app.versions.arg;
+        self.versions = (__bridge_transfer NSMutableArray *)app.versions.arg;
         self.name = [Application stringFromProtoArg:app.name.arg];
         self.developer = [Application stringFromProtoArg:app.developer.arg];
         self.bundleid = [Application stringFromProtoArg:app.bundleid.arg];
@@ -81,8 +105,14 @@
         self.gameCenter = [Application stringFromProtoArg:app.gameCenter.arg];
         self.newsstand = [Application stringFromProtoArg:app.newsstand.arg];
         self.requiredCapabilities = [Application stringFromProtoArg:app.requiredCapabilities.arg];
-        self.customInfoBlocks = (__bridge NSMutableArray *)app.customInfoBlocks.arg;
+        self.customInfoBlocks = (__bridge_transfer NSMutableArray *)app.customInfoBlocks.arg;
         self.websiteURL = [Application stringFromProtoArg:app.websiteURL.arg];
+        self.hasDownloadCount = app.has_downloadCount;
+        self.downloadCount = app.downloadCount;
+        self.descriptionDate = [Application stringFromProtoArg:app.descriptionDate.arg];
+        self.screenshots = (__bridge_transfer NSMutableArray *)app.screenshots.arg;
+        self.ipadScreenshots = (__bridge_transfer NSMutableArray *)app.ipadScreenshots.arg;
+        self.screenshotDate = [Application stringFromProtoArg:app.screenshotDate.arg];
         self.nilIcon = NO;
         self.isVTableEntry = NO;
     }
@@ -100,6 +130,7 @@
         self.fallback_iconurl = [Application stringFromProtoArg:entry.fallback_iconurl.arg];
         self.version = [Application stringFromProtoArg:entry.version.arg];
         self.versionCount = entry.version_count;
+        self.updateBundleID = [Application stringFromProtoArg:entry.installed_bundleid.arg];
         self.nilIcon = NO;
         self.isVTableEntry = YES;
     }

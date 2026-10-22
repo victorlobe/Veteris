@@ -40,6 +40,10 @@ typedef struct _VersionMsg {
     pb_callback_t bundleID;
     bool has_recommended;
     bool recommended;
+    bool has_downloadCount;
+    uint64_t downloadCount;
+    pb_callback_t displayName;
+    pb_callback_t bundleName;
 } VersionMsg;
 
 typedef struct _AppMsg {
@@ -67,7 +71,22 @@ typedef struct _AppMsg {
     pb_callback_t primaryBundleID;
     pb_callback_t customInfoBlocks;
     pb_callback_t websiteURL;
+    bool has_downloadCount;
+    uint64_t downloadCount;
+    pb_callback_t descriptionDate;
+    pb_callback_t screenshots;
+    pb_callback_t ipadScreenshots;
+    pb_callback_t screenshotDate;
 } AppMsg;
+
+typedef struct _ScreenshotMsg {
+    pb_callback_t url;
+    pb_callback_t retinaURL;
+    bool has_width;
+    uint32_t width;
+    bool has_height;
+    uint32_t height;
+} ScreenshotMsg;
 
 typedef struct _InfoBlockMsg {
     pb_callback_t title;
@@ -86,12 +105,14 @@ extern "C" {
 #endif
 
 /* Initializer values for message structs */
-#define VersionMsg_init_default                  {{{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, false, 0, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, false, false}
-#define AppMsg_init_default                      {{{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}}
+#define VersionMsg_init_default                  {{{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, false, 0, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, false, false, false, 0, {{NULL}, NULL}, {{NULL}, NULL}}
+#define AppMsg_init_default                      {{{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, false, 0, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}}
+#define ScreenshotMsg_init_default               {{{NULL}, NULL}, {{NULL}, NULL}, false, 0, false, 0}
 #define InfoBlockMsg_init_default                {{{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}}
 #define InfoFieldMsg_init_default                {{{NULL}, NULL}, {{NULL}, NULL}}
-#define VersionMsg_init_zero                     {{{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, false, 0, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, false, false}
-#define AppMsg_init_zero                         {{{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}}
+#define VersionMsg_init_zero                     {{{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, false, 0, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, false, false, false, 0, {{NULL}, NULL}, {{NULL}, NULL}}
+#define AppMsg_init_zero                         {{{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, false, 0, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}}
+#define ScreenshotMsg_init_zero                  {{{NULL}, NULL}, {{NULL}, NULL}, false, 0, false, 0}
 #define InfoBlockMsg_init_zero                   {{{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}}
 #define InfoFieldMsg_init_zero                   {{{NULL}, NULL}, {{NULL}, NULL}}
 
@@ -123,6 +144,9 @@ extern "C" {
 #define VersionMsg_iconBundleID_tag              25
 #define VersionMsg_bundleID_tag                  26
 #define VersionMsg_recommended_tag               27
+#define VersionMsg_downloadCount_tag             28
+#define VersionMsg_displayName_tag               29
+#define VersionMsg_bundleName_tag                30
 #define AppMsg_name_tag                          1
 #define AppMsg_developer_tag                     2
 #define AppMsg_bundleid_tag                      3
@@ -147,6 +171,15 @@ extern "C" {
 #define AppMsg_primaryBundleID_tag               22
 #define AppMsg_customInfoBlocks_tag              23
 #define AppMsg_websiteURL_tag                    24
+#define AppMsg_downloadCount_tag                  25
+#define AppMsg_descriptionDate_tag               27
+#define AppMsg_screenshots_tag                   28
+#define AppMsg_ipadScreenshots_tag               29
+#define AppMsg_screenshotDate_tag                30
+#define ScreenshotMsg_url_tag                    1
+#define ScreenshotMsg_retinaURL_tag              2
+#define ScreenshotMsg_width_tag                  3
+#define ScreenshotMsg_height_tag                 4
 #define InfoBlockMsg_title_tag                   1
 #define InfoBlockMsg_body_tag                    2
 #define InfoBlockMsg_fields_tag                  3
@@ -181,7 +214,10 @@ X(a, CALLBACK, OPTIONAL, STRING,   metadataSource,   23) \
 X(a, CALLBACK, OPTIONAL, STRING,   iconPath,         24) \
 X(a, CALLBACK, OPTIONAL, STRING,   iconBundleID,     25) \
 X(a, CALLBACK, OPTIONAL, STRING,   bundleID,         26) \
-X(a, STATIC,   OPTIONAL, BOOL,     recommended,      27)
+X(a, STATIC,   OPTIONAL, BOOL,     recommended,      27) \
+X(a, STATIC,   OPTIONAL, UINT64,   downloadCount,    28) \
+X(a, CALLBACK, OPTIONAL, STRING,   displayName,      29) \
+X(a, CALLBACK, OPTIONAL, STRING,   bundleName,       30)
 #define VersionMsg_CALLBACK pb_default_field_callback
 #define VersionMsg_DEFAULT NULL
 
@@ -209,11 +245,26 @@ X(a, CALLBACK, OPTIONAL, STRING,   newsstand,        20) \
 X(a, CALLBACK, OPTIONAL, STRING,   requiredCapabilities, 21) \
 X(a, CALLBACK, OPTIONAL, STRING,   primaryBundleID, 22) \
 X(a, CALLBACK, REPEATED, MESSAGE,  customInfoBlocks, 23) \
-X(a, CALLBACK, OPTIONAL, STRING,   websiteURL,       24)
+X(a, CALLBACK, OPTIONAL, STRING,   websiteURL,       24) \
+X(a, STATIC,   OPTIONAL, UINT64,   downloadCount,    25) \
+X(a, CALLBACK, OPTIONAL, STRING,   descriptionDate,  27) \
+X(a, CALLBACK, REPEATED, MESSAGE,  screenshots,      28) \
+X(a, CALLBACK, REPEATED, MESSAGE,  ipadScreenshots,  29) \
+X(a, CALLBACK, OPTIONAL, STRING,   screenshotDate,   30)
 #define AppMsg_CALLBACK pb_default_field_callback
 #define AppMsg_DEFAULT NULL
 #define AppMsg_versions_MSGTYPE VersionMsg
 #define AppMsg_customInfoBlocks_MSGTYPE InfoBlockMsg
+#define AppMsg_screenshots_MSGTYPE ScreenshotMsg
+#define AppMsg_ipadScreenshots_MSGTYPE ScreenshotMsg
+
+#define ScreenshotMsg_FIELDLIST(X, a) \
+X(a, CALLBACK, REQUIRED, STRING,   url,               1) \
+X(a, CALLBACK, OPTIONAL, STRING,   retinaURL,         2) \
+X(a, STATIC,   OPTIONAL, UINT32,   width,             3) \
+X(a, STATIC,   OPTIONAL, UINT32,   height,            4)
+#define ScreenshotMsg_CALLBACK pb_default_field_callback
+#define ScreenshotMsg_DEFAULT NULL
 
 #define InfoBlockMsg_FIELDLIST(X, a) \
 X(a, CALLBACK, REQUIRED, STRING,   title,             1) \
@@ -233,18 +284,21 @@ extern const pb_msgdesc_t VersionMsg_msg;
 extern const pb_msgdesc_t AppMsg_msg;
 extern const pb_msgdesc_t InfoBlockMsg_msg;
 extern const pb_msgdesc_t InfoFieldMsg_msg;
+extern const pb_msgdesc_t ScreenshotMsg_msg;
 
 /* Defines for backwards compatibility with code written before nanopb-0.4.0 */
 #define VersionMsg_fields &VersionMsg_msg
 #define AppMsg_fields &AppMsg_msg
 #define InfoBlockMsg_fields &InfoBlockMsg_msg
 #define InfoFieldMsg_fields &InfoFieldMsg_msg
+#define ScreenshotMsg_fields &ScreenshotMsg_msg
 
 /* Maximum encoded size of messages (where known) */
 /* VersionMsg_size depends on runtime parameters */
 /* AppMsg_size depends on runtime parameters */
 /* InfoBlockMsg_size depends on runtime parameters */
 /* InfoFieldMsg_size depends on runtime parameters */
+/* ScreenshotMsg_size depends on runtime parameters */
 
 #ifdef __cplusplus
 } /* extern "C" */

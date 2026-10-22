@@ -1,5 +1,7 @@
 #import <Foundation/Foundation.h>
 
+extern NSString *const YZArchiveTLSErrorDomain;
+
 @interface YZArchiveTLSResult : NSObject
 @property (nonatomic, assign) NSUInteger statusCode;
 @property (nonatomic, retain) NSDictionary *headers;
@@ -15,7 +17,7 @@
                     headers:(NSDictionary *)headers
                    progress:(void (^)(unsigned long long current, unsigned long long total))progress
                  completion:(void (^)(YZArchiveTLSResult *result))completion;
+@property (copy) void (^finishingBlock)(unsigned long long total);
 - (void)start;
 - (void)cancel;
-@property (nonatomic, assign) BOOL preservePartialOnCancel;
 @end

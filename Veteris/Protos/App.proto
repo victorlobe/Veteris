@@ -28,6 +28,9 @@ message VersionMsg {
     optional string iconBundleID = 25;
     optional string bundleID = 26;
     optional bool recommended = 27;
+    optional uint64 downloadCount = 28;
+    optional string displayName = 29;
+    optional string bundleName = 30;
 }
 
 message InfoBlockMsg {
@@ -39,6 +42,14 @@ message InfoBlockMsg {
 message InfoFieldMsg {
     required string label = 1;
     required string value = 2;
+}
+
+
+message ScreenshotMsg {
+    required string url = 1;
+    optional string retinaURL = 2;
+    optional uint32 width = 3;
+    optional uint32 height = 4;
 }
 
 message AppMsg {
@@ -66,4 +77,10 @@ message AppMsg {
     optional string primaryBundleID = 22;
     repeated InfoBlockMsg customInfoBlocks = 23;
     optional string websiteURL = 24;
+    optional uint64 downloadCount = 25;
+    // Field 26 is retired
+    optional string descriptionDate = 27;
+    repeated ScreenshotMsg screenshots = 28;
+    repeated ScreenshotMsg ipadScreenshots = 29;
+    optional string screenshotDate = 30;
 }

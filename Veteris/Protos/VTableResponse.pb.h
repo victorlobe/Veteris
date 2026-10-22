@@ -18,6 +18,7 @@ typedef struct _VTableEntryMsg {
     pb_callback_t version;
     pb_callback_t fallback_iconurl;
     uint32_t version_count;
+    pb_callback_t installed_bundleid;
 } VTableEntryMsg;
 
 typedef struct _VTableResponseMsg {
@@ -30,9 +31,9 @@ extern "C" {
 #endif
 
 /* Initializer values for message structs */
-#define VTableEntryMsg_init_default              {{{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, 0}
+#define VTableEntryMsg_init_default              {{{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, 0, {{NULL}, NULL}}
 #define VTableResponseMsg_init_default           {{{NULL}, NULL}}
-#define VTableEntryMsg_init_zero                 {{{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, 0}
+#define VTableEntryMsg_init_zero                 {{{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, 0, {{NULL}, NULL}}
 #define VTableResponseMsg_init_zero              {{{NULL}, NULL}}
 
 /* Field tags (for use in manual encoding/decoding) */
@@ -43,6 +44,7 @@ extern "C" {
 #define VTableEntryMsg_version_tag               5
 #define VTableEntryMsg_fallback_iconurl_tag      6
 #define VTableEntryMsg_version_count_tag         7
+#define VTableEntryMsg_installed_bundleid_tag    9
 #define VTableResponseMsg_entries_tag            1
 
 /* Struct field encoding specification for nanopb */
@@ -53,7 +55,8 @@ X(a, CALLBACK, SINGULAR, STRING,   developer,         3) \
 X(a, CALLBACK, SINGULAR, STRING,   iconurl,           4) \
 X(a, CALLBACK, SINGULAR, STRING,   version,           5) \
 X(a, CALLBACK, SINGULAR, STRING,   fallback_iconurl,  6) \
-X(a, STATIC,   SINGULAR, UINT32,   version_count,     7)
+X(a, STATIC,   SINGULAR, UINT32,   version_count,     7) \
+X(a, CALLBACK, SINGULAR, STRING,   installed_bundleid, 9)
 #define VTableEntryMsg_CALLBACK pb_default_field_callback
 #define VTableEntryMsg_DEFAULT NULL
 

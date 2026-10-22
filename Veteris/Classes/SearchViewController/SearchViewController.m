@@ -75,6 +75,7 @@ static NSUInteger const VeterisSearchHistoryLimit = 10;
     }
     Suggestion *suggestion = [searchResults objectAtIndex:indexPath.row];
     cell.appNameLabel.text = suggestion.name;
+    cell.getLabel.hidden = !VeterisShowGetLabels();
     cell.developerNameLabel.text = [self subtitleForSuggestion:suggestion];
     NSString *versionCountText = [self versionCountTextForSuggestion:suggestion];
     cell.versionLabel.text = versionCountText;
@@ -109,7 +110,7 @@ static NSUInteger const VeterisSearchHistoryLimit = 10;
     if (cachedIcon == nil) {
         cachedIcon = [VAPISS imageFromCache:suggestion.iconurl];
         if (cachedIcon != nil) {
-            if ([VAPIHelper shouldRetainDecodedIcons]) {
+            if ([VeterisMemoryProfile activeValues].retainsDecodedIcons) {
                 suggestion.icon = cachedIcon;
             }
         }
@@ -175,7 +176,7 @@ static NSUInteger const VeterisSearchHistoryLimit = 10;
 
     UIImage *cachedIcon = [VAPISS imageFromCache:suggestion.iconurl];
     if (cachedIcon != nil) {
-        if ([VAPIHelper shouldRetainDecodedIcons]) {
+        if ([VeterisMemoryProfile activeValues].retainsDecodedIcons) {
             suggestion.icon = cachedIcon;
         }
         SearchTableViewCell *cell = (SearchTableViewCell *)[tableView cellForRowAtIndexPath:indexPath];
@@ -202,7 +203,7 @@ static NSUInteger const VeterisSearchHistoryLimit = 10;
                 suggestion.nilIcon = YES;
                 return;
             }
-            if ([VAPIHelper shouldRetainDecodedIcons]) {
+            if ([VeterisMemoryProfile activeValues].retainsDecodedIcons) {
                 suggestion.icon = image;
             }
             if (indexPath.row >= [searchResults count] || [searchResults objectAtIndex:indexPath.row] != suggestion) {
@@ -249,6 +250,9 @@ static NSUInteger const VeterisSearchHistoryLimit = 10;
 
 - (void)viewWillAppear:(BOOL)animated {
     [self.navigationController setNavigationBarHidden:YES];
+    for (SearchTableViewCell *cell in self.searchDisplayController.searchResultsTableView.visibleCells) {
+        cell.getLabel.hidden = !VeterisShowGetLabels();
+    }
 }
 
 - (NSArray *)loadSearchHistory {

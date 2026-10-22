@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>PreferenceSpecifiers</key>
+    <array>
+        <dict>
+            <key>Type</key>
+            <string>PSGroupSpecifier</string>
+            <key>Title</key>
+            <string>Notifications</string>
+            <key>FooterText</key>
+            <string>Notifications appear while Veteris is not open. Download Notifications tell you when an app was installed, a download finished or failed, or downloads were paused. Background Status also tells you when Veteris keeps working in the background, was restarted after it was closed, and has finished.</string>
+        </dict>
+        <dict>
+            <key>Type</key>
+            <string>PSToggleSwitchSpecifier</string>
+            <key>Title</key>
+            <string>Download Notifications</string>
+            <key>Key</key>
+            <string>veteris_download_notifications_enabled</string>
+            <key>DefaultValue</key>
+            <true/>
+        </dict>
+        <dict>
+            <key>Type</key>
+            <string>PSToggleSwitchSpecifier</string>
+            <key>Title</key>
+            <string>Background Status</string>
+            <key>Key</key>
+            <string>veteris_background_status_notifications_enabled</string>
+            <key>DefaultValue</key>
+            <true/>
+        </dict>
+    </array>
+    <key>StringsTable</key>
+    <string>Root</string>
+</dict>
+</plist>

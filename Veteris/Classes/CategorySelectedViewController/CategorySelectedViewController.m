@@ -21,7 +21,8 @@
     [self.view addGestureRecognizer:swipeRight];
 
     self.navigationItem.title = categoryName;
-    [self initialize:[NSString stringWithFormat:@"listing/category/%@", categoryID] skipIndicator:NO];
+    [self setUpSortButtonWithDefaultsKey:@"VeterisCategorySort"];
+    [self initializeSortedListing:[NSString stringWithFormat:@"listing/category/%@", categoryID]];
 }
 
 - (void)setCategoryID:(NSString *)category {

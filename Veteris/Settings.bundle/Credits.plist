@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>PreferenceSpecifiers</key>
+    <array>
+        <dict>
+            <key>Type</key>
+            <string>PSGroupSpecifier</string>
+        </dict>
+        <dict>
+            <key>Type</key>
+            <string>PSTitleValueSpecifier</string>
+            <key>Title</key>
+            <string>Developer</string>
+            <key>Key</key>
+            <string>credits_developer</string>
+            <key>DefaultValue</key>
+            <string>Electimon</string>
+        </dict>
+        <dict>
+            <key>Type</key>
+            <string>PSTitleValueSpecifier</string>
+            <key>Title</key>
+            <string>Maintainer</string>
+            <key>Key</key>
+            <string>credits_maintainer</string>
+            <key>DefaultValue</key>
+            <string>Victor</string>
+        </dict>
+        <dict>
+            <key>Type</key>
+            <string>PSTitleValueSpecifier</string>
+            <key>Title</key>
+            <string>UI Design</string>
+            <key>Key</key>
+            <string>credits_ui_design_1</string>
+            <key>DefaultValue</key>
+            <string>bag.xml</string>
+        </dict>
+        <dict>
+            <key>Type</key>
+            <string>PSTitleValueSpecifier</string>
+            <key>Title</key>
+            <string>UI Design</string>
+            <key>Key</key>
+            <string>credits_ui_design_2</string>
+            <key>DefaultValue</key>
+            <string>Telgamon</string>
+        </dict>
+        <dict>
+            <key>Type</key>
+            <string>PSTitleValueSpecifier</string>
+            <key>Title</key>
+            <string>Professional Bug Finder</string>
+            <key>Key</key>
+            <string>credits_bug_finder</string>
+            <key>DefaultValue</key>
+            <string>Justus61</string>
+        </dict>
+        <dict>
+            <key>Type</key>
+            <string>PSTitleValueSpecifier</string>
+            <key>Title</key>
+            <string>Clutch</string>
+            <key>Key</key>
+            <string>credits_clutch</string>
+            <key>DefaultValue</key>
+            <string>Hackulous/KJC</string>
+        </dict>
+        <dict>
+            <key>Type</key>
+            <string>PSTitleValueSpecifier</string>
+            <key>Title</key>
+            <string>Translation (RU)</string>
+            <key>Key</key>
+            <string>translation_ru</string>
+            <key>DefaultValue</key>
+            <string>platinumstuff</string>
+        </dict>
+        <dict>
+            <key>Type</key>
+            <string>PSTitleValueSpecifier</string>
+            <key>Title</key>
+            <string>Translation (UA)</string>
+            <key>Key</key>
+            <string>translation_ua</string>
+            <key>DefaultValue</key>
+            <string>Mikhail Churakov</string>
+        </dict>
+        <dict>
+            <key>Type</key>
+            <string>PSTitleValueSpecifier</string>
+            <key>Title</key>
+            <string>Translation (DE)</string>
+            <key>Key</key>
+            <string>translation_de</string>
+            <key>DefaultValue</key>
+            <string>Justus61</string>
+        </dict>
+        <dict>
+            <key>Type</key>
+            <string>PSTitleValueSpecifier</string>
+            <key>Title</key>
+            <string>Translation (VI)</string>
+            <key>Key</key>
+            <string>translation_vi</string>
+            <key>DefaultValue</key>
+            <string>Cheese</string>
+        </dict>
+        <dict>
+            <key>Type</key>
+            <string>PSTitleValueSpecifier</string>
+            <key>Title</key>
+            <string>Translation (PT)</string>
+            <key>Key</key>
+            <string>translation_pt</string>
+            <key>DefaultValue</key>
+            <string>AguiaEscaldante</string>
+        </dict>
+        <dict>
+            <key>Type</key>
+            <string>PSTitleValueSpecifier</string>
+            <key>Title</key>
+            <string>Translation (ZH)</string>
+            <key>Key</key>
+            <string>translation_zh</string>
+            <key>DefaultValue</key>
+            <string>pdyq</string>
+        </dict>
+    </array>
+    <key>StringsTable</key>
+    <string>Root</string>
+</dict>
+</plist>

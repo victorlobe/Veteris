@@ -9,6 +9,8 @@ message VTableEntryMsg {
     string version = 5;
     string fallback_iconurl = 6;
     uint32 version_count = 7;
+    // Only in listing/updates: the installed app the update is for.
+    string installed_bundleid = 9;
 }
 
 message VTableResponseMsg {

@@ -21,8 +21,32 @@
             <string>%BUILD_VERSION%</string>
         </dict>
         <dict>
+            <key>Type</key>
+            <string>PSChildPaneSpecifier</string>
             <key>Title</key>
-            <string>Customization</string>
+            <string>Changelog</string>
+            <key>IASKViewControllerClass</key>
+            <string>ChangelogViewController</string>
+            <key>IASKViewControllerSelector</key>
+            <string>initWithFile:withKey:</string>
+        </dict>
+        <dict>
+            <key>Title</key>
+            <string>General</string>
+            <key>Type</key>
+            <string>PSGroupSpecifier</string>
+        </dict>
+        <dict>
+            <key>Type</key>
+            <string>PSChildPaneSpecifier</string>
+            <key>Title</key>
+            <string>Notifications</string>
+            <key>File</key>
+            <string>Notifications</string>
+        </dict>
+        <dict>
+            <key>Title</key>
+            <string>Design</string>
             <key>Type</key>
             <string>PSGroupSpecifier</string>
             <key>Key</key>
@@ -41,6 +65,10 @@
             <array>
                 <string>Midnight (Standard)</string>
                 <string>Stock iOS</string>
+                <string>Notes</string>
+                <string>Reminders</string>
+                <string>Game Center</string>
+                <string>Find My Friends</string>
                 <string>Ruby</string>
                 <string>Strawberry</string>
 				<string>Cherry Blossom</string>
@@ -74,6 +102,10 @@
             <array>
                 <string>Midnight</string>
                 <string>Stock iOS</string>
+                <string>Notes</string>
+                <string>Reminders</string>
+                <string>Game Center</string>
+                <string>Find My Friends</string>
                 <string>Ruby</string>
                 <string>Strawberry</string>
 				<string>Cherry Blossom</string>
@@ -107,6 +139,10 @@
             <array>
                 <string>Default</string>
                 <string>StockIOS</string>
+                <string>Notes</string>
+                <string>Reminders</string>
+                <string>GameCenter</string>
+                <string>FindMyFriends</string>
                 <string>Ruby</string>
                 <string>Strawberry</string>
 				<string>Cherry</string>
@@ -149,6 +185,26 @@
         </dict>
         <dict>
             <key>Type</key>
+            <string>PSChildPaneSpecifier</string>
+            <key>Title</key>
+            <string>Download Button</string>
+            <key>IASKViewControllerClass</key>
+            <string>DownloadButtonSettingsViewController</string>
+            <key>IASKViewControllerSelector</key>
+            <string>initWithFile:withKey:</string>
+        </dict>
+        <dict>
+            <key>Type</key>
+            <string>PSToggleSwitchSpecifier</string>
+            <key>Title</key>
+            <string>Show GET Labels</string>
+            <key>Key</key>
+            <string>veteris_show_get_labels</string>
+            <key>DefaultValue</key>
+            <false/>
+        </dict>
+        <dict>
+            <key>Type</key>
             <string>PSToggleSwitchSpecifier</string>
             <key>Title</key>
             <string>Home Icon Badge</string>
@@ -163,87 +219,65 @@
             <key>Type</key>
             <string>PSGroupSpecifier</string>
             <key>FooterText</key>
-            <string>Reduces caching and parallel requests. Veteris automatically uses Low or Very Low settings based on the device.</string>
+            <string>Reduced uses less memory: one download at a time and fewer images kept in memory. Automatic chooses Reduced on devices with 256 MB of RAM.</string>
         </dict>
         <dict>
             <key>Type</key>
-            <string>PSToggleSwitchSpecifier</string>
+            <string>PSMultiValueSpecifier</string>
             <key>Title</key>
-            <string>Low Memory Mode</string>
+            <string>Memory Usage</string>
             <key>Key</key>
-            <string>veteris_low_memory_mode_enabled</string>
+            <string>veteris_memory_profile</string>
             <key>DefaultValue</key>
-            <false/>
+            <string>auto</string>
+            <key>FooterText</key>
+            <string>Automatic chooses the best setting for this device. On devices with 256 MB of RAM, Normal can cause crashes.</string>
+            <key>Titles</key>
+            <array>
+                <string>Automatic (Recommended)</string>
+                <string>Normal</string>
+                <string>Reduced</string>
+            </array>
+            <key>ShortTitles</key>
+            <array>
+                <string>Automatic</string>
+                <string>Normal</string>
+                <string>Reduced</string>
+            </array>
+            <key>Values</key>
+            <array>
+                <string>auto</string>
+                <string>normal</string>
+                <string>reduced</string>
+            </array>
         </dict>
         <dict>
             <key>Type</key>
             <string>PSTitleValueSpecifier</string>
             <key>Title</key>
-            <string>Active Mode</string>
+            <string>Currently Active</string>
             <key>Key</key>
-            <string>veteris_low_memory_mode_status</string>
+            <string>veteris_memory_profile_active</string>
             <key>DefaultValue</key>
-            <string>Normal</string>
-        </dict>
-        <dict>
-            <key>DefaultValue</key>
-            <integer>0</integer>
-            <key>Key</key>
-            <string>veteris_archive_download_segments</string>
-            <key>Title</key>
-            <string>Download Streams</string>
-            <key>FooterText</key>
-            <string>Choose how many connections Veteris uses for downloads. Auto uses 6 normally and 4 in Low Memory Mode. Higher values can be faster but may use more memory and battery. Changes apply to new downloads, retries, and resumed downloads. Active downloads keep their current connections.</string>
+            <string>normal</string>
             <key>Titles</key>
             <array>
-                <string>Auto (6 normal, 4 low memory)</string>
-                <string>1</string>
-                <string>2</string>
-                <string>3</string>
-                <string>4</string>
-                <string>5</string>
-                <string>6</string>
-                <string>7</string>
-                <string>8</string>
-                <string>9</string>
-                <string>10</string>
-                <string>11</string>
-                <string>12</string>
+                <string>Normal</string>
+                <string>Reduced</string>
             </array>
-            <key>ShortTitles</key>
-            <array>
-                <string>Auto</string>
-                <string>1</string>
-                <string>2</string>
-                <string>3</string>
-                <string>4</string>
-                <string>5</string>
-                <string>6</string>
-                <string>7</string>
-                <string>8</string>
-                <string>9</string>
-                <string>10</string>
-                <string>11</string>
-                <string>12</string>
-            </array>
-            <key>Type</key>
-            <string>PSMultiValueSpecifier</string>
             <key>Values</key>
             <array>
-                <integer>0</integer>
-                <integer>1</integer>
-                <integer>2</integer>
-                <integer>3</integer>
-                <integer>4</integer>
-                <integer>5</integer>
-                <integer>6</integer>
-                <integer>7</integer>
-                <integer>8</integer>
-                <integer>9</integer>
-                <integer>10</integer>
-                <integer>11</integer>
-                <integer>12</integer>
+                <string>normal</string>
+                <string>reduced</string>
             </array>
+        </dict>
+        <dict>
+            <key>Type</key>
+            <string>PSChildPaneSpecifier</string>
+            <key>Title</key>
+            <string>Downloads</string>
+            <key>File</key>
+            <string>Downloads</string>
         </dict>
         <dict>
             <key>Title</key>
@@ -251,7 +285,7 @@
             <key>Type</key>
             <string>PSGroupSpecifier</string>
             <key>FooterText</key>
-            <string>Analytics uses an anonymous install ID to count app requests, searches, and download starts without storing IP addresses. If disabled, analytics events stop and only a separate anonymous opt out ID is sent to count disabled installs. Crash reports send technical crash details only when enabled.</string>
+            <string>Analytics uses an anonymous install ID to count app requests, searches, and download starts without storing IP addresses. If disabled, request and search analytics stop; download starts may still be counted anonymously without an install ID or device details. Crash reports send technical crash details only when enabled.</string>
         </dict>
         <dict>
             <key>Type</key>
@@ -274,176 +308,26 @@
             <true/>
         </dict>
         <dict>
+            <key>Type</key>
+            <string>PSGroupSpecifier</string>
+            <key>Title</key>
+            <string>About</string>
+        </dict>
+        <dict>
+            <key>Type</key>
+            <string>PSChildPaneSpecifier</string>
             <key>Title</key>
             <string>Credits</string>
-            <key>Type</key>
-            <string>PSGroupSpecifier</string>
+            <key>File</key>
+            <string>Credits</string>
         </dict>
         <dict>
             <key>Type</key>
-            <string>PSTitleValueSpecifier</string>
-            <key>Title</key>
-            <string>Developer</string>
-            <key>Key</key>
-            <string>credits_developer</string>
-            <key>DefaultValue</key>
-            <string>Electimon</string>
-        </dict>
-        <dict>
-            <key>Type</key>
-            <string>PSTitleValueSpecifier</string>
-            <key>Title</key>
-            <string>Maintainer</string>
-            <key>Key</key>
-            <string>credits_maintainer</string>
-            <key>DefaultValue</key>
-            <string>Victor</string>
-        </dict>
-        <dict>
-            <key>Type</key>
-            <string>PSTitleValueSpecifier</string>
-            <key>Title</key>
-            <string>UI Design</string>
-            <key>Key</key>
-            <string>credits_ui_design_1</string>
-            <key>DefaultValue</key>
-            <string>bag.xml</string>
-        </dict>
-        <dict>
-            <key>Type</key>
-            <string>PSTitleValueSpecifier</string>
-            <key>Title</key>
-            <string>UI Design</string>
-            <key>Key</key>
-            <string>credits_ui_design_2</string>
-            <key>DefaultValue</key>
-            <string>Telgamon</string>
-        </dict>
-        <dict>
-            <key>Type</key>
-            <string>PSTitleValueSpecifier</string>
-            <key>Title</key>
-            <string>Professional Bug Finder</string>
-            <key>Key</key>
-            <string>credits_bug_finder</string>
-            <key>DefaultValue</key>
-            <string>Justus61</string>
-        </dict>
-        <dict>
-            <key>Type</key>
-            <string>PSTitleValueSpecifier</string>
-            <key>Title</key>
-            <string>Clutch</string>
-            <key>Key</key>
-            <string>credits_clutch</string>
-            <key>DefaultValue</key>
-            <string>Hackulous/KJC</string>
-        </dict>
-        <dict>
-            <key>Type</key>
-            <string>PSTitleValueSpecifier</string>
-            <key>Title</key>
-            <string>Translation (RU)</string>
-            <key>Key</key>
-            <string>translation_ru</string>
-            <key>DefaultValue</key>
-            <string>platinumstuff</string>
-        </dict>
-        <dict>
-            <key>Type</key>
-            <string>PSTitleValueSpecifier</string>
-            <key>Title</key>
-            <string>Translation (UA)</string>
-            <key>Key</key>
-            <string>translation_ua</string>
-            <key>DefaultValue</key>
-            <string>Mikhail Churakov</string>
-        </dict>
-        <dict>
-            <key>Type</key>
-            <string>PSTitleValueSpecifier</string>
-            <key>Title</key>
-            <string>Translation (DE)</string>
-            <key>Key</key>
-            <string>translation_de</string>
-            <key>DefaultValue</key>
-            <string>Justus61</string>
-        </dict>
-        <dict>
-            <key>Type</key>
-            <string>PSTitleValueSpecifier</string>
-            <key>Title</key>
-            <string>Translation (VI)</string>
-            <key>Key</key>
-            <string>translation_vi</string>
-            <key>DefaultValue</key>
-            <string>Cheese</string>
-        </dict>
-        <dict>
-            <key>Type</key>
-            <string>PSTitleValueSpecifier</string>
-            <key>Title</key>
-            <string>Translation (PT)</string>
-            <key>Key</key>
-            <string>translation_pt</string>
-            <key>DefaultValue</key>
-            <string>AguiaEscaldante</string>
-        </dict>
-        <dict>
-            <key>Type</key>
-            <string>PSTitleValueSpecifier</string>
-            <key>Title</key>
-            <string>Translation (ZH)</string>
-            <key>Key</key>
-            <string>translation_zh</string>
-            <key>DefaultValue</key>
-            <string>pdyq</string>
-        </dict>
-        <dict>
+            <string>PSChildPaneSpecifier</string>
             <key>Title</key>
             <string>Licenses</string>
-            <key>Type</key>
-            <string>PSGroupSpecifier</string>
-        </dict>
-        <dict>
-            <key>Type</key>
-            <string>PSChildPaneSpecifier</string>
-            <key>Title</key>
-            <string>SVProgressHUD</string>
             <key>File</key>
-            <string>SVProgressHUD</string>
-        </dict>
-        <dict>
-            <key>Type</key>
-            <string>PSChildPaneSpecifier</string>
-            <key>Title</key>
-            <string>InAppSettingsKit</string>
-            <key>File</key>
-            <string>InAppSettingsKit</string>
-        </dict>
-        <dict>
-            <key>Type</key>
-            <string>PSChildPaneSpecifier</string>
-            <key>Title</key>
-            <string>md5</string>
-            <key>File</key>
-            <string>md5</string>
-        </dict>
-        <dict>
-            <key>Type</key>
-            <string>PSChildPaneSpecifier</string>
-            <key>Title</key>
-            <string>KGNoise</string>
-            <key>File</key>
-            <string>KGNoise</string>
-        </dict>
-        <dict>
-            <key>Type</key>
-            <string>PSChildPaneSpecifier</string>
-            <key>Title</key>
-            <string>BBHTTP</string>
-            <key>File</key>
-            <string>BBHTTP</string>
+            <string>Licenses</string>
         </dict>
         <dict>
             <key>Key</key>

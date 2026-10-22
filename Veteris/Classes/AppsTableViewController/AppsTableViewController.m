@@ -7,10 +7,13 @@
 //
 
 #import "AppsTableViewController.h"
+#import "../AppListTableViewCell/AppListTableViewCell.h"
 #include <stdlib.h>
 
 static NSString *const VeterisDefaultAppsListingEndpoint = @"listing/all";
 static NSString *const VeterisDefaultAppsTitleKey = @"AllApps";
+static NSString *const VeterisAllAppsSortDefaultsKey = @"VeterisAllAppsSort";
+static NSString *const VeterisDeveloperListSortDefaultsKey = @"VeterisDeveloperListSort";
 
 @interface AppsTableViewController ()
 - (NSString *)currentListingEndpoint;
@@ -21,16 +24,33 @@ static NSString *const VeterisDefaultAppsTitleKey = @"AllApps";
 - (void)viewDidLoad {
     [super viewDidLoad];
 
-    NSString *titleKey = self.listingTitleKey;
-    if ([titleKey length] == 0) {
-        titleKey = VeterisDefaultAppsTitleKey;
+    if ([self.listingTitle length] > 0) {
+        self.navigationItem.title = self.listingTitle;
+    } else {
+        NSString *titleKey = self.listingTitleKey;
+        if ([titleKey length] == 0) {
+            titleKey = VeterisDefaultAppsTitleKey;
+        }
+
+        self.navigationItem.title = NSLocalizedString(titleKey, titleKey);
     }
 
-    self.navigationItem.title = NSLocalizedString(titleKey, titleKey);
     if (self.showsRefreshButton) {
         self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithTitle:@"Shuffle" style:UIBarButtonItemStylePlain target:self action:@selector(refreshListing)];
+        [self initialize:[self currentListingEndpoint]];
+        return;
     }
-    [self initialize:[self currentListingEndpoint]];
+
+    NSString *endpoint = [self currentListingEndpoint];
+    if ([endpoint hasPrefix:@"listing/top"]) {
+        self.navigationItem.rightBarButtonItem = nil;
+        [self initialize:endpoint];
+        return;
+    }
+
+    BOOL isDeveloperListing = [endpoint hasPrefix:@"listing/developer/"];
+    [self setUpSortButtonWithDefaultsKey:(isDeveloperListing ? VeterisDeveloperListSortDefaultsKey : VeterisAllAppsSortDefaultsKey)];
+    [self initializeSortedListing:endpoint];
 }
 
 - (NSString *)currentListingEndpoint {
@@ -50,5 +70,15 @@ static NSString *const VeterisDefaultAppsTitleKey = @"AllApps";
 
 - (void)refreshListing {
     [self initialize:[self currentListingEndpoint]];
+}
+
+- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
+    AppListTableViewCell *cell = (AppListTableViewCell *)[super tableView:tableView cellForRowAtIndexPath:indexPath];
+    if ([self.listingEndpoint hasPrefix:@"listing/top"]) {
+        [cell setRankingPosition:indexPath.row + 1];
+    } else {
+        [cell setRankingPosition:0];
+    }
+    return cell;
 }
 @end

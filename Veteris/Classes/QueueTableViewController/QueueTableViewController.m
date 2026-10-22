@@ -2,11 +2,14 @@
 #import "../../AppDelegate.h"
 #import "../YZQueue/YZQueueManager.h"
 #import "../YZQueue/YZQueueState.h"
+#import "../AppInfo/AppInfo.h"
 #define NSArrayAtIndex(arr, idx) ((NSArray *)([arr objectAtIndex:(idx)]))
 
 @implementation QueueTableViewController {
     YZQueueState *_queueState;
     UIView *_noItemsView;
+    YZQueueRep *_actionSheetRep;
+    NSInteger _appInfoButtonIndex;
 }
 - (void)viewDidLoad {
     [super viewDidLoad];
@@ -90,16 +93,20 @@
         case YZRepStateDownloaded:
             [cell.appActivityIndicator stopAnimating];
             break;
-        case YZRepStateDownloading:
+        case YZRepStateDownloading: {
             [cell.appActivityIndicator stopAnimating];
             // tell the queue manager we'd like to attach a progress block/observer
             cell.appProgressView.hidden = NO;
             [_queueState attachProgressBlock:^(NSUInteger current, NSUInteger total) {
                 dispatch_async(dispatch_get_main_queue(), ^{
-                    [cell updateDownloadProgressWithCurrent:current total:total];
+                    if ([cell rep] == rep) {
+                        [cell updateDownloadProgressWithCurrent:current total:total];
+                    }
                 });
             } toRep:rep];
             break;
+        }
+		
         case YZRepStateQueued:
             [cell.appActivityIndicator stopAnimating];
             break;
@@ -144,17 +151,32 @@
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
     UIActionSheet *actionSheet;
     if (indexPath.section == YZRepStateDownloading) {
-        actionSheet = [[UIActionSheet alloc] initWithTitle:NSLocalizedString(@"Options", nil) delegate:self cancelButtonTitle:NSLocalizedString(@"Close", nil) destructiveButtonTitle:NSLocalizedString(@"RemoveFromQueue", @"Remove from Queue") otherButtonTitles:NSLocalizedString(@"Pause", nil), nil];
+        actionSheet = [[UIActionSheet alloc] initWithTitle:NSLocalizedString(@"Options", nil) delegate:self cancelButtonTitle:nil destructiveButtonTitle:NSLocalizedString(@"RemoveFromQueue", @"Remove from Queue") otherButtonTitles:NSLocalizedString(@"Pause", nil), nil];
     } else if (indexPath.section == YZRepStateFailed) {
-        actionSheet = [[UIActionSheet alloc] initWithTitle:NSLocalizedString(@"Options", nil) delegate:self cancelButtonTitle:NSLocalizedString(@"Close", nil) destructiveButtonTitle:NSLocalizedString(@"RemoveFromQueue", @"Remove from Queue") otherButtonTitles:NSLocalizedString(@"Retry", nil), NSLocalizedString(@"ShowErrorDetails", @"Show error details"), nil];
+        actionSheet = [[UIActionSheet alloc] initWithTitle:NSLocalizedString(@"Options", nil) delegate:self cancelButtonTitle:nil destructiveButtonTitle:NSLocalizedString(@"RemoveFromQueue", @"Remove from Queue") otherButtonTitles:NSLocalizedString(@"Retry", nil), NSLocalizedString(@"ShowErrorDetails", @"Show error details"), nil];
     } else if (indexPath.section == YZRepStatePaused) {
-        actionSheet = [[UIActionSheet alloc] initWithTitle:NSLocalizedString(@"Options", nil) delegate:self cancelButtonTitle:NSLocalizedString(@"Close", nil) destructiveButtonTitle:NSLocalizedString(@"RemoveFromQueue", @"Remove from Queue") otherButtonTitles:NSLocalizedString(@"Resume", nil), nil];
+        actionSheet = [[UIActionSheet alloc] initWithTitle:NSLocalizedString(@"Options", nil) delegate:self cancelButtonTitle:nil destructiveButtonTitle:NSLocalizedString(@"RemoveFromQueue", @"Remove from Queue") otherButtonTitles:NSLocalizedString(@"Resume", nil), nil];
     } else if (indexPath.section == YZRepStateInstalled) {
-        actionSheet = [[UIActionSheet alloc] initWithTitle:NSLocalizedString(@"Options", nil) delegate:self cancelButtonTitle:NSLocalizedString(@"Close", nil) destructiveButtonTitle:NSLocalizedString(@"RemoveFromQueue", @"Remove from Queue") otherButtonTitles:NSLocalizedString(@"Launch", nil), nil];
+        actionSheet = [[UIActionSheet alloc] initWithTitle:NSLocalizedString(@"Options", nil) delegate:self cancelButtonTitle:nil destructiveButtonTitle:NSLocalizedString(@"RemoveFromQueue", @"Remove from Queue") otherButtonTitles:NSLocalizedString(@"Launch", nil), nil];
     } else {
-        actionSheet = [[UIActionSheet alloc] initWithTitle:NSLocalizedString(@"Options", nil) delegate:self cancelButtonTitle:NSLocalizedString(@"Close", nil) destructiveButtonTitle:NSLocalizedString(@"RemoveFromQueue", @"Remove from Queue") otherButtonTitles:nil, nil];
+        actionSheet = [[UIActionSheet alloc] initWithTitle:NSLocalizedString(@"Options", nil) delegate:self cancelButtonTitle:nil destructiveButtonTitle:NSLocalizedString(@"RemoveFromQueue", @"Remove from Queue") otherButtonTitles:nil, nil];
     }
+    // Only catalog entries can open the App Info screen.
+    _actionSheetRep = [_queueState repForSection:indexPath.section atIndex:indexPath.row];
+    _appInfoButtonIndex = -1;
+    if ([_actionSheetRep sourceURL] != nil && [[_actionSheetRep bundleID] length] > 0) {
+        _appInfoButtonIndex = [actionSheet addButtonWithTitle:NSLocalizedStringWithDefaultValue(@"QueueShowAppInfo", nil, [NSBundle mainBundle], @"Show App Info", nil)];
+    }
+    actionSheet.cancelButtonIndex = [actionSheet addButtonWithTitle:NSLocalizedString(@"Close", nil)];
     [actionSheet showInView:self.view.window];
+}
+
+- (void)showAppInfoForRep:(YZQueueRep *)rep {
+    UIStoryboard *storyboard = [UIStoryboard storyboardWithName:@"MainStoryboard" bundle:[NSBundle mainBundle]];
+    AppInfo *appinfo = [storyboard instantiateViewControllerWithIdentifier:@"AppInfoViewController"];
+    [appinfo view];
+    [appinfo initialize:[rep bundleID] developer:[rep developer] name:[rep name] image:[rep icon]];
+    [self.navigationController pushViewController:appinfo animated:YES];
 }
 
 - (void)actionSheet:(UIActionSheet *)actionSheet clickedButtonAtIndex:(NSInteger)buttonIndex {
@@ -168,6 +190,14 @@
 
     NSIndexPath *indexPath = [self.tableView indexPathForSelectedRow];
 
+    if (buttonIndex == _appInfoButtonIndex) {
+        YZQueueRep *rep = _actionSheetRep;
+        _actionSheetRep = nil;
+        [self.tableView deselectRowAtIndexPath:indexPath animated:YES];
+        [self showAppInfoForRep:rep];
+        return;
+    }
+
     if (indexPath.section == YZRepStateFailed && buttonIndex == 2) {
         YZQueueRep *rep = [_queueState repForSection:indexPath.section atIndex:indexPath.row];
         NSString *message = rep.errorDetails;
@@ -176,11 +206,11 @@
         }
         UIAlertView *alert = [[UIAlertView alloc] initWithTitle:NSLocalizedString(@"ErrorDetails", @"Error details") message:message delegate:nil cancelButtonTitle:NSLocalizedString(@"OK", nil) otherButtonTitles:nil];
         [alert show];
-        [self.tableView deselectRowAtIndexPath:indexPath animated:YES];
+        [self.tableView deselectRowAtIndexPath:[self.tableView indexPathForSelectedRow] animated:YES];
         return;
     }
 
-    QueueTableViewCell *cell = (QueueTableViewCell *)[self.tableView cellForRowAtIndexPath:indexPath];
+    QueueTableViewCell *cell = (QueueTableViewCell *)[self.tableView cellForRowAtIndexPath:[self.tableView indexPathForSelectedRow]];
     YZQueueRep *rep = [cell rep];
     bool isDownloading = rep.state == YZRepStateDownloading;
     bool isFailed = rep.state == YZRepStateFailed;

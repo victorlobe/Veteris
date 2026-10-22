@@ -2,8 +2,10 @@
 #import "YZQueueRep.h"
 
 @interface YZQueueOps : NSObject
-+ (BOOL)installIPA:(NSString *)filePath;
-+ (void)downloadFileToPath:(NSString *)urlString pathFromString:(NSString *)str parent:(YZQueueRep *)parent;
-+ (void)downloadFileToPath:(NSString *)urlString targetPath:(NSString *)targetPath parent:(YZQueueRep *)parent;
++ (BOOL)installIPA:(NSString *)filePath errorDetails:(NSString **)errorDetails;
++ (void)startDownloadForRep:(YZQueueRep *)rep;
++ (void)stopTransferForRep:(YZQueueRep *)rep;
++ (void)performWhenTargetPathIdle:(NSString *)path block:(dispatch_block_t)block;
++ (BOOL)isValidIPAAtPath:(NSString *)path;
 + (void)notifyAppState:(YZQueueRep *)appRep;
 @end

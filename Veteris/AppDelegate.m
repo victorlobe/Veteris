@@ -16,12 +16,16 @@
 #import "Classes/YZApplication/YZApplication.h"
 #import "RRFPSBar/RRFPSBar.h"
 #import "Classes/YZQueue/YZQueueManager.h"
+#import "Classes/YZQueue/YZQueueNotifier.h"
+#import "Classes/YZQueue/YZDownloadResumeStore.h"
 #import <KSCrash.h>
 #import <KSCrashInstallation.h>
 #import "Classes/VAPIHelper/KSCrashInstallationVAPI.h"
 #import "Classes/DebugTextView/DebugTextView.h"
 #import "Classes/Convenience/Convenience.h"
 #import "Classes/Favorites/FavoritesTableViewController.h"
+#import "Classes/Updates/UpdatesTableViewController.h"
+#import "Classes/Updates/VeterisUpdatesManager.h"
 #import "Classes/AppsTableViewController/AppsTableViewController.h"
 #import "Classes/AppInfo/AppInfo.h"
 
@@ -30,6 +34,73 @@ static NSTimeInterval VeterisLastHandledURLTime = 0.0;
 static NSString *const VeterisTabOrderDefaultsKey = @"VeterisTabOrder";
 static NSString *const VeterisHomeTabIdentifier = @"HomeViewController";
 static NSString *const VeterisDownloadsTabIdentifier = @"Downloads";
+static NSString *const VeterisTop25TabIdentifier = @"Top25";
+static NSString *const VeterisUpdatesTabIdentifier = @"Updates";
+static NSString *const VeterisShuffleTabIdentifier = @"Shuffle";
+static NSString *const VeterisAppSyncAlertIgnoreDateKey = @"VeterisAppSyncAlertIgnoreDate";
+static const NSTimeInterval VeterisAppSyncAlertIgnoreDuration = 24.0 * 60.0 * 60.0;
+
+@interface VeterisAppSyncAlertDelegate : NSObject <UIAlertViewDelegate>
+@end
+
+@implementation VeterisAppSyncAlertDelegate
+
+- (void)alertView:(UIAlertView *)alertView clickedButtonAtIndex:(NSInteger)buttonIndex {
+    if (buttonIndex == [alertView cancelButtonIndex]) {
+        [[NSUserDefaults standardUserDefaults] setObject:[NSNumber numberWithDouble:[[NSDate date] timeIntervalSince1970]]
+                                                  forKey:VeterisAppSyncAlertIgnoreDateKey];
+        [[NSUserDefaults standardUserDefaults] synchronize];
+    }
+}
+
+@end
+
+static VeterisAppSyncAlertDelegate *VeterisSharedAppSyncAlertDelegate(void) {
+    static VeterisAppSyncAlertDelegate *delegate = nil;
+    if (delegate == nil) {
+        delegate = [[VeterisAppSyncAlertDelegate alloc] init];
+    }
+    return delegate;
+}
+
+static BOOL VeterisAppSyncIsInstalled(void) {
+    NSArray *candidatePaths = [NSArray arrayWithObjects:
+        @"/Library/MobileSubstrate/DynamicLibraries/AppSync.dylib",
+        @"/Library/MobileSubstrate/DynamicLibraries/AppSyncUnified.dylib",
+        @"/Library/MobileSubstrate/DynamicLibraries/AppSyncUnified-installd.dylib",
+        @"/Library/MobileSubstrate/DynamicLibraries/AppSyncUnified-FrontBoard.dylib",
+        nil];
+    NSFileManager *fileManager = [NSFileManager defaultManager];
+    for (NSString *path in candidatePaths) {
+        if ([fileManager fileExistsAtPath:path]) {
+            return YES;
+        }
+    }
+    return NO;
+}
+
+static BOOL VeterisIsIOS5OrNewer(void) {
+    NSString *systemVersion = [[UIDevice currentDevice] systemVersion];
+    NSArray *components = [systemVersion componentsSeparatedByString:@"."];
+    return [components count] > 0 && [[components objectAtIndex:0] integerValue] >= 5;
+}
+
+static void VeterisShowAppSyncAlertIfNeeded(void) {
+    id ignoredAtValue = [[NSUserDefaults standardUserDefaults] objectForKey:VeterisAppSyncAlertIgnoreDateKey];
+    NSTimeInterval ignoredAt = [ignoredAtValue respondsToSelector:@selector(doubleValue)] ? [ignoredAtValue doubleValue] : 0.0;
+    NSTimeInterval now = [[NSDate date] timeIntervalSince1970];
+    if (!VeterisIsIOS5OrNewer() || VeterisAppSyncIsInstalled() ||
+        (ignoredAt > 0.0 && now - ignoredAt < VeterisAppSyncAlertIgnoreDuration)) {
+        return;
+    }
+
+    UIAlertView *alert = [[UIAlertView alloc] initWithTitle:NSLocalizedStringWithDefaultValue(@"AppSyncRequiredTitle", nil, [NSBundle mainBundle], @"AppSync Required", nil)
+                                                    message:NSLocalizedStringWithDefaultValue(@"AppSyncRequiredMessage", nil, [NSBundle mainBundle], @"Please install AppSync Unified from Cydia before using Veteris to install apps. Reboot your device after installation.", nil)
+                                                   delegate:VeterisSharedAppSyncAlertDelegate()
+                                          cancelButtonTitle:NSLocalizedStringWithDefaultValue(@"AppSyncIgnore", nil, [NSBundle mainBundle], @"Ignore", nil)
+                                          otherButtonTitles:NSLocalizedString(@"OK", nil), nil];
+    [alert show];
+}
 
 static NSString *VeterisURLDecodedString(NSString *value) {
     if (value == nil) {
@@ -37,6 +108,26 @@ static NSString *VeterisURLDecodedString(NSString *value) {
     }
     NSString *decoded = [value stringByReplacingPercentEscapesUsingEncoding:NSUTF8StringEncoding];
     return decoded ?: value;
+}
+
+static UIImage *VeterisTintedImage(UIImage *image, UIColor *color) {
+    if (image == nil) {
+        return nil;
+    }
+    if (color == nil) {
+        return image;
+    }
+
+    UIGraphicsBeginImageContextWithOptions(image.size, NO, image.scale);
+    [image drawAtPoint:CGPointZero];
+    [color setFill];
+    UIRectFillUsingBlendMode((CGRect){CGPointZero, image.size}, kCGBlendModeSourceIn);
+    UIImage *tintedImage = UIGraphicsGetImageFromCurrentImageContext();
+    UIGraphicsEndImageContext();
+    if ([tintedImage respondsToSelector:@selector(imageWithRenderingMode:)]) {
+        return [tintedImage imageWithRenderingMode:UIImageRenderingModeAlwaysOriginal];
+    }
+    return tintedImage ?: image;
 }
 
 @implementation AppDelegate
@@ -64,8 +155,22 @@ static NSString *VeterisURLDecodedString(NSString *value) {
     });
 }
 
+- (void)updateUpdatesTabBadge {
+    UITabBarController *tabBarController = (UITabBarController *)self.window.rootViewController;
+    if (![tabBarController isKindOfClass:[UITabBarController class]]) {
+        return;
+    }
+    NSUInteger updateCount = [[[VeterisUpdatesManager sharedManager] availableUpdates] count];
+    UIViewController *updatesController = [self viewControllerWithIdentifier:VeterisUpdatesTabIdentifier inViewControllers:tabBarController.viewControllers];
+    updatesController.tabBarItem.badgeValue = updateCount > 0 ? [NSString stringWithFormat:@"%lu", (unsigned long)updateCount] : nil;
+}
+
 - (void)handleQueueBadgeNotification:(NSNotification *)notification {
+    YZQueueRep *rep = (YZQueueRep *)notification.object;
     [self updateQueueTabBadge];
+    if ([rep respondsToSelector:@selector(state)] && [rep state] == YZRepStateInstalled) {
+        [AppInfo refreshInstalledApplicationCache];
+    }
 }
 
 - (UIViewController *)rootControllerForNavigationController:(UINavigationController *)navigationController {
@@ -85,8 +190,14 @@ static NSString *VeterisURLDecodedString(NSString *value) {
     if ([rootController isKindOfClass:[FavoritesTableViewController class]]) {
         return @"Favorites";
     }
+    if ([rootController isKindOfClass:[UpdatesTableViewController class]]) {
+        return VeterisUpdatesTabIdentifier;
+    }
     if ([rootController isKindOfClass:[AppsTableViewController class]]) {
         AppsTableViewController *appsController = (AppsTableViewController *)rootController;
+        if ([appsController.listingEndpoint hasPrefix:@"listing/top"]) {
+            return VeterisTop25TabIdentifier;
+        }
         return appsController.showsRefreshButton ? @"Shuffle" : @"AllApps";
     }
 
@@ -109,6 +220,20 @@ static NSString *VeterisURLDecodedString(NSString *value) {
         return viewControllers;
     }
 
+    NSMutableArray *effectiveSavedTabOrder = [NSMutableArray arrayWithArray:savedTabOrder];
+    if ([self viewControllerWithIdentifier:VeterisTop25TabIdentifier inViewControllers:viewControllers] != nil
+        && ![effectiveSavedTabOrder containsObject:VeterisTop25TabIdentifier]) {
+        NSUInteger favoritesIndex = [effectiveSavedTabOrder indexOfObject:@"Favorites"];
+        if (favoritesIndex != NSNotFound) {
+            [effectiveSavedTabOrder insertObject:VeterisTop25TabIdentifier atIndex:favoritesIndex + 1];
+        } else {
+            NSUInteger categoriesIndex = [effectiveSavedTabOrder indexOfObject:@"CategoriesTableViewController"];
+            if (categoriesIndex != NSNotFound) {
+                [effectiveSavedTabOrder insertObject:VeterisTop25TabIdentifier atIndex:categoriesIndex];
+            }
+        }
+    }
+
     NSMutableDictionary *viewControllersByIdentifier = [NSMutableDictionary dictionary];
     for (UIViewController *viewController in viewControllers) {
         NSString *identifier = [self tabIdentifierForViewController:viewController];
@@ -118,7 +243,7 @@ static NSString *VeterisURLDecodedString(NSString *value) {
     }
 
     NSMutableArray *orderedViewControllers = [NSMutableArray array];
-    for (NSString *identifier in savedTabOrder) {
+    for (NSString *identifier in effectiveSavedTabOrder) {
         UIViewController *viewController = [viewControllersByIdentifier objectForKey:identifier];
         if (viewController != nil && ![orderedViewControllers containsObject:viewController]) {
             [orderedViewControllers addObject:viewController];
@@ -175,10 +300,6 @@ static NSString *VeterisURLDecodedString(NSString *value) {
         }
     }
 
-    if ([defaults objectForKey:@"veteris_low_memory_mode_enabled"] == nil) {
-        [defaults setBool:[VAPIHelper defaultLowMemoryModeEnabled] forKey:@"veteris_low_memory_mode_enabled"];
-        changed = YES;
-    }
     if ([defaults objectForKey:@"veteris_crash_reporting_enabled"] == nil) {
         [defaults setBool:YES forKey:@"veteris_crash_reporting_enabled"];
         changed = YES;
@@ -187,16 +308,28 @@ static NSString *VeterisURLDecodedString(NSString *value) {
         [defaults setBool:YES forKey:@"veteris_home_icon_badge_enabled"];
         changed = YES;
     }
+    if ([defaults objectForKey:YZDownloadNotificationsEnabledKey] == nil) {
+        [defaults setBool:YES forKey:YZDownloadNotificationsEnabledKey];
+        changed = YES;
+    }
+    if ([defaults objectForKey:YZBackgroundStatusNotificationsEnabledKey] == nil) {
+        [defaults setBool:YES forKey:YZBackgroundStatusNotificationsEnabledKey];
+        changed = YES;
+    }
 
+    if ([VeterisMemoryProfile prepareStoredPreferences]) {
+        changed = YES;
+    }
     if (changed) {
         [defaults synchronize];
     }
-    [VAPIHelper updateLowMemoryModeStatusPreference];
+    [VeterisMemoryProfile updateActiveLevelPreference];
 }
 
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
     [self configureDefaultPreferences];
     [VAPIHelper applyLanguageOverride];
+    themeManager = [ThemeManager sharedInstance];
     UINavigationBar *moreNaviBar = [((UITabBarController *)self.window.rootViewController) moreNavigationController].navigationBar;
     [moreNaviBar setBarStyle:UIBarStyleBlack];
     [moreNaviBar setTranslucent:false];
@@ -207,6 +340,7 @@ static NSString *VeterisURLDecodedString(NSString *value) {
     queuedNaviController.title = NSLocalizedString(@"Downloads", @"Downloads");
     queuedNaviController.tabBarItem.title = NSLocalizedString(@"Downloads", @"Downloads");
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(handleQueueBadgeNotification:) name:@"YZQueueRepStateChange" object:nil];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(updateUpdatesTabBadge) name:VeterisUpdatesDidChangeNotification object:nil];
     UINavigationController *favoritesNaviController = [[UINavigationController alloc] initWithRootViewController:[[FavoritesTableViewController alloc] init]];
     favoritesNaviController.navigationBar.barStyle = UIBarStyleBlack;
     favoritesNaviController.tabBarItem = [[UITabBarItem alloc] initWithTabBarSystemItem:UITabBarSystemItemFavorites tag:0];
@@ -224,10 +358,35 @@ static NSString *VeterisURLDecodedString(NSString *value) {
         randomAppsTabIcon = [UIImage imageNamed:@"RandomAppsTabIcon.png"];
     }
     randomAppsNaviController.tabBarItem = [[UITabBarItem alloc] initWithTitle:NSLocalizedString(@"Shuffle", nil) image:randomAppsTabIcon tag:0];
+    AppsTableViewController *topAppsController = [mainStoryboard instantiateViewControllerWithIdentifier:@"AppsTableViewController"];
+    topAppsController.listingTitleKey = @"Top 25";
+    topAppsController.listingEndpoint = @"listing/top";
+    UINavigationController *topAppsNaviController = [[UINavigationController alloc] initWithRootViewController:topAppsController];
+    topAppsNaviController.navigationBar.barStyle = UIBarStyleBlack;
+    topAppsNaviController.title = NSLocalizedString(@"Top 25", nil);
+    UIImage *top25TabIcon = [UIImage imageNamed:@"Top25TabIcon"];
+    if (top25TabIcon == nil) {
+        top25TabIcon = [UIImage imageNamed:@"Top25TabIcon.png"];
+    }
+    topAppsNaviController.tabBarItem = [[UITabBarItem alloc] initWithTitle:NSLocalizedString(@"Top 25", nil) image:top25TabIcon tag:0];
+    topAppsNaviController.tabBarItem.title = NSLocalizedString(@"Top 25", nil);
     NSMutableArray *viewControllers = [NSMutableArray arrayWithArray:((UITabBarController *)self.window.rootViewController).viewControllers];
     [viewControllers insertObject:queuedNaviController atIndex:2];
     [viewControllers insertObject:favoritesNaviController atIndex:4];
     [viewControllers insertObject:randomAppsNaviController atIndex:7];
+    [viewControllers insertObject:topAppsNaviController atIndex:5];
+
+
+    UIViewController *updatesNaviController = [self viewControllerWithIdentifier:VeterisUpdatesTabIdentifier inViewControllers:viewControllers];
+    if (updatesNaviController != nil) {
+        NSString *updatesTitle = NSLocalizedStringWithDefaultValue(@"Updates", nil, [NSBundle mainBundle], @"Updates", nil);
+        updatesNaviController.title = updatesTitle;
+        updatesNaviController.tabBarItem.title = updatesTitle;
+        [viewControllers removeObject:updatesNaviController];
+        UIViewController *shuffleNaviController = [self viewControllerWithIdentifier:VeterisShuffleTabIdentifier inViewControllers:viewControllers];
+        NSUInteger shuffleIndex = shuffleNaviController != nil ? [viewControllers indexOfObject:shuffleNaviController] : NSNotFound;
+        [viewControllers insertObject:updatesNaviController atIndex:(shuffleIndex != NSNotFound ? shuffleIndex + 1 : [viewControllers count])];
+    }
     id savedTabOrder = [[NSUserDefaults standardUserDefaults] objectForKey:VeterisTabOrderDefaultsKey];
     if (![savedTabOrder isKindOfClass:[NSArray class]]) {
         savedTabOrder = nil;
@@ -237,7 +396,14 @@ static NSString *VeterisURLDecodedString(NSString *value) {
     [((UITabBarController *)self.window.rootViewController) setCustomizableViewControllers:viewControllers];
     ((UITabBarController *)self.window.rootViewController).delegate = self;
     [self updateQueueTabBadge];
+    [[VeterisUpdatesManager sharedManager] start];
+    [self updateUpdatesTabBadge];
     [self selectTabWithIdentifier:VeterisHomeTabIdentifier inTabBarController:(UITabBarController *)self.window.rootViewController];
+    UILocalNotification *launchNotification = [launchOptions objectForKey:UIApplicationLaunchOptionsLocalNotificationKey];
+    if ([YZQueueNotifier isQueueNotification:launchNotification]) {
+        [self selectTabWithIdentifier:VeterisDownloadsTabIdentifier inTabBarController:(UITabBarController *)self.window.rootViewController];
+    }
+    VeterisShowAppSyncAlertIfNeeded();
 
 #ifdef DEBUG
     [DebugTextView attachToWindow:self.window];
@@ -250,7 +416,6 @@ static NSString *VeterisURLDecodedString(NSString *value) {
     [[UITabBar appearance] setBackgroundImage:backgroundImage];
     [UINavigationBar.appearance setBackgroundImage:[UIImage imageNamed:@"UITitleBarBG"] forBarMetrics:UIBarMetricsDefault];
     [((UITabBarController *)self.window.rootViewController) moreNavigationController].delegate = self;
-    themeManager = [ThemeManager sharedInstance];
     [themeManager applyTintToTabBars];
     [themeManager applyTintToNavigationBars];
     self.window.backgroundColor = [UIColor whiteColor];
@@ -259,6 +424,9 @@ static NSString *VeterisURLDecodedString(NSString *value) {
     categoriesNaviController.title = NSLocalizedString(@"Categories", @"Categories");
     UINavigationController *allAppsNaviController = (UINavigationController *)[self viewControllerWithIdentifier:@"AllApps" inViewControllers:currentViewControllers];
     allAppsNaviController.title = NSLocalizedString(@"AllApps", @"AllApps");
+    UINavigationController *topAppsTabController = (UINavigationController *)[self viewControllerWithIdentifier:VeterisTop25TabIdentifier inViewControllers:currentViewControllers];
+    topAppsTabController.title = NSLocalizedString(@"Top 25", nil);
+    topAppsTabController.tabBarItem.title = NSLocalizedString(@"Top 25", nil);
     UINavigationController *crackNaviController = (UINavigationController *)[self viewControllerWithIdentifier:@"CrackTableViewController" inViewControllers:currentViewControllers];
     crackNaviController.title = NSLocalizedString(@"Crack", @"Crack");
     crackNaviController.tabBarItem.title = NSLocalizedString(@"Crack", @"Crack");
@@ -276,38 +444,55 @@ static NSString *VeterisURLDecodedString(NSString *value) {
     } else {
         [self handlePendingLaunchURLIfNeeded:launchURL];
     }
+    // Relaunch
+    BOOL launchedInBackground = (application.applicationState == UIApplicationStateBackground);
+    if (launchedInBackground) {
+        [YZQueueManager holdBackgroundLaunchUntilRestored];
+    }
     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-        [self cleanDownloadDirectory];
+        BOOL downloadDirectoryReady = [self cleanDownloadDirectory];
         dispatch_async(dispatch_get_main_queue(), ^{
-            [YZQueueManager restorePendingDownloads];
+            if (downloadDirectoryReady) {
+                [YZQueueManager restorePendingDownloadsResumingInterrupted:launchedInBackground];
+            }
+            if (launchedInBackground) {
+                [YZQueueManager releaseBackgroundLaunchHold];
+            }
         });
         [self installCrashHandler];
     });
     return YES;
 }
 
-- (void)cleanDownloadDirectory {
+- (BOOL)cleanDownloadDirectory {
+    if (![YZDownloadResumeStore migrateLegacyDownloadDirectoryIfNeeded]) {
+        debugLog(@"Skipping download cleanup and resume until folder migration completes");
+        return NO;
+    }
     NSString *downloadDir = downloadPath();
     NSFileManager *manager = [[NSFileManager alloc] init];
     if (![manager fileExistsAtPath:downloadDir]) {
         NSError *createDirError = nil;
         if (![manager createDirectoryAtPath:downloadDir withIntermediateDirectories:YES attributes:nil error:&createDirError]) {
             debugLog(@"Failed to create download directory: %@, error: %@", downloadDir, createDirError.localizedDescription);
-            return;
+            return NO;
         } else {
             debugLog(@"Created download directory: %@", downloadDir);
         }
     }
     NSSet *pendingResumePaths = [NSSet setWithArray:[YZQueueManager pendingResumeTargetPaths]];
-    NSString *resumeManifestPath = [downloadDir stringByAppendingPathComponent:@".VeterisPendingDownloads.plist"];
+    NSString *resumeManifestPath = [YZDownloadResumeStore manifestPath];
+    NSString *savedDownloadDir = downloadOnlyPath();
+    NSString *savedDownloadPrefix = [savedDownloadDir stringByAppendingString:@"/"];
     NSDirectoryEnumerator *fileEnumerator = [manager enumeratorAtPath:downloadDir];
     for (NSString *filename in fileEnumerator) {
         NSString *filePath = [downloadDir stringByAppendingPathComponent:filename];
-        NSString *savedDownloadDir = downloadOnlyPath();
-        if ([filePath isEqualToString:resumeManifestPath] ||
-            [pendingResumePaths containsObject:filePath] ||
-            [filePath isEqualToString:savedDownloadDir] ||
-            [filePath hasPrefix:[savedDownloadDir stringByAppendingString:@"/"]]) {
+        if ([filePath isEqualToString:resumeManifestPath] || [filePath isEqualToString:savedDownloadDir]) {
+            continue;
+        }
+        NSString *artifactOwner = [YZDownloadResumeStore targetPathForArtifactPath:filePath];
+        NSString *ownerPath = artifactOwner ?: filePath;
+        if ([pendingResumePaths containsObject:ownerPath] || [YZQueueManager isTargetPathInUse:ownerPath]) {
             continue;
         }
         NSError *error = nil;
@@ -316,14 +501,23 @@ static NSString *VeterisURLDecodedString(NSString *value) {
             debugLog(@"Failed to get attributes for file: %@, error: %@", filename, error.localizedDescription);
             continue;
         }
-        if ([[attributes objectForKey:NSFileType] isEqualToString:NSFileTypeRegular]) {
-            if (![manager removeItemAtPath:filePath error:&error]) {
-                debugLog(@"Failed to delete file: %@, error: %@", filename, error.localizedDescription);
-            } else {
-                debugLog(@"Deleted file: %@", filename);
+        if (![[attributes objectForKey:NSFileType] isEqualToString:NSFileTypeRegular]) {
+            continue;
+        }
+        if ([filePath hasPrefix:savedDownloadPrefix]) {
+            // Kill unfinished downloads
+            BOOL unfinishedIPA = (artifactOwner == nil && [manager fileExistsAtPath:[YZDownloadResumeStore resumeInfoPathForTargetPath:filePath]]);
+            if (artifactOwner == nil && !unfinishedIPA) {
+                continue;
             }
         }
+        if (![manager removeItemAtPath:filePath error:&error]) {
+            debugLog(@"Failed to delete file: %@, error: %@", filename, error.localizedDescription);
+        } else {
+            debugLog(@"Deleted file: %@", filename);
+        }
     }
+    return YES;
 }
 
 #ifdef DEBUG
@@ -447,9 +641,17 @@ void myExceptionHandler(NSException *exception)
     [self performSelector:@selector(handleLaunchURL:) withObject:url afterDelay:0.0];
 }
 
+- (void)application:(UIApplication *)application didReceiveLocalNotification:(UILocalNotification *)notification {
+    if (application.applicationState == UIApplicationStateInactive && [YZQueueNotifier isQueueNotification:notification]) {
+        [self selectTabWithIdentifier:VeterisDownloadsTabIdentifier inTabBarController:(UITabBarController *)self.window.rootViewController];
+    }
+}
+
 - (void)applicationDidBecomeActive:(UIApplication *)application {
     // TEMP: update check disabled
     // [VAPIHelper checkForUpdates];
+    [AppInfo refreshInstalledApplicationCache];
+    [VAPIHelper checkForRemoteAlert];
 }
 
 -(void)emptySandbox {

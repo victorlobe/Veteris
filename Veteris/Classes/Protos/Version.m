@@ -39,6 +39,10 @@
         self.iconBundleID = [Version stringFromProtoArg:versionProto.iconBundleID.arg];
         self.bundleID = [Version stringFromProtoArg:versionProto.bundleID.arg];
         self.recommended = versionProto.has_recommended && versionProto.recommended;
+        self.hasDownloadCount = versionProto.has_downloadCount;
+        self.downloadCount = versionProto.downloadCount;
+        self.displayName = [Version stringFromProtoArg:versionProto.displayName.arg];
+        self.bundleName = [Version stringFromProtoArg:versionProto.bundleName.arg];
     }
     return self;
 }

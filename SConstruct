@@ -61,6 +61,10 @@ if IS_MAC:
     strip_cmd = shutil.which("llvm-strip") or shutil.which("strip") or "strip"
     ldid_cmd = find_ldid()
     env_vars = {"PATH": os.environ.get("PATH", "/usr/bin:/bin")}
+    # Pass the pinned Xcode (Makefile DEVELOPER_DIR) through to xcrun and the
+    # /usr/bin tool shims; SCons otherwise drops it and falls back to xcode-select.
+    if os.environ.get("DEVELOPER_DIR"):
+        env_vars["DEVELOPER_DIR"] = os.environ["DEVELOPER_DIR"]
 else:
     cc = "arm-apple-darwin9-clang"
     cxx = "arm-apple-darwin9-clang++"
@@ -230,6 +234,8 @@ resources = [
     "Veteris/SVProgressHUD/SVProgressHUD.bundle",
 ]
 png_resources = glob.glob("Veteris/Images/*.png")
+download_button_resources = glob.glob("Veteris/Images/downloadButton/*.png")
+theme_artwork_resources = sorted(glob.glob("Veteris/Images/ThemeArtwork/*/*.png"))
 settings_bundle_files = [
     file
     for file in glob.glob("Veteris/Settings.bundle/**/*", recursive=True)
@@ -259,6 +265,10 @@ storyboard_deps = sorted(glob.glob(storyboard_precompiled + "/*"))
 bundle_nodes = []
 bundle_nodes += env.Install("xcbuild/Veteris.app", resources)
 bundle_nodes += env.Install("xcbuild/Veteris.app", png_resources)
+bundle_nodes += env.Install("xcbuild/Veteris.app/downloadButton", download_button_resources)
+for source_path in theme_artwork_resources:
+    rel = source_path.replace("Veteris/Images/", "", 1)
+    bundle_nodes += env.InstallAs("xcbuild/Veteris.app/%s" % rel, source_path)
 bundle_nodes += env.InstallAs("xcbuild/Veteris.app/Veteris", signed_prog)
 bundle_nodes += env.InstallAs("xcbuild/Veteris.app/Info.plist", generated_info)
 for source_path in settings_bundle_files:

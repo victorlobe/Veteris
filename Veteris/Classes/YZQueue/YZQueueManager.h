@@ -9,8 +9,14 @@
 + (void)enqueueYZApplicationForDownload:(YZApplication *)yzApp;
 + (void)enqueueYZApplicationForDownloadOnly:(YZApplication *)yzApp targetPath:(NSString *)targetPath;
 + (void)enqueueYZApplicationDownloaded:(YZApplication *)yzApp;
-+ (void)restorePendingDownloads;
++ (void)restorePendingDownloadsResumingInterrupted:(BOOL)resumeInterrupted;
++ (void)holdBackgroundLaunchUntilRestored;
++ (void)releaseBackgroundLaunchHold;
 + (NSArray *)pendingResumeTargetPaths;
++ (BOOL)hasActiveWork;
++ (NSUInteger)interruptActiveTransfers;
++ (void)resumeInterruptedTransfers;
++ (BOOL)isTargetPathInUse:(NSString *)targetPath;
 + (bool)markRepAsCancelled:(YZQueueRep *)rep;
 + (bool)pauseRep:(YZQueueRep *)rep;
 + (bool)retryRep:(YZQueueRep *)rep;

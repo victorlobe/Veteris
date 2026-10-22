@@ -6,41 +6,30 @@
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
 	<string>Veteris</string>
-	<key>CFBundleExecutable</key>
-	<string>Veteris</string>
-	<key>CFBundleIdentifier</key>
-	<string>com.victorlobe.veteris</string>
-	<key>CFBundleInfoDictionaryVersion</key>
-	<string>6.0</string>
-	<key>CFBundleName</key>
-	<string>Veteris</string>
-	<key>CFBundlePackageType</key>
-	<string>APPL</string>
-	<key>CFBundleShortVersionString</key>
-	<string>%MARKETING_VERSION%</string>
-	<key>CFBundleSignature</key>
-	<string>????</string>
-	<key>CFBundleVersion</key>
-	<string>%BUILD_VERSION%</string>
-	<key>CFBundleURLTypes</key>
+	<key>CFBundleDocumentTypes</key>
 	<array>
 		<dict>
-			<key>CFBundleURLName</key>
-			<string>com.victorlobe.veteris</string>
-			<key>CFBundleURLSchemes</key>
+			<key>CFBundleTypeIconFiles</key>
 			<array>
-				<string>veteris</string>
+				<string>Icon.png</string>
+				<string>Icon@2x.png</string>
+				<string>Icon-60.png</string>
+				<string>Icon-60@2x.png</string>
+			</array>
+			<key>CFBundleTypeName</key>
+			<string>iPhone Application</string>
+			<key>CFBundleTypeRole</key>
+			<string>Viewer</string>
+			<key>LSHandlerRank</key>
+			<string>Owner</string>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>com.victorlobe.veteris.ipa</string>
 			</array>
 		</dict>
 	</array>
-	<key>LSApplicationCategoryType</key>
-	<string></string>
-	<key>LSRequiresIPhoneOS</key>
-	<true/>
-	<key>NSMainNibFile~ipad</key>
-	<string>MainStoryboard-iPad</string>
-	<key>UIMainStoryboardFile</key>
-	<string>MainStoryboard</string>
+	<key>CFBundleExecutable</key>
+	<string>Veteris</string>
 	<key>CFBundleIconFile</key>
 	<string>Icon.png</string>
 	<key>CFBundleIconFiles</key>
@@ -59,6 +48,63 @@
 		<string>Icon-72.png</string>
 		<string>Icon-72@2x.png</string>
 	</array>
+	<key>CFBundleIdentifier</key>
+	<string>com.victorlobe.veteris</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>en</string>
+		<string>de</string>
+		<string>uk</string>
+		<string>vi</string>
+		<string>ru</string>
+		<string>pt</string>
+		<string>ar</string>
+		<string>tr</string>
+		<string>es</string>
+		<string>fr</string>
+		<string>zh-Hans</string>
+		<string>ja</string>
+		<string>it</string>
+		<string>pl</string>
+		<string>he</string>
+	</array>
+	<key>CFBundleName</key>
+	<string>Veteris</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>%MARKETING_VERSION%</string>
+	<key>CFBundleSignature</key>
+	<string>????</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.victorlobe.veteris</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>veteris</string>
+			</array>
+		</dict>
+	</array>
+	<key>CFBundleVersion</key>
+	<string>%BUILD_VERSION%</string>
+	<key>LSApplicationCategoryType</key>
+	<string></string>
+	<key>LSRequiresIPhoneOS</key>
+	<true/>
+	<key>NSMainNibFile~ipad</key>
+	<string>MainStoryboard-iPad</string>
+	<key>SBAppUsesLocalNotifications</key>
+	<true/>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>unboundedTaskCompletion</string>
+	</array>
+	<key>UIMainStoryboardFile</key>
+	<string>MainStoryboard</string>
 	<key>UIRequiredDeviceCapabilities</key>
 	<array>
 		<string>armv7</string>
@@ -97,46 +143,6 @@
 				<string>veteris/x-ipa</string>
 			</dict>
 		</dict>
-	</array>
-	<key>CFBundleDocumentTypes</key>
-	<array>
-		<dict>
-			<key>CFBundleTypeIconFiles</key>
-			<array>
-				<string>Icon.png</string>
-				<string>Icon@2x.png</string>
-				<string>Icon-60.png</string>
-				<string>Icon-60@2x.png</string>
-			</array>
-			<key>CFBundleTypeName</key>
-			<string>iPhone Application</string>
-			<key>CFBundleTypeRole</key>
-			<string>Viewer</string>
-			<key>LSHandlerRank</key>
-			<string>Owner</string>
-			<key>LSItemContentTypes</key>
-			<array>
-				<string>com.victorlobe.veteris.ipa</string>
-			</array>
-		</dict>
-	</array>
-	<key>CFBundleLocalizations</key>
-	<array>
-		<string>en</string>
-		<string>de</string>
-		<string>uk</string>
-		<string>vi</string>
-		<string>ru</string>
-		<string>pt</string>
-		<string>ar</string>
-		<string>tr</string>
-		<string>es</string>
-		<string>fr</string>
-		<string>zh-Hans</string>
-		<string>ja</string>
-		<string>it</string>
-		<string>pl</string>
-		<string>he</string>
 	</array>
 </dict>
 </plist>

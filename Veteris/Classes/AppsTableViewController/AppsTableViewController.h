@@ -13,6 +13,7 @@
 
 @property (copy, nonatomic) NSString *listingEndpoint;
 @property (copy, nonatomic) NSString *listingTitleKey;
+@property (copy, nonatomic) NSString *listingTitle;
 @property (nonatomic) BOOL showsRefreshButton;
 
 @end

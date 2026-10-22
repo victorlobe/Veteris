@@ -12,7 +12,9 @@
 @property (weak, nonatomic) IBOutlet UILabel *appNameLabel;
 @property (weak, nonatomic) IBOutlet UILabel *developerNameLabel;
 @property (weak, nonatomic) IBOutlet UILabel *versionLabel;
+@property (weak, nonatomic) IBOutlet UILabel *getLabel;
 @property (weak, nonatomic) IBOutlet UIImageView *appUIImage;
 @property (weak, nonatomic) IBOutlet UIActivityIndicatorView *activityIndicator;
 @property (nonatomic) int indicatorCounter;
+- (void)setRankingPosition:(NSUInteger)position;
 @end
