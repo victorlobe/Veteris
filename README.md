@@ -1,5 +1,5 @@
 <p align="center">
-  <img width="120" height="120" alt="icon" src="https://github.com/user-attachments/assets/de8e4391-d4a4-4bac-88b5-a6b7bb80d295" />
+  <img width="120" height="120" alt="icon" src="https://github.com/user-attachments/assets/4c5a61f8-6028-47ee-a4ae-7467e2ac0ad4" />
 </p>
 
 <h1 align="center">Veteris</h1>
