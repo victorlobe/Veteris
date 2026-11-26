@@ -97,13 +97,16 @@
 	<string></string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
-	<key>NSMainNibFile~ipad</key>
-	<string>MainStoryboard-iPad</string>
 	<key>SBAppUsesLocalNotifications</key>
 	<true/>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>unboundedTaskCompletion</string>
+	</array>
+	<key>UIDeviceFamily</key>
+	<array>
+		<integer>1</integer>
+		<integer>2</integer>
 	</array>
 	<key>UIMainStoryboardFile</key>
 	<string>MainStoryboard</string>
@@ -124,6 +127,13 @@
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
+	</array>
+	<key>UISupportedInterfaceOrientations~ipad</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationPortraitUpsideDown</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 	<key>UTExportedTypeDeclarations</key>
 	<array>

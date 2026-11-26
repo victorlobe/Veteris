@@ -217,7 +217,7 @@ CGRect IASKCGRectSwap(CGRect rect);
 }
 
 - (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation {
-    return YES;
+    return VeterisShouldAutorotateToInterfaceOrientation(interfaceOrientation);
 }
 
 - (void)setHiddenKeys:(NSSet *)theHiddenKeys {

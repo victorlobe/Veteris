@@ -11,7 +11,11 @@
 
 + (LoadingIndicatorView*)attachToView:(UIView *)view textKey:(NSString *)textKey {
     LoadingIndicatorView *loadingView = [[LoadingIndicatorView alloc] initWithFrame:CGRectMake(0, 0, 0, 0)];
-    [loadingView constructWithCenter:view.center textKey:textKey];
+    CGPoint center = view.center;
+    if ([view isKindOfClass:[UIWindow class]] || [view.superview isKindOfClass:[UIWindow class]]) {
+        center = CGPointMake(CGRectGetMidX(view.bounds), CGRectGetMidY(view.bounds));
+    }
+    [loadingView constructWithCenter:center textKey:textKey];
     [view addSubview:loadingView];
     return loadingView;
 }
@@ -34,7 +38,8 @@
     float width = textView.frame.size.width + activityIndicator.frame.size.width;
     float height = MAX(textView.frame.size.height, activityIndicator.frame.size.height);
     self.frame = CGRectMake(0, 0, width, height);
-    self.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+    self.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleRightMargin |
+                            UIViewAutoresizingFlexibleTopMargin | UIViewAutoresizingFlexibleBottomMargin;
     [self addSubview:activityIndicator];
     [self addSubview:textView];
     UITabBarController *tabBarController = (UITabBarController *)getDelegate().window.rootViewController;

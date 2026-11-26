@@ -79,7 +79,8 @@
         errorLabel.textColor = [UIColor grayColor];
         errorLabel.backgroundColor = [UIColor clearColor];
         errorLabel.textAlignment = NSTextAlignmentCenter;
-        errorLabel.center = CGPointMake(self.tableView.center.x, getDelegate().window.center.y);
+        errorLabel.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleRightMargin |
+                                      UIViewAutoresizingFlexibleTopMargin | UIViewAutoresizingFlexibleBottomMargin;
     }
     [VAPISS getMessage:@"listing/categories" completion:^(NSData *data, NSError *error){
         [loadingIndicator destroy];
@@ -91,7 +92,9 @@
             [self.tableView reloadData];
         } else {
             alert(NSLocalizedString(@"Oops", nil), NSLocalizedString(@"ServerContactError", nil), 1);
-            [getDelegate().window addSubview:errorLabel];
+            UIView *errorHost = getDelegate().window.rootViewController.view ?: getDelegate().window;
+            errorLabel.center = CGPointMake(CGRectGetMidX(errorHost.bounds), CGRectGetMidY(errorHost.bounds));
+            [errorHost addSubview:errorLabel];
         }
     }];
 }
@@ -131,4 +134,9 @@
         [categorySelected setCategoryName:cell.categoryLabel.text];
     }
 }
+
+- (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation {
+    return VeterisShouldAutorotateToInterfaceOrientation(interfaceOrientation);
+}
+
 @end

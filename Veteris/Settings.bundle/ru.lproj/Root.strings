@@ -105,3 +105,17 @@ Midnight = "Полночь";
 "iOS 7" = "iOS 7";
 "iOS 26" = "iOS 26";
 "UIButton" = "UIButton";
+
+"Advanced" = "Дополнительно";
+"Server Flags" = "Server Flags";
+"Flags" = "Flags";
+"Icons While Scrolling" = "Иконки при прокрутке";
+"Icon Requests While Scrolling" = "Запросы иконок при прокрутке";
+"On" = "Вкл.";
+"Off" = "Выкл.";
+"Status" = "Состояние";
+"Source" = "Источник";
+"Server" = "Сервер";
+"Defaults" = "По умолчанию";
+"Last Updated" = "Последнее обновление";
+"The Veteris server can turn some features on or off. Here you can see which ones are currently active and when Veteris last checked. Veteris checks each time it opens or returns to the foreground." = "Сервер Veteris может включать и выключать некоторые функции. Здесь видно, какие из них сейчас активны и когда они проверялись в последний раз. Проверка выполняется при каждом открытии Veteris и возврате на передний план.";

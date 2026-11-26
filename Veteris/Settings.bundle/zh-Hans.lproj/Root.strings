@@ -106,3 +106,17 @@
 "iOS 7" = "iOS 7";
 "iOS 26" = "iOS 26";
 "UIButton" = "UIButton";
+
+"Advanced" = "高级";
+"Server Flags" = "Server Flags";
+"Flags" = "Flags";
+"Icons While Scrolling" = "滚动时加载图标";
+"Icon Requests While Scrolling" = "滚动时的图标请求数";
+"On" = "开";
+"Off" = "关";
+"Status" = "状态";
+"Source" = "来源";
+"Server" = "服务器";
+"Defaults" = "默认值";
+"Last Updated" = "上次更新";
+"The Veteris server can turn some features on or off. Here you can see which ones are currently active and when Veteris last checked. Veteris checks each time it opens or returns to the foreground." = "Veteris 服务器可以开启或关闭某些功能。你可以在这里查看当前启用了哪些功能，以及 Veteris 上次检查的时间。每次打开 Veteris 或返回前台时都会检查。";

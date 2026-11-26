@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>PreferenceSpecifiers</key>
+    <array>
+        <dict>
+            <key>Type</key>
+            <string>PSGroupSpecifier</string>
+            <key>Title</key>
+            <string>Flags</string>
+        </dict>
+        <dict>
+            <key>Type</key>
+            <string>PSTitleValueSpecifier</string>
+            <key>Title</key>
+            <string>Icons While Scrolling</string>
+            <key>Key</key>
+            <string>client_config_list_icons_while_scrolling</string>
+            <key>DefaultValue</key>
+            <true/>
+            <key>Titles</key>
+            <array>
+                <string>On</string>
+                <string>Off</string>
+            </array>
+            <key>Values</key>
+            <array>
+                <true/>
+                <false/>
+            </array>
+        </dict>
+        <dict>
+            <key>Type</key>
+            <string>PSTitleValueSpecifier</string>
+            <key>Title</key>
+            <string>Icon Requests While Scrolling</string>
+            <key>Key</key>
+            <string>client_config_list_icon_scroll_limit</string>
+            <key>DefaultValue</key>
+            <integer>4</integer>
+        </dict>
+        <dict>
+            <key>Type</key>
+            <string>PSGroupSpecifier</string>
+            <key>Title</key>
+            <string>Status</string>
+            <key>FooterText</key>
+            <string>The Veteris server can turn some features on or off. Here you can see which ones are currently active and when Veteris last checked. Veteris checks each time it opens or returns to the foreground.</string>
+        </dict>
+        <dict>
+            <key>Type</key>
+            <string>PSTitleValueSpecifier</string>
+            <key>Title</key>
+            <string>Source</string>
+            <key>Key</key>
+            <string>client_config_source</string>
+            <key>DefaultValue</key>
+            <string>defaults</string>
+            <key>Titles</key>
+            <array>
+                <string>Server</string>
+                <string>Defaults</string>
+            </array>
+            <key>Values</key>
+            <array>
+                <string>server</string>
+                <string>defaults</string>
+            </array>
+        </dict>
+        <dict>
+            <key>Type</key>
+            <string>PSTitleValueSpecifier</string>
+            <key>Title</key>
+            <string>Last Updated</string>
+            <key>Key</key>
+            <string>client_config_updated_text</string>
+            <key>DefaultValue</key>
+            <string>–</string>
+        </dict>
+    </array>
+    <key>StringsTable</key>
+    <string>Root</string>
+</dict>
+</plist>

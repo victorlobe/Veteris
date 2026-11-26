@@ -1,7 +1,15 @@
 #import <Foundation/Foundation.h>
+#import <UIKit/UIKit.h>
 #import "NSString+Ext.h"
 #import "UIWindow+Ext.h"
 #import "UIColor+Ext.h"
+
+static inline BOOL VeterisShouldAutorotateToInterfaceOrientation(UIInterfaceOrientation orientation) {
+    if (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad) {
+        return YES;
+    }
+    return orientation == UIInterfaceOrientationPortrait;
+}
 
 typedef NS_ENUM(NSInteger, VeterisAppCellSubtitleArea) {
     VeterisAppCellSubtitleAreaList = 0,

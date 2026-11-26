@@ -127,6 +127,21 @@ static UIView *AppInfoActionSheetPresentationView(UIView *fallbackView) {
     return fallbackView.window ?: fallbackView;
 }
 
+static void AppInfoShowActionSheet(UIActionSheet *actionSheet, UIView *fallbackView, id anchor) {
+    if (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad) {
+        if ([anchor isKindOfClass:[UIBarButtonItem class]]) {
+            [actionSheet showFromBarButtonItem:(UIBarButtonItem *)anchor animated:YES];
+            return;
+        }
+        if ([anchor isKindOfClass:[UIView class]] && ((UIView *)anchor).window != nil) {
+            UIView *anchorView = (UIView *)anchor;
+            [actionSheet showFromRect:anchorView.bounds inView:anchorView animated:YES];
+            return;
+        }
+    }
+    [actionSheet showInView:AppInfoActionSheetPresentationView(fallbackView)];
+}
+
 static NSString *AppInfoURLEscape(NSString *value) {
     if (value == nil) {
         return @"";
@@ -988,20 +1003,57 @@ static BOOL AppInfoUsesRetinaScreenshots(void) {
     return [[UIScreen mainScreen] scale] > 1.0 && [VeterisMemoryProfile activeLevel] == VeterisMemoryLevelNormal;
 }
 
-static void AppInfoLoadScreenshot(ApplicationScreenshot *screenshot, BOOL retina, void (^completion)(UIImage *image)) {
+static UIImage *AppInfoDecodedScreenshotImage(NSData *data, CGSize maxPointSize, CGFloat scale) {
+    UIImage *source = [UIImage imageWithData:data];
+    CGImageRef sourceImage = source.CGImage;
+    if (sourceImage == NULL) {
+        return source;
+    }
+    CGFloat pixelWidth = (CGFloat)CGImageGetWidth(sourceImage);
+    CGFloat pixelHeight = (CGFloat)CGImageGetHeight(sourceImage);
+    if (pixelWidth <= 0.0 || pixelHeight <= 0.0 || scale <= 0.0) {
+        return source;
+    }
+    CGFloat ratio = MIN(1.0, MIN((maxPointSize.width * scale) / pixelWidth, (maxPointSize.height * scale) / pixelHeight));
+    size_t width = (size_t)MAX(1.0, round(pixelWidth * ratio));
+    size_t height = (size_t)MAX(1.0, round(pixelHeight * ratio));
+
+    CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
+    CGContextRef context = CGBitmapContextCreate(NULL, width, height, 8, 0, colorSpace,
+                                                 kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little);
+    CGColorSpaceRelease(colorSpace);
+    if (context == NULL) {
+        return source;
+    }
+    CGContextSetInterpolationQuality(context, kCGInterpolationHigh);
+    CGContextDrawImage(context, CGRectMake(0.0, 0.0, (CGFloat)width, (CGFloat)height), sourceImage);
+    CGImageRef decodedImage = CGBitmapContextCreateImage(context);
+    CGContextRelease(context);
+    if (decodedImage == NULL) {
+        return source;
+    }
+    UIImage *result = [UIImage imageWithCGImage:decodedImage scale:scale orientation:UIImageOrientationUp];
+    CGImageRelease(decodedImage);
+    return result;
+}
+
+static void AppInfoLoadScreenshot(ApplicationScreenshot *screenshot, BOOL retina, CGSize maxPointSize, void (^completion)(UIImage *image)) {
     NSString *path = (retina && [screenshot.retinaURL length] > 0) ? screenshot.retinaURL : screenshot.url;
     NSString *fallbackPath = [path isEqualToString:screenshot.url] ? nil : screenshot.url;
     if ([path length] == 0) {
         return;
     }
+    CGFloat scale = [[UIScreen mainScreen] scale];
     [VAPISS getStatic:path fallbackPath:fallbackPath completion:^(NSData *data, NSError *error) {
         if (error != nil || data == nil) {
             debugLog(@"Failed to fetch screenshot %@", path);
             return;
         }
-        UIImage *image = [UIImage imageWithData:data];
-        dispatch_async(dispatch_get_main_queue(), ^{
-            completion(image);
+        dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+            UIImage *image = AppInfoDecodedScreenshotImage(data, maxPointSize, scale);
+            dispatch_async(dispatch_get_main_queue(), ^{
+                completion(image);
+            });
         });
     }];
 }
@@ -1067,7 +1119,8 @@ static CGSize AppInfoScreenshotDisplaySize(CGSize pixelSize, CGFloat height, CGF
         [imageViews addObject:imageView];
 
         __weak UIImageView *weakImageView = imageView;
-        AppInfoLoadScreenshot([shownScreenshots objectAtIndex:index], retina, ^(UIImage *image) {
+        CGSize maxStripSize = CGSizeMake(100000.0, [AppInfoScreenshotStripView preferredHeight]);
+        AppInfoLoadScreenshot([shownScreenshots objectAtIndex:index], retina, maxStripSize, ^(UIImage *image) {
             AppInfoScreenshotStripView *strongSelf = weakSelf;
             // Ignore this response if the app has changed.
             if (strongSelf == nil || strongSelf->shownScreenshots != expectedScreenshots) {
@@ -1111,6 +1164,7 @@ static CGSize AppInfoScreenshotDisplaySize(CGSize pixelSize, CGFloat height, CGF
     NSUInteger startIndex;
     BOOL startIndexApplied;
     BOOL statusBarWasHidden;
+    CGFloat lastLayoutWidth;
     UIScrollView *pagerView;
     UIPageControl *pageControl;
     NSMutableArray *pageViews;
@@ -1145,6 +1199,9 @@ static CGSize AppInfoScreenshotDisplaySize(CGSize pixelSize, CGFloat height, CGF
     [view addSubview:pagerView];
 
     BOOL retina = AppInfoUsesRetinaScreenshots();
+    CGSize screenSize = [[UIScreen mainScreen] bounds].size;
+    CGFloat longSide = MAX(screenSize.width, screenSize.height);
+    CGSize maxViewerSize = CGSizeMake(longSide, longSide);
     for (ApplicationScreenshot *screenshot in viewerScreenshots) {
         UIImageView *imageView = [[UIImageView alloc] initWithFrame:CGRectZero];
         imageView.contentMode = UIViewContentModeScaleAspectFit;
@@ -1152,7 +1209,7 @@ static CGSize AppInfoScreenshotDisplaySize(CGSize pixelSize, CGFloat height, CGF
         [pagerView addSubview:imageView];
         [pageViews addObject:imageView];
         __weak UIImageView *weakImageView = imageView;
-        AppInfoLoadScreenshot(screenshot, retina, ^(UIImage *image) {
+        AppInfoLoadScreenshot(screenshot, retina, maxViewerSize, ^(UIImage *image) {
             weakImageView.image = image;
         });
     }
@@ -1195,7 +1252,10 @@ static CGSize AppInfoScreenshotDisplaySize(CGSize pixelSize, CGFloat height, CGF
     if (!startIndexApplied && size.width > 0.0) {
         pagerView.contentOffset = CGPointMake(size.width * startIndex, 0.0);
         startIndexApplied = YES;
+    } else if (size.width > 0.0 && size.width != lastLayoutWidth) {
+        pagerView.contentOffset = CGPointMake(size.width * pageControl.currentPage, 0.0);
     }
+    lastLayoutWidth = size.width;
     pageControl.frame = CGRectMake(0.0, self.view.bounds.size.height - 36.0, self.view.bounds.size.width, 36.0);
 }
 
@@ -1208,6 +1268,10 @@ static CGSize AppInfoScreenshotDisplaySize(CGSize pixelSize, CGFloat height, CGF
 
 - (void)close {
     [self dismissViewControllerAnimated:YES completion:nil];
+}
+
+- (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation {
+    return VeterisShouldAutorotateToInterfaceOrientation(interfaceOrientation);
 }
 
 @end
@@ -2887,7 +2951,7 @@ static CGSize AppInfoScreenshotDisplaySize(CGSize pixelSize, CGFloat height, CGF
     }];
 }
 
-- (void)showVersionActionSheetAtIndex:(NSInteger)versionIndex includeInfo:(BOOL)includeInfo {
+- (void)showVersionActionSheetAtIndex:(NSInteger)versionIndex includeInfo:(BOOL)includeInfo anchor:(id)anchor {
     if (versionIndex < 0 || versionIndex >= [app.versions count]) {
         return;
     }
@@ -2909,10 +2973,11 @@ static CGSize AppInfoScreenshotDisplaySize(CGSize pixelSize, CGFloat height, CGF
                                          otherButtonTitles:NSLocalizedString(@"Install", nil), NSLocalizedString(@"Download", nil), nil];
     }
     actionSheet.tag = AppInfoVersionCellActionSheetTag;
-    [actionSheet showInView:AppInfoActionSheetPresentationView(self.view)];
+    AppInfoShowActionSheet(actionSheet, self.view, anchor);
 }
 
 - (IBAction)getButtonPressed:(id)sender {
+    UIView *anchorView = [sender isKindOfClass:[UIView class]] ? (UIView *)sender : self.getButton;
     if (!initialized) {
         alert(NSLocalizedString(@"Oops", nil), NSLocalizedString(@"WaitForAppFinishLoading", nil), VAPIHelperErrorUnknown);
         return;
@@ -2936,7 +3001,7 @@ static CGSize AppInfoScreenshotDisplaySize(CGSize pixelSize, CGFloat height, CGF
             alert(@"Error", message, VAPIHelperErrorUnknown);
             return;
         }
-        [self showVersionActionSheetAtIndex:versionIndex includeInfo:NO];
+        [self showVersionActionSheetAtIndex:versionIndex includeInfo:NO anchor:anchorView];
         return;
     }
     // Set initialized here because if the button is pressed the view must be fully loaded
@@ -2948,7 +3013,7 @@ static CGSize AppInfoScreenshotDisplaySize(CGSize pixelSize, CGFloat height, CGF
     }
     [actionSheet addButtonWithTitle:NSLocalizedString(@"Cancel", nil)];
     [actionSheet setCancelButtonIndex:[app.versions count]];
-    [actionSheet showInView:AppInfoActionSheetPresentationView(self.view)];
+    AppInfoShowActionSheet(actionSheet, self.view, anchorView);
 
 }
 
@@ -2979,7 +3044,7 @@ static CGSize AppInfoScreenshotDisplaySize(CGSize pixelSize, CGFloat height, CGF
                                                destructiveButtonTitle:nil
                                                     otherButtonTitles:favoriteTitle, NSLocalizedString(@"CopyLink", nil), nil];
     actionSheet.tag = AppInfoActionsActionSheetTag;
-    [actionSheet showInView:AppInfoActionSheetPresentationView(self.view)];
+    AppInfoShowActionSheet(actionSheet, self.view, self.navigationItem.rightBarButtonItem);
 }
 
 - (void)copyCurrentApplicationLink {
@@ -3133,7 +3198,7 @@ static CGSize AppInfoScreenshotDisplaySize(CGSize pixelSize, CGFloat height, CGF
         return;
     }
 
-    if (buttonIndex == [app.versions count]) {
+    if (buttonIndex < 0 || buttonIndex >= (NSInteger)[app.versions count]) {
         [self resetInstallButtonIfNeeded];
         return;
     }
@@ -3206,6 +3271,11 @@ static CGSize AppInfoScreenshotDisplaySize(CGSize pixelSize, CGFloat height, CGF
         return;
     }
 
-    [self showVersionActionSheetAtIndex:indexPath.row includeInfo:YES];
+    [self showVersionActionSheetAtIndex:indexPath.row includeInfo:YES anchor:[tableView cellForRowAtIndexPath:indexPath]];
 }
+
+- (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation {
+    return VeterisShouldAutorotateToInterfaceOrientation(interfaceOrientation);
+}
+
 @end

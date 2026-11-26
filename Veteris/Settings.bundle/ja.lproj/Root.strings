@@ -106,3 +106,17 @@
 "iOS 7" = "iOS 7";
 "iOS 26" = "iOS 26";
 "UIButton" = "UIButton";
+
+"Advanced" = "詳細";
+"Server Flags" = "Server Flags";
+"Flags" = "Flags";
+"Icons While Scrolling" = "スクロール中のアイコン";
+"Icon Requests While Scrolling" = "スクロール中のアイコン要求数";
+"On" = "オン";
+"Off" = "オフ";
+"Status" = "状態";
+"Source" = "取得元";
+"Server" = "サーバー";
+"Defaults" = "デフォルト";
+"Last Updated" = "最終更新";
+"The Veteris server can turn some features on or off. Here you can see which ones are currently active and when Veteris last checked. Veteris checks each time it opens or returns to the foreground." = "Veterisのサーバーは一部の機能をオンまたはオフにできます。ここでは現在有効な機能と、Veterisが最後に確認した日時を確認できます。Veterisは起動するたびと、フォアグラウンドに戻るたびに確認します。";

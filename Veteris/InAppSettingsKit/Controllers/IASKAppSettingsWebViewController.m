@@ -56,7 +56,7 @@
 }
 
 - (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation {
-    return YES;
+    return VeterisShouldAutorotateToInterfaceOrientation(interfaceOrientation);
 }
 
 - (void)webViewDidFinishLoad:(UIWebView *)webView {

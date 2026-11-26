@@ -321,4 +321,8 @@ static NSArray *DownloadButtonSettingsStyles(void) {
     [tableView deselectRowAtIndexPath:indexPath animated:YES];
 }
 
+- (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation {
+    return VeterisShouldAutorotateToInterfaceOrientation(interfaceOrientation);
+}
+
 @end

@@ -105,3 +105,17 @@
 "iOS 7" = "iOS 7";
 "iOS 26" = "iOS 26";
 "UIButton" = "UIButton";
+
+"Advanced" = "Gelişmiş";
+"Server Flags" = "Server Flags";
+"Flags" = "Flags";
+"Icons While Scrolling" = "Kaydırırken Simgeler";
+"Icon Requests While Scrolling" = "Kaydırırken Simge İstekleri";
+"On" = "Açık";
+"Off" = "Kapalı";
+"Status" = "Durum";
+"Source" = "Kaynak";
+"Server" = "Sunucu";
+"Defaults" = "Varsayılanlar";
+"Last Updated" = "Son Güncelleme";
+"The Veteris server can turn some features on or off. Here you can see which ones are currently active and when Veteris last checked. Veteris checks each time it opens or returns to the foreground." = "Veteris sunucusu bazı özellikleri açıp kapatabilir. Burada hangilerinin şu anda etkin olduğunu ve Veteris'in en son ne zaman kontrol ettiğini görebilirsiniz. Veteris her açıldığında veya ön plana döndüğünde kontrol eder.";

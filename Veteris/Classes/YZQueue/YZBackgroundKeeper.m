@@ -6,9 +6,11 @@
 #import <UIKit/UIKit.h>
 
 static const NSTimeInterval kYZLaunchHoldTimeout = 60.0;
+static const NSTimeInterval kYZBackgroundTaskEndDelay = 3.0;
 
 @implementation YZBackgroundKeeper {
     UIBackgroundTaskIdentifier _backgroundTask;
+    NSUInteger _endTaskToken;
     BOOL _reportedActive;
     BOOL _helperKeepsAlive;
     BOOL _expiredInBackground;
@@ -75,7 +77,7 @@ static const NSTimeInterval kYZLaunchHoldTimeout = 60.0;
     if (hasWork) {
         [self beginBackgroundTaskIfNeeded];
     } else {
-        [self endBackgroundTask];
+        [self endBackgroundTaskAfterDelay];
     }
     if (hasWork == _reportedActive) {
         return;
@@ -122,6 +124,7 @@ static const NSTimeInterval kYZLaunchHoldTimeout = 60.0;
 #pragma mark - Background task
 
 - (void)beginBackgroundTaskIfNeeded {
+    _endTaskToken++;
     if (_backgroundTask != UIBackgroundTaskInvalid || _expiredInBackground) {
         return;
     }
@@ -134,7 +137,22 @@ static const NSTimeInterval kYZLaunchHoldTimeout = 60.0;
     }
 }
 
+
+
+- (void)endBackgroundTaskAfterDelay {
+    if (_backgroundTask == UIBackgroundTaskInvalid) {
+        return;
+    }
+    NSUInteger token = ++_endTaskToken;
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(kYZBackgroundTaskEndDelay * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        if (_endTaskToken == token && !_launchHold && ![YZQueueManager hasActiveWork]) {
+            [self endBackgroundTask];
+        }
+    });
+}
+
 - (void)endBackgroundTask {
+    _endTaskToken++;
     if (_backgroundTask == UIBackgroundTaskInvalid) {
         return;
     }

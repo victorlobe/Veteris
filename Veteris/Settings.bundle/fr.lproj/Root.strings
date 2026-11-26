@@ -106,3 +106,17 @@
 "iOS 7" = "iOS 7";
 "iOS 26" = "iOS 26";
 "UIButton" = "UIButton";
+
+"Advanced" = "Avancé";
+"Server Flags" = "Server Flags";
+"Flags" = "Flags";
+"Icons While Scrolling" = "Icônes pendant le défilement";
+"Icon Requests While Scrolling" = "Requêtes d’icônes pendant le défilement";
+"On" = "Oui";
+"Off" = "Non";
+"Status" = "État";
+"Source" = "Source";
+"Server" = "Serveur";
+"Defaults" = "Valeurs par défaut";
+"Last Updated" = "Dernière mise à jour";
+"The Veteris server can turn some features on or off. Here you can see which ones are currently active and when Veteris last checked. Veteris checks each time it opens or returns to the foreground." = "Le serveur de Veteris peut activer ou désactiver certaines fonctions. Vous voyez ici lesquelles sont actives et quand Veteris a vérifié pour la dernière fois. Veteris vérifie à chaque ouverture et à chaque retour au premier plan.";

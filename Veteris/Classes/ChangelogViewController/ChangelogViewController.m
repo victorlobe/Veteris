@@ -242,4 +242,8 @@ typedef enum {
     }
 }
 
+- (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation {
+    return VeterisShouldAutorotateToInterfaceOrientation(interfaceOrientation);
+}
+
 @end

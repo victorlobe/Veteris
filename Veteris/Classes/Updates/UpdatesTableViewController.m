@@ -11,6 +11,7 @@
 #import "VeterisUpdatesManager.h"
 #import "../../AppDelegate.h"
 #import "../AppInfo/AppInfo.h"
+#import "../AppInfo/VeterisAppInfoSegue.h"
 #import "../Convenience/Convenience.h"
 #import "../Protos/Application.h"
 #import "../AppListTableViewCell/AppListTableViewCell.h"
@@ -29,6 +30,7 @@ static NSString *UpdatesString(NSString *key, NSString *english) {
     NSArray *_availableUpdates;
     NSArray *_mutedUpdates;
     NSMutableSet *_loadingIconURLs;
+    NSMutableSet *_failedIconURLs;
     NSUInteger _iconLoadGeneration;
     BOOL _viewIsVisible;
     BOOL _installingAll;
@@ -44,6 +46,7 @@ static NSString *UpdatesString(NSString *key, NSString *english) {
     _availableUpdates = [NSArray array];
     _mutedUpdates = [NSArray array];
     _loadingIconURLs = [NSMutableSet set];
+    _failedIconURLs = [NSMutableSet set];
     self.navigationItem.title = UpdatesString(@"Updates", @"Updates");
     self.updateAllButton.title = UpdatesString(@"UpdateAll", @"Update All");
     self.tableView.separatorStyle = UITableViewCellSeparatorStyleNone;
@@ -83,6 +86,7 @@ static NSString *UpdatesString(NSString *key, NSString *english) {
     _viewIsVisible = NO;
     _iconLoadGeneration++;
     [_loadingIconURLs removeAllObjects];
+    [_failedIconURLs removeAllObjects];
 }
 
 - (void)updatesDidChange:(NSNotification *)notification {
@@ -119,7 +123,7 @@ static NSString *UpdatesString(NSString *key, NSString *english) {
     self.tableView.separatorStyle = hasRows ? UITableViewCellSeparatorStyleSingleLine : UITableViewCellSeparatorStyleNone;
     [self setBarButtonItem:self.updateAllButton enabled:(!_installingAll && [_availableUpdates count] > 0)];
     [self.tableView reloadData];
-    [self loadIconsForVisibleRowsIfIdle];
+    [self loadIconsForVisibleRows];
 }
 
 - (NSArray *)updatesInSection:(NSInteger)section {
@@ -182,7 +186,7 @@ static NSString *UpdatesString(NSString *key, NSString *english) {
     AppInfo *appinfo = [storyboard instantiateViewControllerWithIdentifier:@"AppInfoViewController"];
     [appinfo view];
     [appinfo initialize:update.bundleid developer:update.developer name:update.name image:update.icon ?: [VAPISS imageFromCache:update.iconurl]];
-    [self.navigationController pushViewController:appinfo animated:YES];
+    VeterisShowAppInfo(self, appinfo);
 }
 
 - (void)actionSheet:(UIActionSheet *)actionSheet clickedButtonAtIndex:(NSInteger)buttonIndex {
@@ -227,15 +231,40 @@ static NSString *UpdatesString(NSString *key, NSString *english) {
     }
 }
 
-- (void)loadIconsForVisibleRowsIfIdle {
-    if (!_viewIsVisible || self.tableView.dragging || self.tableView.decelerating) {
+- (void)loadIconsForVisibleRows {
+    if (!_viewIsVisible) {
         return;
     }
+    BOOL scrolling = self.tableView.dragging || self.tableView.decelerating;
+    if (scrolling && ![VAPIHelper loadsListIconsWhileScrolling]) {
+        return;
+    }
+    NSUInteger limit = scrolling ? [VAPIHelper listIconScrollRequestLimit] : NSUIntegerMax;
+    if (!scrolling) {
+        [_failedIconURLs removeAllObjects];
+    }
     for (NSIndexPath *indexPath in [self.tableView indexPathsForVisibleRows]) {
+        if ([_loadingIconURLs count] >= limit) {
+            break;
+        }
         Application *update = [self updateAtIndexPath:indexPath];
         if (update != nil) {
+            if (scrolling) {
+                AppListTableViewCell *cell = (AppListTableViewCell *)[self.tableView cellForRowAtIndexPath:indexPath];
+                if (cell.appUIImage.image != nil) {
+                    continue;
+                }
+            }
             [self loadIconForApp:update atIndexPath:indexPath];
         }
+    }
+}
+
+- (void)loadMoreIconsIfScrolling {
+    if (self.tableView.dragging || self.tableView.decelerating) {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [self loadIconsForVisibleRows];
+        });
     }
 }
 
@@ -244,7 +273,7 @@ static NSString *UpdatesString(NSString *key, NSString *english) {
         return;
     }
     NSString *iconKey = ([application.iconurl length] > 0) ? application.iconurl : application.fallback_iconurl;
-    if ([iconKey length] == 0 || [_loadingIconURLs containsObject:iconKey]) {
+    if ([iconKey length] == 0 || [_loadingIconURLs containsObject:iconKey] || [_failedIconURLs containsObject:iconKey]) {
         return;
     }
 
@@ -253,7 +282,14 @@ static NSString *UpdatesString(NSString *key, NSString *english) {
     [VAPISS getStatic:application.iconurl fallbackPath:application.fallback_iconurl completion:^(NSData *data, NSError *error) {
         dispatch_async(dispatch_get_main_queue(), ^{
             [_loadingIconURLs removeObject:iconKey];
-            if (!_viewIsVisible || generation != _iconLoadGeneration || error != nil) {
+            if (!_viewIsVisible || generation != _iconLoadGeneration) {
+                return;
+            }
+            if (error != nil) {
+                [_failedIconURLs addObject:iconKey];
+            }
+            [self loadMoreIconsIfScrolling];
+            if (error != nil) {
                 return;
             }
             UIImage *image = [UIImage imageWithData:data];
@@ -274,14 +310,20 @@ static NSString *UpdatesString(NSString *key, NSString *english) {
     }];
 }
 
+- (void)scrollViewDidScroll:(UIScrollView *)scrollView {
+    if (scrollView.dragging || scrollView.decelerating) {
+        [self loadIconsForVisibleRows];
+    }
+}
+
 - (void)scrollViewDidEndDragging:(UIScrollView *)scrollView willDecelerate:(BOOL)decelerate {
     if (!decelerate) {
-        [self loadIconsForVisibleRowsIfIdle];
+        [self loadIconsForVisibleRows];
     }
 }
 
 - (void)scrollViewDidEndDecelerating:(UIScrollView *)scrollView {
-    [self loadIconsForVisibleRowsIfIdle];
+    [self loadIconsForVisibleRows];
 }
 
 #pragma mark - Table view
@@ -341,6 +383,10 @@ static NSString *UpdatesString(NSString *key, NSString *english) {
     _muteButtonIndex = [actionSheet addButtonWithTitle:muted ? UpdatesString(@"UnmuteUpdates", @"Unmute Updates") : UpdatesString(@"MuteUpdates", @"Mute Updates")];
     actionSheet.cancelButtonIndex = [actionSheet addButtonWithTitle:NSLocalizedString(@"Cancel", nil)];
     [actionSheet showInView:self.view.window ?: self.view];
+}
+
+- (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation {
+    return VeterisShouldAutorotateToInterfaceOrientation(interfaceOrientation);
 }
 
 @end

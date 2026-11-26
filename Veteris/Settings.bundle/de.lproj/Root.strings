@@ -102,3 +102,17 @@ Autumn = "Herbst";
 "Button Style" = "Tastenstil";
 "iOS 26" = "iOS 26";
 "UIButton" = "UIButton";
+
+"Advanced" = "Erweitert";
+"Server Flags" = "Server Flags";
+"Flags" = "Flags";
+"Icons While Scrolling" = "Icons beim Scrollen";
+"Icon Requests While Scrolling" = "Iconanfragen beim Scrollen";
+"On" = "Ein";
+"Off" = "Aus";
+"Status" = "Status";
+"Source" = "Quelle";
+"Server" = "Server";
+"Defaults" = "Standardwerte";
+"Last Updated" = "Zuletzt aktualisiert";
+"The Veteris server can turn some features on or off. Here you can see which ones are currently active and when Veteris last checked. Veteris checks each time it opens or returns to the foreground." = "Der Server von Veteris kann einige Funktionen aktivieren oder deaktivieren. Hier siehst du, welche gerade aktiv sind und wann Veteris zuletzt nachgesehen hat. Veteris prüft das bei jedem Öffnen und jedes Mal, wenn die App wieder in den Vordergrund kommt.";

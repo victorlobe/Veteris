@@ -45,18 +45,11 @@
 - (UIImage *)imageFromCache:(NSString *)url;
 - (void)clearMemoryCaches;
 + (void)checkForRemoteAlert;
++ (void)refreshClientConfig;
++ (BOOL)loadsListIconsWhileScrolling;
++ (NSUInteger)listIconScrollRequestLimit;
 + (NSDictionary *)getHeaders;
 + (void)trackDownloadStartForApplication:(YZApplication *)application url:(NSString *)url downloadOnly:(BOOL)downloadOnly;
-+ (void)trackDownloadEvent:(NSString *)event
-                  bundleID:(NSString *)bundleID
-                   appName:(NSString *)appName
-                 developer:(NSString *)developer
-                   version:(NSString *)version
-                    minIOS:(NSString *)minIOS
-                       url:(NSString *)url
-                 sizeBytes:(unsigned long long)sizeBytes
-              downloadOnly:(BOOL)downloadOnly
-               extraFields:(NSDictionary *)extraFields;
 + (void)showWhatsNewIfNeeded;
 @property (strong, nonatomic) NSString *VAPIDeviceString;
 @end

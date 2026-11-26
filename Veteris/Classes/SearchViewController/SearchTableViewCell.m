@@ -100,12 +100,17 @@
 - (void)layoutSubviews {
     [super layoutSubviews];
 
-    self.backgroundImageView.frame = CGRectMake(0.0, 0.0, 320.0, 78.0);
+    static const CGFloat designContentWidth = 300.0;
+    static const CGFloat designTextWidth = 184.0;
+    static const CGFloat designTextRightMargin = 38.0;
+    CGFloat delta = CGRectGetWidth(self.contentView.bounds) - designContentWidth;
+    CGFloat textWidth = MAX(0.0, designTextWidth + delta * designTextWidth / (designTextWidth + designTextRightMargin));
+    self.backgroundImageView.frame = CGRectMake(0.0, 0.0, MAX(0.0, 320.0 + delta), 78.0);
     self.appUIImage.frame = CGRectMake(8.0, 8.0, 62.0, 62.0);
-    self.developerNameLabel.frame = CGRectMake(78.0, 8.0, 184.0, 12.0);
-    self.versionLabel.frame = CGRectMake(78.0, 58.0, 184.0, 12.0);
-    self.getLabel.frame = CGRectMake(270.0, 29.0, 30.0, 19.0);
-    self.appNameLabel.frame = CGRectMake(78.0, 18.0, 184.0, 42.0);
+    self.developerNameLabel.frame = CGRectMake(78.0, 8.0, textWidth, 12.0);
+    self.versionLabel.frame = CGRectMake(78.0, 58.0, textWidth, 12.0);
+    self.getLabel.frame = CGRectMake(270.0 + delta, 29.0, 30.0, 19.0);
+    self.appNameLabel.frame = CGRectMake(78.0, 18.0, textWidth, 42.0);
     self.activityIndicator.frame = CGRectMake(21.0, 20.0, 37.0, 37.0);
 }
 

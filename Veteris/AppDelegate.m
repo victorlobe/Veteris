@@ -28,6 +28,25 @@
 #import "Classes/Updates/VeterisUpdatesManager.h"
 #import "Classes/AppsTableViewController/AppsTableViewController.h"
 #import "Classes/AppInfo/AppInfo.h"
+#import "Classes/AppInfo/VeterisAppInfoSegue.h"
+#import <objc/runtime.h>
+#import <objc/message.h>
+
+static BOOL VeterisSetTabBarMaxItems(UITabBarController *tabBarController, unsigned int maxItems) {
+    SEL selector = NSSelectorFromString(@"_setMaximumNumberOfItems:");
+    Method method = class_getInstanceMethod([UITabBarController class], selector);
+    if (tabBarController == nil || method == NULL || method_getNumberOfArguments(method) != 3) {
+        return NO;
+    }
+    char argumentType[16] = {0};
+    method_getArgumentType(method, 2, argumentType, sizeof(argumentType));
+    if (strcmp(argumentType, @encode(unsigned int)) != 0) {
+        return NO;
+    }
+    ((void (*)(id, SEL, unsigned int))objc_msgSend)(tabBarController, selector, maxItems);
+    [tabBarController setViewControllers:@[]];
+    return YES;
+}
 
 static NSString *VeterisLastHandledURLString = nil;
 static NSTimeInterval VeterisLastHandledURLTime = 0.0;
@@ -392,6 +411,9 @@ static UIImage *VeterisTintedImage(UIImage *image, UIColor *color) {
         savedTabOrder = nil;
     }
     viewControllers = [NSMutableArray arrayWithArray:[self viewControllers:viewControllers orderedBySavedTabOrder:savedTabOrder]];
+    if (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad) {
+        VeterisSetTabBarMaxItems((UITabBarController *)self.window.rootViewController, 5);
+    }
     [((UITabBarController *)self.window.rootViewController) setViewControllers:viewControllers];
     [((UITabBarController *)self.window.rootViewController) setCustomizableViewControllers:viewControllers];
     ((UITabBarController *)self.window.rootViewController).delegate = self;
@@ -414,7 +436,7 @@ static UIImage *VeterisTintedImage(UIImage *image, UIColor *color) {
     // UI Changes
     UIImage *backgroundImage = [UIImage imageNamed:@"UITabBarBG"];
     [[UITabBar appearance] setBackgroundImage:backgroundImage];
-    [UINavigationBar.appearance setBackgroundImage:[UIImage imageNamed:@"UITitleBarBG"] forBarMetrics:UIBarMetricsDefault];
+    [UINavigationBar.appearance setBackgroundImage:[ThemeManager defaultNavigationBarBackgroundImage] forBarMetrics:UIBarMetricsDefault];
     [((UITabBarController *)self.window.rootViewController) moreNavigationController].delegate = self;
     [themeManager applyTintToTabBars];
     [themeManager applyTintToNavigationBars];
@@ -562,7 +584,7 @@ void myExceptionHandler(NSException *exception)
     AppInfo *appinfo = [storyboard instantiateViewControllerWithIdentifier:@"AppInfoViewController"];
     [appinfo view];
     [appinfo initialize:bundleID];
-    [navigationController pushViewController:appinfo animated:YES];
+    VeterisShowAppInfo(navigationController, appinfo);
     return YES;
 }
 
@@ -652,6 +674,7 @@ void myExceptionHandler(NSException *exception)
     // [VAPIHelper checkForUpdates];
     [AppInfo refreshInstalledApplicationCache];
     [VAPIHelper checkForRemoteAlert];
+    [VAPIHelper refreshClientConfig];
 }
 
 -(void)emptySandbox {

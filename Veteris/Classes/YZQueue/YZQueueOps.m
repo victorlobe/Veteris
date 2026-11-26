@@ -486,65 +486,21 @@ static void YZReleaseTargetPath(NSString *path) {
 
 @end
 
-static NSString *YZStringFromUnsignedLongLong(unsigned long long value) {
-    return [NSString stringWithFormat:@"%llu", value];
-}
-
-static NSString *YZStringFromDouble(double value) {
-    return [NSString stringWithFormat:@"%.2f", value];
-}
-
-static void YZSetTelemetryField(NSMutableDictionary *fields, NSString *key, id value) {
-    if ([key length] == 0 || value == nil) {
-        return;
-    }
-    NSString *stringValue = [value description];
-    if ([stringValue length] > 0) {
-        [fields setObject:stringValue forKey:key];
-    }
-}
-
-static void YZTrackDownloadTelemetry(YZQueueRep *parent,
-                                     NSString *event,
-                                     NSString *originalURL,
-                                     NSString *candidateURL,
-                                     NSString *finalURL,
-                                     NSString *downloader,
-                                     NSUInteger attempt,
-                                     NSUInteger httpStatus,
-                                     unsigned long long currentBytes,
-                                     unsigned long long totalBytes,
-                                     NSTimeInterval elapsed,
-                                     unsigned long long intervalBytesPerSecond,
-                                     unsigned long long averageBytesPerSecond,
-                                     NSDictionary *headers,
-                                     NSError *error) {
-    NSMutableDictionary *fields = [NSMutableDictionary dictionary];
-    YZSetTelemetryField(fields, @"candidate_url", candidateURL);
-    YZSetTelemetryField(fields, @"final_url", finalURL);
-    YZSetTelemetryField(fields, @"downloader", downloader);
-    YZSetTelemetryField(fields, @"attempt", [NSString stringWithFormat:@"%lu", (unsigned long)(attempt + 1)]);
-    YZSetTelemetryField(fields, @"attempts", [NSString stringWithFormat:@"%lu", (unsigned long)kMaxDownloadAttempts]);
-    YZSetTelemetryField(fields, @"http_status", [NSString stringWithFormat:@"%lu", (unsigned long)httpStatus]);
-    YZSetTelemetryField(fields, @"current_bytes", YZStringFromUnsignedLongLong(currentBytes));
-    YZSetTelemetryField(fields, @"total_bytes", YZStringFromUnsignedLongLong(totalBytes));
-    YZSetTelemetryField(fields, @"elapsed_seconds", YZStringFromDouble(elapsed));
-    YZSetTelemetryField(fields, @"interval_bps", YZStringFromUnsignedLongLong(intervalBytesPerSecond));
-    YZSetTelemetryField(fields, @"average_bps", YZStringFromUnsignedLongLong(averageBytesPerSecond));
-    YZSetTelemetryField(fields, @"content_length", YZHeaderValue(headers, @"Content-Length"));
-    YZSetTelemetryField(fields, @"content_range", YZHeaderValue(headers, @"Content-Range"));
-    YZSetTelemetryField(fields, @"location", YZHeaderValue(headers, @"Location"));
-    YZSetTelemetryField(fields, @"error", [error localizedDescription]);
-    [VAPIHelper trackDownloadEvent:event
-                          bundleID:parent.bundleID
-                           appName:parent.name
-                         developer:parent.developer
-                           version:parent.version
-                            minIOS:parent.minimumOS
-                               url:originalURL
-                         sizeBytes:totalBytes
-                      downloadOnly:!parent.installAfterDownload
-                       extraFields:fields];
+static void YZLogDownloadTelemetry(YZQueueRep *parent,
+                                   NSString *event,
+                                   NSString *originalURL,
+                                   NSString *candidateURL,
+                                   NSString *finalURL,
+                                   NSString *downloader,
+                                   NSUInteger attempt,
+                                   NSUInteger httpStatus,
+                                   unsigned long long currentBytes,
+                                   unsigned long long totalBytes,
+                                   NSTimeInterval elapsed,
+                                   unsigned long long intervalBytesPerSecond,
+                                   unsigned long long averageBytesPerSecond,
+                                   NSDictionary *headers,
+                                   NSError *error) {
     YZDownloadLog(@"telemetry event=%@ downloader=%@ bundle=%@ version=%@ attempt=%lu/%lu status=%lu current=%llu total=%llu elapsed=%.2fs intervalBps=%llu avgBps=%llu original=%@ candidate=%@ final=%@ contentLength=%@ contentRange=%@ location=%@ error=%@",
                   event,
                   downloader,
@@ -736,21 +692,21 @@ static void YZTrackDownloadTelemetry(YZQueueRep *parent,
             NSTimeInterval elapsed = MAX(0.001, now - telemetryStartedAt);
             unsigned long long intervalBytes = current >= telemetryLastBytes ? current - telemetryLastBytes : 0;
             unsigned long long downloadedBytes = current >= resumeOffset ? current - resumeOffset : 0;
-            YZTrackDownloadTelemetry(parent,
-                                     @"download_progress_sample",
-                                     originalURL,
-                                     urlString,
-                                     nil,
-                                     @"archive_tls",
-                                     attempt,
-                                     0,
-                                     current,
-                                     total,
-                                     elapsed,
-                                     (unsigned long long)((double)intervalBytes / interval),
-                                     (unsigned long long)((double)downloadedBytes / elapsed),
-                                     nil,
-                                     nil);
+            YZLogDownloadTelemetry(parent,
+                                   @"download_progress_sample",
+                                   originalURL,
+                                   urlString,
+                                   nil,
+                                   @"archive_tls",
+                                   attempt,
+                                   0,
+                                   current,
+                                   total,
+                                   elapsed,
+                                   (unsigned long long)((double)intervalBytes / interval),
+                                   (unsigned long long)((double)downloadedBytes / elapsed),
+                                   nil,
+                                   nil);
             telemetryLastSampleAt = now;
             telemetryLastBytes = current;
         }
@@ -777,41 +733,41 @@ static void YZTrackDownloadTelemetry(YZQueueRep *parent,
         unsigned long long currentSize = YZFileSizeAtPath(filePath);
         unsigned long long downloadedBytes = currentSize >= resumeOffset ? currentSize - resumeOffset : 0;
 
-        YZTrackDownloadTelemetry(parent,
-                                 @"download_response",
-                                 originalURL,
-                                 urlString,
-                                 result.finalURL,
-                                 @"archive_tls",
-                                 attempt,
-                                 httpStatus,
-                                 currentSize,
-                                 expectedTotal,
-                                 elapsed,
-                                 0,
-                                 (unsigned long long)((double)downloadedBytes / elapsed),
-                                 result.headers,
-                                 result.error);
+        YZLogDownloadTelemetry(parent,
+                               @"download_response",
+                               originalURL,
+                               urlString,
+                               result.finalURL,
+                               @"archive_tls",
+                               attempt,
+                               httpStatus,
+                               currentSize,
+                               expectedTotal,
+                               elapsed,
+                               0,
+                               (unsigned long long)((double)downloadedBytes / elapsed),
+                               result.headers,
+                               result.error);
 
         if (httpStatus == 416 && result.error == nil && YZStoredFileIsComplete(filePath, result.headers)) {
             YZDownloadLog(@"tls success %@ existing file complete status=416", filePath);
             YZFinishSuccessfulDownload(parent, filePath);
         } else if (validIPA) {
-            YZTrackDownloadTelemetry(parent,
-                                     @"download_complete",
-                                     originalURL,
-                                     urlString,
-                                     result.finalURL,
-                                     @"archive_tls",
-                                     attempt,
-                                     httpStatus,
-                                     currentSize,
-                                     expectedTotal,
-                                     elapsed,
-                                     0,
-                                     (unsigned long long)((double)downloadedBytes / elapsed),
-                                     result.headers,
-                                     result.error);
+            YZLogDownloadTelemetry(parent,
+                                   @"download_complete",
+                                   originalURL,
+                                   urlString,
+                                   result.finalURL,
+                                   @"archive_tls",
+                                   attempt,
+                                   httpStatus,
+                                   currentSize,
+                                   expectedTotal,
+                                   elapsed,
+                                   0,
+                                   (unsigned long long)((double)downloadedBytes / elapsed),
+                                   result.headers,
+                                   result.error);
             YZDownloadLog(@"tls success %@ status=%lu size=%llu expected=%llu finalURL=%@",
                           filePath,
                           (unsigned long)httpStatus,
@@ -844,47 +800,22 @@ static void YZTrackDownloadTelemetry(YZQueueRep *parent,
                     [self downloadFileWithArchiveTLS:originalURL candidates:candidates targetPath:filePath parent:parent generation:generation attempt:nextAttempt];
                 }];
             } else {
-                YZTrackDownloadTelemetry(parent,
-                                         @"download_failure",
-                                         originalURL,
-                                         urlString,
-                                         result.finalURL,
-                                         @"archive_tls",
-                                         attempt,
-                                         httpStatus,
-                                         currentSize,
-                                         expectedTotal,
-                                         elapsed,
-                                         0,
-                                         (unsigned long long)((double)downloadedBytes / elapsed),
-                                         result.headers,
-                                         result.error);
+                YZLogDownloadTelemetry(parent,
+                                       @"download_failure",
+                                       originalURL,
+                                       urlString,
+                                       result.finalURL,
+                                       @"archive_tls",
+                                       attempt,
+                                       httpStatus,
+                                       currentSize,
+                                       expectedTotal,
+                                       elapsed,
+                                       0,
+                                       (unsigned long long)((double)downloadedBytes / elapsed),
+                                       result.headers,
+                                       result.error);
                 YZDownloadLog(@"tls final failure %@ after %lu attempts; falling back to BBHTTP", filePath, (unsigned long)kMaxDownloadAttempts);
-                NSMutableDictionary *analyticsFields = [NSMutableDictionary dictionaryWithObjectsAndKeys:
-                                                         [NSString stringWithFormat:@"%lu", (unsigned long)kMaxDownloadAttempts], @"attempts",
-                                                         [NSString stringWithFormat:@"%lu", (unsigned long)httpStatus], @"http_status",
-                                                         @"archive_tls", @"fallback_from",
-                                                         @"bbhttp", @"fallback_to",
-                                                         nil];
-                if ([urlString length] > 0) {
-                    [analyticsFields setObject:urlString forKey:@"attempt_url"];
-                }
-                if ([result.finalURL length] > 0) {
-                    [analyticsFields setObject:result.finalURL forKey:@"final_url"];
-                }
-                if ([[result.error localizedDescription] length] > 0) {
-                    [analyticsFields setObject:[result.error localizedDescription] forKey:@"error"];
-                }
-                [VAPIHelper trackDownloadEvent:@"download_tls_fallback"
-                                      bundleID:parent.bundleID
-                                       appName:parent.name
-                                     developer:parent.developer
-                                       version:parent.version
-                                        minIOS:parent.minimumOS
-                                           url:originalURL
-                                     sizeBytes:0
-                                  downloadOnly:!parent.installAfterDownload
-                                   extraFields:analyticsFields];
                 [self scheduleAttemptForParent:parent generation:generation targetPath:filePath delay:0.0 attempt:^{
                     [self downloadFileViaBBHTTP:originalURL candidates:candidates targetPath:filePath parent:parent generation:generation attempt:0];
                 }];
@@ -957,21 +888,21 @@ static void YZTrackDownloadTelemetry(YZQueueRep *parent,
         }
         expectedTotal = YZTotalBytesFromHeaders(headers, statusCode, progressBase);
         NSTimeInterval now = [NSDate timeIntervalSinceReferenceDate];
-        YZTrackDownloadTelemetry(parent,
-                                 @"download_response",
-                                 originalURL,
-                                 urlString,
-                                 nil,
-                                 @"bbhttp",
-                                 attempt,
-                                 statusCode,
-                                 progressBase,
-                                 expectedTotal,
-                                 MAX(0.001, now - telemetryStartedAt),
-                                 0,
-                                 0,
-                                 headers,
-                                 nil);
+        YZLogDownloadTelemetry(parent,
+                               @"download_response",
+                               originalURL,
+                               urlString,
+                               nil,
+                               @"bbhttp",
+                               attempt,
+                               statusCode,
+                               progressBase,
+                               expectedTotal,
+                               MAX(0.001, now - telemetryStartedAt),
+                               0,
+                               0,
+                               headers,
+                               nil);
         YZDownloadLog(@"response %@ status=%lu contentLength=%@ contentRange=%@ expectedTotal=%llu",
                       filePath,
                       (unsigned long)statusCode,
@@ -1000,21 +931,21 @@ static void YZTrackDownloadTelemetry(YZQueueRep *parent,
             NSTimeInterval elapsed = MAX(0.001, now - telemetryStartedAt);
             unsigned long long intervalBytes = fullCurrent >= telemetryLastBytes ? fullCurrent - telemetryLastBytes : 0;
             unsigned long long downloadedBytes = fullCurrent >= resumeOffset ? fullCurrent - resumeOffset : 0;
-            YZTrackDownloadTelemetry(parent,
-                                     @"download_progress_sample",
-                                     originalURL,
-                                     urlString,
-                                     nil,
-                                     @"bbhttp",
-                                     attempt,
-                                     responseStatus,
-                                     fullCurrent,
-                                     fullTotal,
-                                     elapsed,
-                                     (unsigned long long)((double)intervalBytes / interval),
-                                     (unsigned long long)((double)downloadedBytes / elapsed),
-                                     nil,
-                                     nil);
+            YZLogDownloadTelemetry(parent,
+                                   @"download_progress_sample",
+                                   originalURL,
+                                   urlString,
+                                   nil,
+                                   @"bbhttp",
+                                   attempt,
+                                   responseStatus,
+                                   fullCurrent,
+                                   fullTotal,
+                                   elapsed,
+                                   (unsigned long long)((double)intervalBytes / interval),
+                                   (unsigned long long)((double)downloadedBytes / elapsed),
+                                   nil,
+                                   nil);
             telemetryLastSampleAt = now;
             telemetryLastBytes = fullCurrent;
         }
@@ -1085,21 +1016,21 @@ static void YZTrackDownloadTelemetry(YZQueueRep *parent,
             YZDownloadLog(@"success %@ existing file complete status=416", filePath);
             YZFinishSuccessfulDownload(parent, filePath);
         } else if (validIPA) {
-            YZTrackDownloadTelemetry(parent,
-                                     @"download_complete",
-                                     originalURL,
-                                     urlString,
-                                     request.effectiveURL,
-                                     @"bbhttp",
-                                     attempt,
-                                     httpStatus,
-                                     currentSize,
-                                     expectedTotal,
-                                     elapsed,
-                                     0,
-                                     (unsigned long long)((double)downloadedBytes / elapsed),
-                                     headers,
-                                     request.error);
+            YZLogDownloadTelemetry(parent,
+                                   @"download_complete",
+                                   originalURL,
+                                   urlString,
+                                   request.effectiveURL,
+                                   @"bbhttp",
+                                   attempt,
+                                   httpStatus,
+                                   currentSize,
+                                   expectedTotal,
+                                   elapsed,
+                                   0,
+                                   (unsigned long long)((double)downloadedBytes / elapsed),
+                                   headers,
+                                   request.error);
             YZDownloadLog(@"success %@ status=%lu url=%@", filePath, (unsigned long)httpStatus, urlString);
             YZFinishSuccessfulDownload(parent, filePath);
         } else {
@@ -1125,21 +1056,21 @@ static void YZTrackDownloadTelemetry(YZQueueRep *parent,
                     [self downloadFileViaBBHTTP:originalURL candidates:candidates targetPath:filePath parent:parent generation:generation attempt:nextAttempt];
                 }];
             } else {
-                YZTrackDownloadTelemetry(parent,
-                                         @"download_failure",
-                                         originalURL,
-                                         urlString,
-                                         request.effectiveURL,
-                                         @"bbhttp",
-                                         attempt,
-                                         httpStatus,
-                                         currentSize,
-                                         expectedTotal,
-                                         elapsed,
-                                         0,
-                                         (unsigned long long)((double)downloadedBytes / elapsed),
-                                         headers,
-                                         request.error);
+                YZLogDownloadTelemetry(parent,
+                                       @"download_failure",
+                                       originalURL,
+                                       urlString,
+                                       request.effectiveURL,
+                                       @"bbhttp",
+                                       attempt,
+                                       httpStatus,
+                                       currentSize,
+                                       expectedTotal,
+                                       elapsed,
+                                       0,
+                                       (unsigned long long)((double)downloadedBytes / elapsed),
+                                       headers,
+                                       request.error);
                 YZDownloadLog(@"final failure %@ after %lu attempts", filePath, (unsigned long)kMaxDownloadAttempts);
                 if (discard) {
                     [self performWhenTargetPathIdle:filePath block:^{

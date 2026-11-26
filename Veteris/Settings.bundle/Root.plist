@@ -311,6 +311,20 @@
             <key>Type</key>
             <string>PSGroupSpecifier</string>
             <key>Title</key>
+            <string>Advanced</string>
+        </dict>
+        <dict>
+            <key>Type</key>
+            <string>PSChildPaneSpecifier</string>
+            <key>Title</key>
+            <string>Server Flags</string>
+            <key>File</key>
+            <string>ServerFlags</string>
+        </dict>
+        <dict>
+            <key>Type</key>
+            <string>PSGroupSpecifier</string>
+            <key>Title</key>
             <string>About</string>
         </dict>
         <dict>

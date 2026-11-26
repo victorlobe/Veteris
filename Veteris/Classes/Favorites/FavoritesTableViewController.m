@@ -10,6 +10,7 @@
 #import "VeterisFavoritesManager.h"
 #import "../../AppDelegate.h"
 #import "../AppInfo/AppInfo.h"
+#import "../AppInfo/VeterisAppInfoSegue.h"
 #import "../Convenience/Convenience.h"
 #import "../Protos/Application.h"
 #import "../SearchViewController/SearchTableViewCell.h"
@@ -18,6 +19,7 @@
 @implementation FavoritesTableViewController {
     NSMutableArray *applications;
     NSMutableSet *_loadingIconURLs;
+    NSMutableSet *_failedIconURLs;
     NSUInteger _iconLoadGeneration;
     BOOL _viewIsVisible;
     UILabel *_emptyLabel;
@@ -27,6 +29,7 @@
     [super viewDidLoad];
     applications = [NSMutableArray array];
     _loadingIconURLs = [NSMutableSet set];
+    _failedIconURLs = [NSMutableSet set];
     self.navigationItem.title = NSLocalizedString(@"Favorites", nil);
     self.tableView.rowHeight = 77.0;
     self.tableView.separatorStyle = UITableViewCellSeparatorStyleNone;
@@ -64,6 +67,7 @@
     _viewIsVisible = NO;
     _iconLoadGeneration++;
     [_loadingIconURLs removeAllObjects];
+    [_failedIconURLs removeAllObjects];
 }
 
 - (void)favoritesDidChange:(NSNotification *)notification {
@@ -75,7 +79,7 @@
     _emptyLabel.hidden = ([applications count] > 0);
     self.tableView.separatorStyle = ([applications count] > 0) ? UITableViewCellSeparatorStyleSingleLine : UITableViewCellSeparatorStyleNone;
     [self.tableView reloadData];
-    [self loadIconsForVisibleRowsIfIdle];
+    [self loadIconsForVisibleRows];
 }
 
 - (NSString *)versionCountTextForApplication:(Application *)application {
@@ -108,15 +112,39 @@
     }
 }
 
-- (void)loadIconsForVisibleRowsIfIdle {
-    if (!_viewIsVisible || self.tableView.dragging || self.tableView.decelerating) {
+- (void)loadIconsForVisibleRows {
+    if (!_viewIsVisible) {
         return;
     }
-
+    BOOL scrolling = self.tableView.dragging || self.tableView.decelerating;
+    if (scrolling && ![VAPIHelper loadsListIconsWhileScrolling]) {
+        return;
+    }
+    NSUInteger limit = scrolling ? [VAPIHelper listIconScrollRequestLimit] : NSUIntegerMax;
+    if (!scrolling) {
+        [_failedIconURLs removeAllObjects];
+    }
     for (NSIndexPath *indexPath in [self.tableView indexPathsForVisibleRows]) {
+        if ([_loadingIconURLs count] >= limit) {
+            break;
+        }
         if (indexPath.row < [applications count]) {
+            if (scrolling) {
+                SearchTableViewCell *cell = (SearchTableViewCell *)[self.tableView cellForRowAtIndexPath:indexPath];
+                if (cell.appUIImage.image != nil) {
+                    continue;
+                }
+            }
             [self loadIconForApp:[applications objectAtIndex:indexPath.row] atIndexPath:indexPath];
         }
+    }
+}
+
+- (void)loadMoreIconsIfScrolling {
+    if (self.tableView.dragging || self.tableView.decelerating) {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [self loadIconsForVisibleRows];
+        });
     }
 }
 
@@ -125,7 +153,7 @@
         return;
     }
     NSString *iconKey = ([application.iconurl length] > 0) ? application.iconurl : application.fallback_iconurl;
-    if ([iconKey length] == 0 || [_loadingIconURLs containsObject:iconKey]) {
+    if ([iconKey length] == 0 || [_loadingIconURLs containsObject:iconKey] || [_failedIconURLs containsObject:iconKey]) {
         return;
     }
 
@@ -148,6 +176,10 @@
             if (!_viewIsVisible || generation != _iconLoadGeneration) {
                 return;
             }
+            if (error != nil) {
+                [_failedIconURLs addObject:iconKey];
+            }
+            [self loadMoreIconsIfScrolling];
             if (error != nil) {
                 debugLog(@"Failed to load favorite icon for %@, bundleid: %@, app image url: %@", application.name, application.bundleid, application.iconurl);
                 return;
@@ -191,6 +223,7 @@
     }
 
     Application *application = [applications objectAtIndex:indexPath.row];
+    cell.getLabel.hidden = !VeterisShowGetLabels();
     cell.appNameLabel.text = application.name;
     cell.developerNameLabel.text = VeterisAppCellSubtitle(application.developer, application.bundleid, VeterisAppCellSubtitleAreaList);
     NSString *versionCountText = [self versionCountTextForApplication:application];
@@ -213,17 +246,27 @@
     [appinfo view];
     SearchTableViewCell *cell = (SearchTableViewCell *)[tableView cellForRowAtIndexPath:indexPath];
     [appinfo initialize:application.bundleid developer:application.developer name:application.name image:cell.appUIImage.image];
-    [self.navigationController pushViewController:appinfo animated:YES];
+    VeterisShowAppInfo(self, appinfo);
+}
+
+- (void)scrollViewDidScroll:(UIScrollView *)scrollView {
+    if (scrollView.dragging || scrollView.decelerating) {
+        [self loadIconsForVisibleRows];
+    }
 }
 
 - (void)scrollViewDidEndDragging:(UIScrollView *)scrollView willDecelerate:(BOOL)decelerate {
     if (!decelerate) {
-        [self loadIconsForVisibleRowsIfIdle];
+        [self loadIconsForVisibleRows];
     }
 }
 
 - (void)scrollViewDidEndDecelerating:(UIScrollView *)scrollView {
-    [self loadIconsForVisibleRowsIfIdle];
+    [self loadIconsForVisibleRows];
+}
+
+- (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation {
+    return VeterisShouldAutorotateToInterfaceOrientation(interfaceOrientation);
 }
 
 @end

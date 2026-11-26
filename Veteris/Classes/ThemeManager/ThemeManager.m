@@ -57,6 +57,10 @@ static NSValue *ThemeOffset(CGFloat horizontal, CGFloat vertical) {
     return sharedInstance;
 }
 
++ (UIImage *)defaultNavigationBarBackgroundImage {
+    return [[UIImage imageNamed:@"UITitleBarBG"] resizableImageWithCapInsets:UIEdgeInsetsMake(0, 5, 0, 5)];
+}
+
 - (id)init {
     self = [super init];
     if (self) {
@@ -565,7 +569,7 @@ static NSValue *ThemeOffset(CGFloat horizontal, CGFloat vertical) {
         [navigationBar setTintColor:[self tintColorForCurrentTheme]];
         return;
     }
-    [navigationBar setBackgroundImage:[UIImage imageNamed:@"UITitleBarBG"] forBarMetrics:UIBarMetricsDefault];
+    [navigationBar setBackgroundImage:[ThemeManager defaultNavigationBarBackgroundImage] forBarMetrics:UIBarMetricsDefault];
     [navigationBar setBarStyle:UIBarStyleBlack];
     CAGradientLayer *gradientLayer = [self createGradientLayerForCurrentThemeWithFrame:navigationBar.bounds];
     [bgView.layer insertSublayer:gradientLayer atIndex:0];
@@ -590,7 +594,7 @@ static NSValue *ThemeOffset(CGFloat horizontal, CGFloat vertical) {
         [UINavigationBar.appearance setTintColor:[self tintColorForCurrentTheme]];
         return;
     }
-    [UINavigationBar.appearance setBackgroundImage:[UIImage imageNamed:@"UITitleBarBG"] forBarMetrics:UIBarMetricsDefault];
+    [UINavigationBar.appearance setBackgroundImage:[ThemeManager defaultNavigationBarBackgroundImage] forBarMetrics:UIBarMetricsDefault];
     [UINavigationBar.appearance setBarStyle:UIBarStyleBlack];
     [UINavigationBar.appearance setTintColor:[self tintColorForCurrentTheme]];
 }

@@ -1,6 +1,7 @@
 #define kPleaseReloadThemes @"PleaseReloadThemes"
 @interface ThemeManager : NSObject
 + (ThemeManager *)sharedInstance;
++ (UIImage *)defaultNavigationBarBackgroundImage;
 - (bool)deviceSupportsThemes;
 - (UIColor*)tintColorForTheme:(NSString*)themeName;
 - (UIColor*)tintColorForCurrentTheme;

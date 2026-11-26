@@ -20,6 +20,7 @@
 #import "../YZTabBar/YZTabBar.h"
 #import "../ProtoStack.h"
 #import "../SettingsReset/VeterisResetController.h"
+#import "../AppInfo/VeterisAppInfoSegue.h"
 
 @implementation HomeViewController {
     NSDictionary *apiResponse;
@@ -41,6 +42,10 @@ static NSString *const VeterisHomeIconBadgeEnabledKey = @"veteris_home_icon_badg
 static NSString *const VeterisResetSettingsKey = @"reset_veteris_all";
 static NSString *const VeterisDevSecretCode = @"VictorIsKing";
 static NSInteger const VeterisDevCodeAlertTag = 8001;
+
+static CGFloat const VeterisHomeDesignBackgroundHeight = 316.0;
+static CGFloat const VeterisHomeBadgeOffsetX = 157.0 - 60.0;
+static CGFloat const VeterisHomeBadgeOffsetY = 21.0 - 20.0;
 
 - (BOOL)homeIconBadgeEnabled
 {
@@ -127,14 +132,43 @@ static NSInteger const VeterisDevCodeAlertTag = 8001;
 {
     [super viewDidLayoutSubviews];
     [self applySmallDeviceHomeFramesIfNeeded];
+    [self layoutBackgroundGradients];
 }
 
 - (void)applySmallDeviceHomeFramesIfNeeded
 {
-    if (!isiPhone5) {
+    if (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPhone && !isiPhone5) {
         self.appIconImageView.frame = CGRectMake(60, 20, 201, 251);
         self.badgeImageView.frame = CGRectMake(156, 21, 75, 64);
+        return;
     }
+    CGRect badgeFrame = self.badgeImageView.frame;
+    badgeFrame.origin.x = CGRectGetMinX(self.appIconImageView.frame) + VeterisHomeBadgeOffsetX;
+    badgeFrame.origin.y = CGRectGetMinY(self.appIconImageView.frame) + VeterisHomeBadgeOffsetY;
+    self.badgeImageView.frame = badgeFrame;
+}
+
+- (void)layoutBackgroundGradients
+{
+    CGRect bounds = self.backgroundView.bounds;
+    CGFloat designHeight = VeterisHomeDesignBackgroundHeight;
+    [CATransaction begin];
+    [CATransaction setDisableActions:YES];
+    for (CALayer *layer in self.view.layer.sublayers) {
+        if ([layer isKindOfClass:[CAGradientLayer class]]) {
+            layer.frame = CGRectMake(0.0, 0.0, CGRectGetWidth(bounds), designHeight);
+        }
+    }
+    for (CALayer *layer in self.backgroundView.layer.sublayers) {
+        if ([layer isKindOfClass:[CAGradientLayer class]]) {
+            CAGradientLayer *gradient = (CAGradientLayer *)layer;
+            gradient.frame = bounds;
+            CGFloat height = CGRectGetHeight(bounds);
+            CGFloat bandEnd = height > 0.0 ? MIN(1.0, 0.2 * designHeight / height) : 0.2;
+            gradient.locations = @[@0, @(bandEnd), @1];
+        }
+    }
+    [CATransaction commit];
 }
 
 - (void)viewWillAppear:(BOOL)animated {
@@ -178,12 +212,28 @@ static NSInteger const VeterisDevCodeAlertTag = 8001;
     appSettingsViewController.showCreditsFooter = NO;
     appSettingsViewController.title = NSLocalizedString(@"Settings", @"");
     appSettingsViewController.hiddenKeys = [self hiddenSettingsKeys];
-    UINavigationController *navController = [[UINavigationController alloc] initWithRootViewController:appSettingsViewController];
+    BOOL pad = (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad);
+    UINavigationController *navController;
+    if (pad) {
+        VeterisAppInfoSheetController *sheet = [[VeterisAppInfoSheetController alloc] initWithRootViewController:appSettingsViewController];
+        sheet.modalPresentationStyle = UIModalPresentationFormSheet;
+        __weak HomeViewController *weakSelf = self;
+        sheet.closeHandler = ^{
+            [weakSelf dismissSettingsAnimated];
+        };
+        navController = sheet;
+    } else {
+        navController = [[UINavigationController alloc] initWithRootViewController:appSettingsViewController];
+    }
     navController.navigationBar.barStyle = UIBarStyleBlack;
     UIBarButtonItem *doneButton = [[UIBarButtonItem alloc] initWithTitle:NSLocalizedString(@"Done", nil) style:UIBarButtonItemStylePlain target:self action:@selector(dismissSettingsAnimated)];
     doneButton.style = UIBarButtonItemStyleBordered;
     appSettingsViewController.navigationItem.rightBarButtonItem = doneButton;
     [getDelegate().themeManager applyThemeToNavigationBar:navController.navigationBar];
+    if (pad) {
+        [getDelegate().window.rootViewController presentViewController:navController animated:YES completion:nil];
+        return;
+    }
     [UIView beginAnimations:nil context:nil];
     [UIView setAnimationDuration:0.75];
     [UIView setAnimationTransition:UIViewAnimationTransitionCurlUp forView:getDelegate().window cache:NO];
@@ -193,11 +243,15 @@ static NSInteger const VeterisDevCodeAlertTag = 8001;
 }
 
 - (void)dismissSettingsAnimated {
-    [UIView beginAnimations:nil context:nil];
-    [UIView setAnimationDuration:0.75];
-    [UIView setAnimationTransition:UIViewAnimationTransitionCurlDown forView:getDelegate().window cache:NO];
-    [getDelegate().window.rootViewController dismissViewControllerAnimated:NO completion:nil];
-    [UIView commitAnimations];
+    if (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad) {
+        [getDelegate().window.rootViewController dismissViewControllerAnimated:YES completion:nil];
+    } else {
+        [UIView beginAnimations:nil context:nil];
+        [UIView setAnimationDuration:0.75];
+        [UIView setAnimationTransition:UIViewAnimationTransitionCurlDown forView:getDelegate().window cache:NO];
+        [getDelegate().window.rootViewController dismissViewControllerAnimated:NO completion:nil];
+        [UIView commitAnimations];
+    }
     currentSettingsViewController = nil;
     maintainerTapCount = 0;
     UINavigationController *topNavController = (UINavigationController *)((UITabBarController *)getDelegate().window.rootViewController).selectedViewController;
@@ -335,6 +389,7 @@ static NSInteger const VeterisDevCodeAlertTag = 8001;
                            @0.7
                            ];
     [self.view.layer insertSublayer:gradient atIndex:0];
+    [self layoutBackgroundGradients];
     self.backgroundImage.image = [self imageWithColor:[UIColor blackColor] size:self.backgroundImage.bounds.size];
     self.backgroundImage.alpha = 0.06;
 }
@@ -353,6 +408,7 @@ static NSInteger const VeterisDevCodeAlertTag = 8001;
                            @1
                            ];
     [self.backgroundView.layer insertSublayer:gradient atIndex:0];
+    [self layoutBackgroundGradients];
 }
 
 - (UIImage *)imageWithColor:(UIColor *)color size:(CGSize)size {
@@ -431,5 +487,9 @@ static NSInteger const VeterisDevCodeAlertTag = 8001;
     // Pass the selected object to the new view controller.
 }
 */
+
+- (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation {
+    return VeterisShouldAutorotateToInterfaceOrientation(interfaceOrientation);
+}
 
 @end

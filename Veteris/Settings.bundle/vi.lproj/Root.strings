@@ -106,3 +106,17 @@
 "iOS 7" = "iOS 7";
 "iOS 26" = "iOS 26";
 "UIButton" = "UIButton";
+
+"Advanced" = "Nâng cao";
+"Server Flags" = "Server Flags";
+"Flags" = "Flags";
+"Icons While Scrolling" = "Biểu tượng khi cuộn";
+"Icon Requests While Scrolling" = "Yêu cầu biểu tượng khi cuộn";
+"On" = "Bật";
+"Off" = "Tắt";
+"Status" = "Trạng thái";
+"Source" = "Nguồn";
+"Server" = "Máy chủ";
+"Defaults" = "Mặc định";
+"Last Updated" = "Cập nhật lần cuối";
+"The Veteris server can turn some features on or off. Here you can see which ones are currently active and when Veteris last checked. Veteris checks each time it opens or returns to the foreground." = "Máy chủ Veteris có thể bật hoặc tắt một số tính năng. Tại đây bạn có thể xem tính năng nào đang hoạt động và Veteris kiểm tra lần cuối khi nào. Veteris kiểm tra mỗi khi được mở hoặc quay lại nền trước.";

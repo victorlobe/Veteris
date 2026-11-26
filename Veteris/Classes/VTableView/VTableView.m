@@ -48,7 +48,8 @@ static NSString *VeterisListSortTitle(NSArray *option) {
 }
 
 @interface VTableView () <UIActionSheetDelegate>
-- (void)loadIconsForVisibleRowsIfIdle;
+- (void)loadIconsForVisibleRows;
+- (void)loadMoreIconsIfScrolling;
 - (void)loadIconForApp:(Application *)app atIndexPath:(NSIndexPath *)indexPath;
 - (void)configureIconForCell:(AppListTableViewCell *)cell app:(Application *)app;
 @end
@@ -58,6 +59,7 @@ static NSString *VeterisListSortTitle(NSArray *option) {
     LoadingIndicatorView *loadingIndicator;
     UILabel *errorLabel;
     NSMutableSet *_loadingIconURLs;
+    NSMutableSet *_failedIconURLs;
     NSUInteger _iconLoadGeneration;
     BOOL _viewIsVisible;
     BOOL _registeredForThemeNotifications;
@@ -79,6 +81,9 @@ static NSString *VeterisListSortTitle(NSArray *option) {
     if (_loadingIconURLs == nil) {
         _loadingIconURLs = [[NSMutableSet alloc] init];
     }
+    if (_failedIconURLs == nil) {
+        _failedIconURLs = [[NSMutableSet alloc] init];
+    }
     if (!_registeredForThemeNotifications) {
         NSNotificationCenter *center = [NSNotificationCenter defaultCenter];
         [center addObserver:self selector:@selector(reconfigure:) name:kPleaseReloadThemes object:nil];
@@ -91,7 +96,9 @@ static NSString *VeterisListSortTitle(NSArray *option) {
     self.tableView.backgroundView.backgroundColor = [UIColor whiteColor];
     if (!skipIndicator) {
         NSString *loadingTextKey = ([endpoint hasPrefix:@"listing/random"]) ? @"Shuffling" : @"Loading";
-        loadingIndicator = [LoadingIndicatorView attachToView:getDelegate().window textKey:loadingTextKey];
+        UIWindow *window = getDelegate().window;
+        UIView *indicatorHost = window.rootViewController.view ?: window;
+        loadingIndicator = [LoadingIndicatorView attachToView:indicatorHost textKey:loadingTextKey];
     }
 
     if (errorLabel == nil) {
@@ -101,7 +108,8 @@ static NSString *VeterisListSortTitle(NSArray *option) {
         errorLabel.textColor = [UIColor grayColor];
         errorLabel.backgroundColor = [UIColor clearColor];
         errorLabel.textAlignment = NSTextAlignmentCenter;
-        errorLabel.center = CGPointMake(self.tableView.center.x, getDelegate().window.center.y);
+        errorLabel.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleRightMargin |
+                                      UIViewAutoresizingFlexibleTopMargin | UIViewAutoresizingFlexibleBottomMargin;
     }
 
     [VAPISS getMessage:endpoint completion:^(NSData *data, NSError *error){
@@ -113,7 +121,7 @@ static NSString *VeterisListSortTitle(NSArray *option) {
             }
             self.tableView.separatorStyle = UITableViewCellSeparatorStyleSingleLine;
             [self.tableView reloadData];
-            [self loadIconsForVisibleRowsIfIdle];
+            [self loadIconsForVisibleRows];
             [errorLabel removeFromSuperview];
         } else {
             if (!skipIndicator) {
@@ -121,7 +129,9 @@ static NSString *VeterisListSortTitle(NSArray *option) {
                 loadingIndicator = nil; // btooom
             }
             alert(NSLocalizedString(@"Oops", @""), NSLocalizedString(@"ServerContactError", nil), VAPIHelperErrorNetwork);
-            [getDelegate().window addSubview:errorLabel];
+            UIView *errorHost = getDelegate().window.rootViewController.view ?: getDelegate().window;
+            errorLabel.center = CGPointMake(CGRectGetMidX(errorHost.bounds), CGRectGetMidY(errorHost.bounds));
+            [errorHost addSubview:errorLabel];
         }
     }];
     inInit = NO;
@@ -206,6 +216,7 @@ static NSString *VeterisListSortTitle(NSArray *option) {
 - (void)reloadSortedListing {
     _iconLoadGeneration++;
     [_loadingIconURLs removeAllObjects];
+    [_failedIconURLs removeAllObjects];
     applications = nil;
     [self.tableView reloadData];
     [self.tableView setContentOffset:CGPointMake(0, -self.tableView.contentInset.top) animated:NO];
@@ -242,6 +253,7 @@ static NSString *VeterisListSortTitle(NSArray *option) {
     _viewIsVisible = NO;
     _iconLoadGeneration++;
     [_loadingIconURLs removeAllObjects];
+    [_failedIconURLs removeAllObjects];
     firstAppear = 3;
     if (loadingIndicator != nil) {
         [loadingIndicator destroy];
@@ -264,7 +276,7 @@ static NSString *VeterisListSortTitle(NSArray *option) {
         [self initialize:_endpoint];
     }
     [getDelegate().themeManager applyThemeToNavigationBar:self.navigationController.navigationBar];
-    [self loadIconsForVisibleRowsIfIdle];
+    [self loadIconsForVisibleRows];
 }
 
 #pragma mark - UITableViewDataSource
@@ -329,16 +341,41 @@ static NSString *VeterisListSortTitle(NSArray *option) {
     }
 }
 
-- (void)loadIconsForVisibleRowsIfIdle {
-    if (!_viewIsVisible || self.tableView.dragging || self.tableView.decelerating) {
+- (void)loadIconsForVisibleRows {
+    if (!_viewIsVisible) {
         return;
+    }
+    BOOL scrolling = self.tableView.dragging || self.tableView.decelerating;
+    if (scrolling && ![VAPIHelper loadsListIconsWhileScrolling]) {
+        return;
+    }
+    NSUInteger limit = scrolling ? [VAPIHelper listIconScrollRequestLimit] : NSUIntegerMax;
+    if (!scrolling) {
+        [_failedIconURLs removeAllObjects];
     }
     NSArray *visibleIndexPaths = [self.tableView indexPathsForVisibleRows];
     for (NSIndexPath *indexPath in visibleIndexPaths) {
+        if ([_loadingIconURLs count] >= limit) {
+            break;
+        }
         if (indexPath.row < [applications count]) {
+            if (scrolling) {
+                AppListTableViewCell *cell = (AppListTableViewCell *)[self.tableView cellForRowAtIndexPath:indexPath];
+                if (cell.appUIImage.image != nil) {
+                    continue;
+                }
+            }
             Application *app = [applications objectAtIndex:indexPath.row];
             [self loadIconForApp:app atIndexPath:indexPath];
         }
+    }
+}
+
+- (void)loadMoreIconsIfScrolling {
+    if (self.tableView.dragging || self.tableView.decelerating) {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [self loadIconsForVisibleRows];
+        });
     }
 }
 
@@ -347,7 +384,7 @@ static NSString *VeterisListSortTitle(NSArray *option) {
         return;
     }
     NSString *iconKey = ([app.iconurl length] > 0) ? app.iconurl : app.fallback_iconurl;
-    if ([iconKey length] == 0 || [_loadingIconURLs containsObject:iconKey]) {
+    if ([iconKey length] == 0 || [_loadingIconURLs containsObject:iconKey] || [_failedIconURLs containsObject:iconKey]) {
         return;
     }
 
@@ -371,6 +408,10 @@ static NSString *VeterisListSortTitle(NSArray *option) {
             if (!_viewIsVisible || generation != _iconLoadGeneration) {
                 return;
             }
+            if (error != nil) {
+                [_failedIconURLs addObject:iconKey];
+            }
+            [self loadMoreIconsIfScrolling];
             if (error != nil) {
                 debugLog(@"Oopsie :3 failed to load image for %@, bundleid: %@, app image url: %@", app.name, app.bundleid, app.iconurl);
                 return;
@@ -396,14 +437,20 @@ static NSString *VeterisListSortTitle(NSArray *option) {
     }];
 }
 
+- (void)scrollViewDidScroll:(UIScrollView *)scrollView {
+    if (scrollView.dragging || scrollView.decelerating) {
+        [self loadIconsForVisibleRows];
+    }
+}
+
 - (void)scrollViewDidEndDragging:(UIScrollView *)scrollView willDecelerate:(BOOL)decelerate {
     if (!decelerate) {
-        [self loadIconsForVisibleRowsIfIdle];
+        [self loadIconsForVisibleRows];
     }
 }
 
 - (void)scrollViewDidEndDecelerating:(UIScrollView *)scrollView {
-    [self loadIconsForVisibleRowsIfIdle];
+    [self loadIconsForVisibleRows];
 }
 
 - (void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender {
@@ -418,4 +465,9 @@ static NSString *VeterisListSortTitle(NSArray *option) {
         [appinfo initialize:app.bundleid developer:app.developer name:app.name image:cell.appUIImage.image];
     }
 }
+
+- (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation {
+    return VeterisShouldAutorotateToInterfaceOrientation(interfaceOrientation);
+}
+
 @end

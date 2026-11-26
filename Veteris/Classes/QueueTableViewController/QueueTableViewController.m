@@ -3,6 +3,7 @@
 #import "../YZQueue/YZQueueManager.h"
 #import "../YZQueue/YZQueueState.h"
 #import "../AppInfo/AppInfo.h"
+#import "../AppInfo/VeterisAppInfoSegue.h"
 #define NSArrayAtIndex(arr, idx) ((NSArray *)([arr objectAtIndex:(idx)]))
 
 @implementation QueueTableViewController {
@@ -176,7 +177,7 @@
     AppInfo *appinfo = [storyboard instantiateViewControllerWithIdentifier:@"AppInfoViewController"];
     [appinfo view];
     [appinfo initialize:[rep bundleID] developer:[rep developer] name:[rep name] image:[rep icon]];
-    [self.navigationController pushViewController:appinfo animated:YES];
+    VeterisShowAppInfo(self, appinfo);
 }
 
 - (void)actionSheet:(UIActionSheet *)actionSheet clickedButtonAtIndex:(NSInteger)buttonIndex {
@@ -240,4 +241,9 @@
 - (void)actionSheetCancel:(UIActionSheet *)actionSheet {
     [self.tableView deselectRowAtIndexPath:[self.tableView indexPathForSelectedRow] animated:YES];
 }
+
+- (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation {
+    return VeterisShouldAutorotateToInterfaceOrientation(interfaceOrientation);
+}
+
 @end

@@ -213,4 +213,8 @@ static CGFloat const VeterisAppSubtitleModeControlInset = 10.0f;
     [tableView deselectRowAtIndexPath:indexPath animated:YES];
 }
 
+- (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation {
+    return VeterisShouldAutorotateToInterfaceOrientation(interfaceOrientation);
+}
+
 @end

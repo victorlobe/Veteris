@@ -14,6 +14,7 @@
 #import <MacTypes.h>
 #include <dlfcn.h>
 #import <sys/sysctl.h>
+#import <CommonCrypto/CommonDigest.h>
 #include <stdlib.h>
 #import "../../AppDelegate.h"
 #import "../../BBHTTP/BBHTTP.h"
@@ -49,6 +50,15 @@ static NSString *const VAPI_CRASH_REPORTING_OPT_OUT_UUID_KEY = @"VAPICrashReport
 static NSString *const VAPI_DEV_MODE_ENABLED_KEY = @"veteris_dev_mode_enabled";
 static NSString *const VAPI_ANALYTICS_ENABLED_KEY = @"veteris_analytics_enabled";
 static NSString *const VAPI_CRASH_REPORTING_ENABLED_KEY = @"veteris_crash_reporting_enabled";
+static NSString *const VAPI_CONFIG_ICONS_WHILE_SCROLLING_KEY = @"client_config_list_icons_while_scrolling";
+static NSString *const VAPI_CONFIG_ICON_SCROLL_LIMIT_KEY = @"client_config_list_icon_scroll_limit";
+static NSString *const VAPI_CONFIG_SOURCE_KEY = @"client_config_source";
+static NSString *const VAPI_CONFIG_UPDATED_TEXT_KEY = @"client_config_updated_text";
+static const NSUInteger VAPIClientConfigIconScrollLimitDefault = 4;
+static const NSUInteger VAPIClientConfigIconScrollLimitMax = 16;
+static BOOL VAPIClientConfigLoaded = NO;
+static BOOL VAPIClientConfigIconsWhileScrolling = YES;
+static NSUInteger VAPIClientConfigIconScrollLimit = VAPIClientConfigIconScrollLimitDefault;
 static NSString *const VAPI_SERVER_ENVIRONMENT_KEY = @"veteris_server_environment";
 static NSString *const VAPI_LANGUAGE_OVERRIDE_KEY = @"veteris_language_override";
 static NSString *const VAPI_LANGUAGE_OVERRIDE_SYSTEM = @"system";
@@ -305,55 +315,34 @@ static NSString *VAPIQueryEscape(NSString *value) {
     return escaped ?: @"";
 }
 
+static NSString *VAPIDownloadIDForURL(NSString *url) {
+    NSData *data = [url dataUsingEncoding:NSUTF8StringEncoding];
+    unsigned char digest[CC_SHA256_DIGEST_LENGTH];
+    CC_SHA256([data bytes], (CC_LONG)[data length], digest);
+    NSMutableString *hex = [NSMutableString stringWithCapacity:24];
+    for (NSUInteger i = 0; i < 12; i++) {
+        [hex appendFormat:@"%02x", digest[i]];
+    }
+    return hex;
+}
+
 + (void)trackDownloadStartForApplication:(YZApplication *)application url:(NSString *)url downloadOnly:(BOOL)downloadOnly {
     if (application == nil || url == nil || [url length] == 0) {
         return;
     }
 
-    [self trackDownloadEvent:@"download_start"
-                    bundleID:application.bundleID
-                     appName:application.name
-                   developer:application.developer
-                     version:application.version
-                      minIOS:application.minimumOS
-                         url:url
-                   sizeBytes:application.sizeBytes
-                downloadOnly:downloadOnly
-                 extraFields:nil];
-}
-
-+ (void)trackDownloadEvent:(NSString *)event
-                  bundleID:(NSString *)bundleID
-                   appName:(NSString *)appName
-                 developer:(NSString *)developer
-                   version:(NSString *)version
-                    minIOS:(NSString *)minIOS
-                       url:(NSString *)url
-                 sizeBytes:(unsigned long long)sizeBytes
-              downloadOnly:(BOOL)downloadOnly
-               extraFields:(NSDictionary *)extraFields {
-    if (url == nil || [url length] == 0) {
-        return;
-    }
-
-    NSMutableArray *items = [NSMutableArray array];
-    NSMutableDictionary *fields = [@{
-        @"event" : event ?: @"download_start",
-        @"bundle_id" : bundleID ?: @"",
-        @"app_name" : appName ?: @"",
-        @"developer" : developer ?: @"",
-        @"version" : version ?: @"",
-        @"min_ios" : minIOS ?: @"",
-        @"ipa_url" : url ?: @"",
-        @"size_bytes" : [NSString stringWithFormat:@"%llu", sizeBytes],
+    NSDictionary *fields = @{
+        @"event" : @"download_start",
+        @"download_id" : VAPIDownloadIDForURL(url),
+        @"bundle_id" : application.bundleID ?: @"",
+        @"app_name" : application.name ?: @"",
+        @"developer" : application.developer ?: @"",
+        @"version" : application.version ?: @"",
+        @"min_ios" : application.minimumOS ?: @"",
+        @"size_bytes" : [NSString stringWithFormat:@"%llu", application.sizeBytes],
         @"download_only" : downloadOnly ? @"1" : @"0",
-    } mutableCopy];
-    for (NSString *key in extraFields) {
-        id value = [extraFields objectForKey:key];
-        if ([key isKindOfClass:[NSString class]] && [key length] > 0 && value != nil) {
-            [fields setObject:[value description] forKey:key];
-        }
-    }
+    };
+    NSMutableArray *items = [NSMutableArray array];
     for (NSString *key in fields) {
         [items addObject:[NSString stringWithFormat:@"%@=%@", key, VAPIQueryEscape([fields objectForKey:key])]];
     }
@@ -593,6 +582,66 @@ static NSString *VAPIQueryEscape(NSString *value) {
             [alertView show];
         });
     }];
+}
+
++ (void)loadClientConfigIfNeeded {
+    if (VAPIClientConfigLoaded) {
+        return;
+    }
+    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+    id whileScrolling = [defaults objectForKey:VAPI_CONFIG_ICONS_WHILE_SCROLLING_KEY];
+    VAPIClientConfigIconsWhileScrolling = (whileScrolling == nil) ? YES : [defaults boolForKey:VAPI_CONFIG_ICONS_WHILE_SCROLLING_KEY];
+    NSInteger limit = [defaults integerForKey:VAPI_CONFIG_ICON_SCROLL_LIMIT_KEY];
+    VAPIClientConfigIconScrollLimit = (limit > 0) ? MIN((NSUInteger)limit, VAPIClientConfigIconScrollLimitMax) : VAPIClientConfigIconScrollLimitDefault;
+    VAPIClientConfigLoaded = YES;
+}
+
++ (void)refreshClientConfig {
+    [VAPISS getMessage:@"client/config" completion:^(NSData *data, NSError *error) {
+        if (error != nil || data == nil || [data length] == 0) {
+            return;
+        }
+        NSArray *entries = (NSArray *)(CFBridgingRelease(decode([data bytes], [data length], NewsResponse)));
+        if (![entries isKindOfClass:[NSArray class]] || [entries count] == 0) {
+            return;
+        }
+        NSMutableDictionary *flags = [NSMutableDictionary dictionary];
+        for (NewsPost *entry in entries) {
+            if ([entry.title length] > 0) {
+                [flags setObject:(entry.body ?: @"") forKey:entry.title];
+            }
+        }
+        debugLog(@"Client config: %@", flags);
+
+        [VAPIHelper loadClientConfigIfNeeded];
+        NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+        NSString *whileScrolling = [flags objectForKey:@"list_icons_while_scrolling"];
+        if (whileScrolling != nil) {
+            VAPIClientConfigIconsWhileScrolling = [whileScrolling boolValue];
+            [defaults setBool:VAPIClientConfigIconsWhileScrolling forKey:VAPI_CONFIG_ICONS_WHILE_SCROLLING_KEY];
+        }
+        NSInteger limit = [[flags objectForKey:@"list_icon_scroll_limit"] integerValue];
+        if (limit > 0) {
+            VAPIClientConfigIconScrollLimit = MIN((NSUInteger)limit, VAPIClientConfigIconScrollLimitMax);
+            [defaults setInteger:(NSInteger)VAPIClientConfigIconScrollLimit forKey:VAPI_CONFIG_ICON_SCROLL_LIMIT_KEY];
+        }
+        [defaults setObject:@"server" forKey:VAPI_CONFIG_SOURCE_KEY];
+        [defaults setObject:[NSDateFormatter localizedStringFromDate:[NSDate date]
+                                                           dateStyle:NSDateFormatterShortStyle
+                                                           timeStyle:NSDateFormatterShortStyle]
+                     forKey:VAPI_CONFIG_UPDATED_TEXT_KEY];
+        [defaults synchronize];
+    }];
+}
+
++ (BOOL)loadsListIconsWhileScrolling {
+    [VAPIHelper loadClientConfigIfNeeded];
+    return VAPIClientConfigIconsWhileScrolling;
+}
+
++ (NSUInteger)listIconScrollRequestLimit {
+    [VAPIHelper loadClientConfigIfNeeded];
+    return VAPIClientConfigIconScrollLimit;
 }
 
 + (void)showWhatsNewIfNeeded {

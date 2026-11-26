@@ -288,4 +288,8 @@ static NSUInteger const VeterisSearchHistoryLimit = 10;
     self.historyTableView.hidden = ([self.searchBar.text length] > 0);
 }
 
+- (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation {
+    return VeterisShouldAutorotateToInterfaceOrientation(interfaceOrientation);
+}
+
 @end
