@@ -35,6 +35,17 @@ static NSValue *ThemeOffset(CGFloat horizontal, CGFloat vertical) {
 @implementation ThemeArtworkButtonItemReference
 @end
 
+@interface ThemeBarGradientView : UIView
+@end
+
+@implementation ThemeBarGradientView
+
++ (Class)layerClass {
+    return [CAGradientLayer class];
+}
+
+@end
+
 @implementation ThemeManager {
     NSDictionary *themeInfo;
     NSString *currentTheme;
@@ -506,8 +517,9 @@ static NSValue *ThemeOffset(CGFloat horizontal, CGFloat vertical) {
         [bgView setNeedsDisplay];
         return;
     }
-    CAGradientLayer *gradientLayer = [self createGradientLayerForCurrentThemeWithFrame:bgView.bounds];
-    [bgView.layer insertSublayer:gradientLayer atIndex:0];
+    [self insertGradientIntoBarBackgroundView:bgView
+                                        frame:bgView.bounds
+                             autoresizingMask:UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight];
 }
 
 - (void)applyTintToTabBars {
@@ -571,8 +583,9 @@ static NSValue *ThemeOffset(CGFloat horizontal, CGFloat vertical) {
     }
     [navigationBar setBackgroundImage:[ThemeManager defaultNavigationBarBackgroundImage] forBarMetrics:UIBarMetricsDefault];
     [navigationBar setBarStyle:UIBarStyleBlack];
-    CAGradientLayer *gradientLayer = [self createGradientLayerForCurrentThemeWithFrame:navigationBar.bounds];
-    [bgView.layer insertSublayer:gradientLayer atIndex:0];
+    [self insertGradientIntoBarBackgroundView:bgView
+                                        frame:navigationBar.bounds
+                             autoresizingMask:UIViewAutoresizingFlexibleWidth];
     [bgView setNeedsDisplay];
     // set tint color here anyway, sometimes the shown viewcontroller doesnt get redrawn
     [navigationBar setTintColor:[self tintColorForCurrentTheme]];
@@ -990,7 +1003,24 @@ static NSValue *ThemeOffset(CGFloat horizontal, CGFloat vertical) {
 }
 
 #pragma mark - Layer Helpers
+- (void)insertGradientIntoBarBackgroundView:(UIView *)bgView frame:(CGRect)frame autoresizingMask:(UIViewAutoresizing)autoresizingMask {
+    if (bgView == nil) {
+        return;
+    }
+    ThemeBarGradientView *gradientView = [[ThemeBarGradientView alloc] initWithFrame:frame];
+    gradientView.userInteractionEnabled = NO;
+    gradientView.autoresizingMask = autoresizingMask;
+    CAGradientLayer *themeGradient = [self createGradientLayerForCurrentThemeWithFrame:frame];
+    ((CAGradientLayer *)gradientView.layer).colors = themeGradient.colors;
+    [bgView insertSubview:gradientView atIndex:0];
+}
+
 - (void)cleanViewOfGradientLayers:(UIView *)view {
+    for (UIView *subview in [view.subviews copy]) {
+        if ([subview isKindOfClass:[ThemeBarGradientView class]]) {
+            [subview removeFromSuperview];
+        }
+    }
     for (CALayer *layer in [view.layer.sublayers copy]) {
         if ([layer isKindOfClass:[CAGradientLayer class]]) {
             [layer removeFromSuperlayer];

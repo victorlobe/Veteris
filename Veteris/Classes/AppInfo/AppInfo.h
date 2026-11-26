@@ -24,6 +24,8 @@ extern NSString * const AppInfoInstalledApplicationsDidRefreshNotification;
 @property (weak, nonatomic) IBOutlet UIScrollView *scrollView;
 @property (weak, nonatomic) IBOutlet UIActivityIndicatorView *activityIndicator;
 - (void)initialize:(NSString *)bundleID;
+- (BOOL)isShowingActivityPopover;
+- (void)dismissActivityPopoverAnimated:(BOOL)animated;
 - (void)initialize:(NSString *)bundleID developer:(NSString *)developer name:(NSString *)name image:(UIImage *)image;
 - (void)initializeVersionInfoWithApplication:(Application *)application version:(Version *)version image:(UIImage *)image;
 + (void)refreshInstalledApplicationCache;

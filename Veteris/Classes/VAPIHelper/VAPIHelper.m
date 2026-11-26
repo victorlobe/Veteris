@@ -360,8 +360,19 @@ static NSString *VAPIDownloadIDForURL(NSString *url) {
 - (void)get:(NSString *)endpoint path:(NSString *)path iconTraffic:(BOOL)iconTraffic completion:(void (^)(NSData *data, NSError *error))completion {
     BBHTTPExecutor *executor = iconTraffic ? _iconExecutor : _apiExecutor;
     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+        NSString *target = [NSString stringWithFormat:@"%@%@", endpoint, path];
+        NSURL *url = [NSURL URLWithString:target];
+        if (url == nil || [url host] == nil) {
+            debugLog(@"Invalid request URL: %@", target);
+            dispatch_async(dispatch_get_main_queue(), ^{
+                if (completion != nil) {
+                    completion(nil, [NSError errorWithDomain:NSURLErrorDomain code:NSURLErrorBadURL userInfo:nil]);
+                }
+            });
+            return;
+        }
         NSDictionary *reqHeaders = [VAPIHelper getHeaders];
-        BBHTTPRequest *request = [[BBHTTPRequest alloc] initWithTarget:[NSString stringWithFormat:@"%@%@", endpoint, path] andVerb:@"GET"];
+        BBHTTPRequest *request = [[BBHTTPRequest alloc] initWithURL:url andVerb:@"GET"];
         for (id key in reqHeaders) {
             [request setValue:[reqHeaders valueForKey:key] forHeader:key];
         }

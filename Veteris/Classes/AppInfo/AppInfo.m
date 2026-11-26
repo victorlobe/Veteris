@@ -1420,6 +1420,7 @@ static CGSize AppInfoScreenshotDisplaySize(CGSize pixelSize, CGFloat height, CGF
 
 - (void)dealloc {
     [[NSNotificationCenter defaultCenter] removeObserver:self];
+    [self dismissActivityPopoverAnimated:NO];
 
     versionsTableView.dataSource = nil;
     versionsTableView.delegate = nil;
@@ -1819,6 +1820,7 @@ static CGSize AppInfoScreenshotDisplaySize(CGSize pixelSize, CGFloat height, CGF
 
 - (void)viewWillDisappear:(BOOL)animated {
     [super viewWillDisappear:animated];
+    [self dismissActivityPopoverAnimated:NO];
     relatedIconLoadGeneration++;
     [relatedLoadingIconURLs removeAllObjects];
 }
@@ -3056,7 +3058,26 @@ static CGSize AppInfoScreenshotDisplaySize(CGSize pixelSize, CGFloat height, CGF
     [UIPasteboard generalPasteboard].string = link;
 }
 
+- (BOOL)isShowingActivityPopover {
+    return activityPopover != nil && activityPopover.popoverVisible;
+}
+
+- (void)dismissActivityPopoverAnimated:(BOOL)animated {
+    if (activityPopover == nil) {
+        return;
+    }
+    if (activityPopover.popoverVisible) {
+        [activityPopover dismissPopoverAnimated:animated];
+    }
+    activityPopover = nil;
+}
+
 - (void)presentNativeShareMenu {
+    if ([self isShowingActivityPopover]) {
+        [self dismissActivityPopoverAnimated:YES];
+        return;
+    }
+
     Class activityViewControllerClass = NSClassFromString(@"UIActivityViewController");
     if (activityViewControllerClass == Nil) {
         [self showActionsFallbackActionSheet];

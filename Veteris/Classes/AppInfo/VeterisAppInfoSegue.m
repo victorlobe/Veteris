@@ -1,4 +1,5 @@
 #import "VeterisAppInfoSegue.h"
+#import "AppInfo.h"
 
 static BOOL VeterisViewIsBehindView(UIView *view, UIView *frontView) {
     if (view == nil || frontView == nil || [view isDescendantOfView:frontView]) {
@@ -64,8 +65,17 @@ static BOOL VeterisViewIsBehindView(UIView *view, UIView *frontView) {
     outsideTapRecognizer = nil;
 }
 
+- (BOOL)isShowingAppInfoPopover {
+    for (UIViewController *controller in self.viewControllers) {
+        if ([controller isKindOfClass:[AppInfo class]] && [(AppInfo *)controller isShowingActivityPopover]) {
+            return YES;
+        }
+    }
+    return NO;
+}
+
 - (BOOL)gestureRecognizer:(UIGestureRecognizer *)gestureRecognizer shouldReceiveTouch:(UITouch *)touch {
-    if (self.presentedViewController != nil) {
+    if (self.presentedViewController != nil || [self isShowingAppInfoPopover]) {
         return NO;
     }
     return VeterisViewIsBehindView(touch.view, self.view);
@@ -82,6 +92,11 @@ static BOOL VeterisViewIsBehindView(UIView *view, UIView *frontView) {
 }
 
 - (void)close {
+    for (UIViewController *controller in self.viewControllers) {
+        if ([controller isKindOfClass:[AppInfo class]]) {
+            [(AppInfo *)controller dismissActivityPopoverAnimated:NO];
+        }
+    }
     [self removeOutsideTapRecognizer];
     void (^handler)(void) = self.closeHandler;
     if (handler != nil) {

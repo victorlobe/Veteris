@@ -325,8 +325,11 @@ CGRect IASKCGRectSwap(CGRect rect);
 
 - (void)toggledValue:(id)sender {
     IASKSwitch *toggle    = (IASKSwitch*)sender;
+    if ([toggle key] == nil) {
+        return;
+    }
     IASKSpecifier *spec   = [_settingsReader specifierForKey:[toggle key]];
-    
+
     if ([toggle isOn]) {
         if ([spec trueValue] != nil) {
             [self.settingsStore setObject:[spec trueValue] forKey:[toggle key]];
@@ -501,8 +504,8 @@ CGRect IASKCGRectSwap(CGRect rect);
 			toggleState = specifier.defaultBoolValue;
 		}
 		IASKSwitch *toggle = (IASKSwitch*)cell.accessoryView;
-		toggle.on = toggleState;
 		toggle.key = specifier.key;
+		toggle.on = toggleState;
 	}
 	else if ([specifier.type isEqualToString:kIASKPSMultiValueSpecifier]) {
 		cell.textLabel.text = specifier.title;
