@@ -152,6 +152,7 @@
 "InstallFailureReason" = "失败原因：%@";
 "InstallFailureRecovery" = "解决建议：%@";
 "InstallFailureUnderlying" = "原始错误：%@";
+"InstallFailureInstallerUnavailable" = "此设备上没有可用的系统安装程序，因此 Veteris 无法在此安装应用。";
 ShowErrorDetails = "显示错误详情";
 ErrorDetails = "错误详情";
 NoErrorDetailsAvailable = "未记录诊断详情。";

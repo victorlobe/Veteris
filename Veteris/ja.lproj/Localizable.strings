@@ -152,6 +152,7 @@
 "InstallFailureReason" = "失敗の理由: %@";
 "InstallFailureRecovery" = "対処方法: %@";
 "InstallFailureUnderlying" = "元のエラー: %@";
+"InstallFailureInstallerUnavailable" = "このデバイスではシステムのインストーラを利用できないため、Veteris はここでアプリをインストールできません。";
 ShowErrorDetails = "エラーの詳細を表示";
 ErrorDetails = "エラーの詳細";
 NoErrorDetailsAvailable = "診断情報は記録されていません。";

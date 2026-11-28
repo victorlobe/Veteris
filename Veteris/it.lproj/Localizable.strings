@@ -152,6 +152,7 @@
 "InstallFailureReason" = "Motivo dell’errore: %@";
 "InstallFailureRecovery" = "Suggerimento per la soluzione: %@";
 "InstallFailureUnderlying" = "Errore originale: %@";
+"InstallFailureInstallerUnavailable" = "Il programma di installazione di sistema non è disponibile su questo dispositivo, quindi Veteris non può installare app qui.";
 ShowErrorDetails = "Mostra dettagli errore";
 ErrorDetails = "Dettagli errore";
 NoErrorDetailsAvailable = "Non sono stati registrati dettagli diagnostici.";

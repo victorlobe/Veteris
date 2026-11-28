@@ -2,8 +2,24 @@
 #import "zip/zip.h"
 #import "../VAPIHelper/VAPIHelper.h"
 
+static NSString *YZZipEntryNameString(const char *name) {
+    if (name == NULL) {
+        return nil;
+    }
+    NSString *string = [NSString stringWithUTF8String:name];
+    if (string == nil) {
+        NSStringEncoding cp437 = CFStringConvertEncodingToNSStringEncoding(kCFStringEncodingDOSLatinUS);
+        string = [NSString stringWithCString:name encoding:cp437];
+    }
+    if (string == nil) {
+        string = [NSString stringWithCString:name encoding:NSISOLatin1StringEncoding];
+    }
+    return string;
+}
+
 @implementation YZZipArchive {
     struct zip_t *zip;
+    NSMutableDictionary *entryIndexes;
 }
 + (YZZipArchive *)open:(NSString *)path {
     YZZipArchive *archive = [[YZZipArchive alloc] init];
@@ -19,10 +35,13 @@
 - (NSData *)readFile:(NSString *)path {
     void *buf = NULL;
     size_t bufsize = 0;
-    zip_entry_open(zip, [path UTF8String]);
-    {
-        zip_entry_read(zip, &buf, &bufsize);
+    NSNumber *index = (path != nil) ? [entryIndexes objectForKey:path] : nil;
+    int opened = (index != nil) ? zip_entry_openbyindex(zip, [index unsignedIntegerValue])
+                                : zip_entry_open(zip, [path UTF8String]);
+    if (opened < 0) {
+        return nil;
     }
+    zip_entry_read(zip, &buf, &bufsize);
     zip_entry_close(zip);
     if (buf == NULL || bufsize == 0) {
         return nil;
@@ -33,15 +52,23 @@
 }
 
 - (NSArray *)files {
-    int i, n = zip_entries_total(zip);
-    NSMutableArray *files = [NSMutableArray arrayWithCapacity:n];
-    for (i = 0; i < n; ++i) {
-        zip_entry_openbyindex(zip, i);
-        {
-            const char *name = zip_entry_name(zip);
-            [files addObject:[NSString stringWithUTF8String:name]];
+    ssize_t n = zip_entries_total(zip);
+    if (n < 0) {
+        return nil;
+    }
+    NSMutableArray *files = [NSMutableArray arrayWithCapacity:(NSUInteger)n];
+    entryIndexes = [NSMutableDictionary dictionaryWithCapacity:(NSUInteger)n];
+    for (ssize_t i = 0; i < n; ++i) {
+        if (zip_entry_openbyindex(zip, (size_t)i) < 0) {
+            continue;
         }
+        NSString *name = YZZipEntryNameString(zip_entry_name(zip));
         zip_entry_close(zip);
+        if (name == nil) {
+            continue;
+        }
+        [files addObject:name];
+        [entryIndexes setObject:[NSNumber numberWithUnsignedInteger:(NSUInteger)i] forKey:name];
     }
     return files;
 }

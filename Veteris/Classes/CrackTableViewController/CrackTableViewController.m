@@ -83,6 +83,8 @@
 - (void)viewDidAppear:(BOOL)animated {
     [super viewDidAppear:animated];
     appList = [[ApplicationLister sharedInstance] crackableApps];
+    [selectedRows removeAllObjects];
+    [self updateCrackButtonState];
     if (appList.count == 0) {
         self.tableView.separatorStyle = UITableViewCellSeparatorStyleNone;
         noAppLabel.hidden = NO;
@@ -159,18 +161,30 @@
     cell.cellIndicator.hidden = YES;
     cell.accessoryType = UITableViewCellAccessoryNone;
     if (!selectedIndex) {
+        if (indexPath.row >= [appList count]) {
+            return cell;
+        }
         ApplicationC *app = [appList objectAtIndex:indexPath.row];
 
         cell.selectionStyle = UITableViewCellSelectionStyleNone;
         cell.cellLabel.text = app.applicationDisplayName;
         cell.cellImage.image = app.applicationIcon;
-        cell.cellVersionLabel.text = [NSString stringWithFormat:NSLocalizedString(@"version", nil), app.applicationVersion];
+        cell.cellVersionLabel.text = [NSString stringWithFormat:NSLocalizedString(@"Version", nil), app.applicationVersion];
         if ([self inQueues:app]) {
             cell.contentView.backgroundColor = [UIColor grayColor];
         }
     } else {
         if ([crackingArray count] != 0 || [queueArray count] != 0 || [doneArray count] != 0) {
             ApplicationC *app;
+            NSArray *sectionArray = queueArray;
+            if (indexPath.section == 0) {
+                sectionArray = doneArray;
+            } else if (indexPath.section == 1) {
+                sectionArray = crackingArray;
+            }
+            if (indexPath.row >= [sectionArray count]) {
+                return cell;
+            }
             switch (indexPath.section) {
                 case 0:
                     NSLog(@"IN DA DONE SECTION");
@@ -200,7 +214,7 @@
             }
             cell.cellLabel.text = app.applicationDisplayName;
             cell.cellImage.image = app.applicationIcon;
-            cell.cellVersionLabel.text = [NSString stringWithFormat:NSLocalizedString(@"version", nil), app.applicationVersion];
+            cell.cellVersionLabel.text = [NSString stringWithFormat:NSLocalizedString(@"Version", nil), app.applicationVersion];
 
         } else {
             NSLog(@"women arent trophies");
@@ -213,6 +227,9 @@
 
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
     if (!selectedIndex) {
+        if (indexPath.row >= [appList count]) {
+            return;
+        }
         if (![self inQueues:[appList objectAtIndex:indexPath.row]]) {
             CrackTableViewCell *cell = (CrackTableViewCell *)[tableView cellForRowAtIndexPath:indexPath];
             if ([[tableView indexPathsForSelectedRows] containsObject:indexPath]) {
@@ -226,7 +243,10 @@
             NSLog(@"Operation already ran for this app!");
         }
     } else {
-        ApplicationC *app = [appList objectAtIndex:indexPath.row];
+        if (indexPath.section != 0 || indexPath.row >= [doneArray count]) {
+            return;
+        }
+        ApplicationC *app = [doneArray objectAtIndex:indexPath.row];
         if ([doneArray containsObject:app]) {
             if (app->finishedSuccessfully) {
                 UIActionSheet *actionSheet = [[UIActionSheet alloc] initWithTitle:app.applicationDisplayName delegate:self cancelButtonTitle:@"Cancel!" destructiveButtonTitle:nil otherButtonTitles:nil, nil];
@@ -238,6 +258,9 @@
 
 - (void)tableView:(UITableView *)tableView didDeselectRowAtIndexPath:(NSIndexPath *)indexPath {
     if (!selectedIndex) {
+        if (indexPath.row >= [appList count]) {
+            return;
+        }
         if (![self inQueues:[appList objectAtIndex:indexPath.row]]) {
             NSLog(@"deselected");
             CrackTableViewCell *cell = (CrackTableViewCell *)[tableView cellForRowAtIndexPath:indexPath];
@@ -258,6 +281,9 @@
     } else {
         [[self tableView] reloadData];
         for (NSIndexPath *path in selectedRows) {
+            if (path.row >= [appList count]) {
+                continue;
+            }
             ApplicationC *app = [appList objectAtIndex:path.row];
             if (![self inQueues:app]) {
                 NSLog(@"set in loop");
@@ -275,6 +301,9 @@
         CrackTableViewCell *cell = (CrackTableViewCell *)[self.tableView cellForRowAtIndexPath:path];
         cell.contentView.backgroundColor = [UIColor grayColor];
         cell.accessoryType = UITableViewCellAccessoryNone;
+        if (path.row >= [appList count]) {
+            continue;
+        }
         ApplicationC *app = [appList objectAtIndex:path.row];
         if ([crackingArray containsObject:app] || [doneArray containsObject:app] || [queueArray containsObject:app]) {
             NSLog(@" Already in the queue you donut");
@@ -282,8 +311,11 @@
         }
         NSLog(@"app name = %@", app.applicationDisplayName);
         NSBlockOperation *op = [NSBlockOperation blockOperationWithBlock:^{
-            [queueArray removeObject:app];
-            [crackingArray addObject:app];
+            dispatch_sync(dispatch_get_main_queue(), ^{
+                [queueArray removeObject:app];
+                [crackingArray addObject:app];
+                [self.tableView reloadData];
+            });
             // DO cracking
             Cracker *cracker = [[Cracker alloc] init];
             [cracker prepareFromInstalledApp:app];
@@ -295,9 +327,9 @@
                     app->finishedSuccessfully = true;
                 });
             }
-            [crackingArray removeObject:app];
-            [doneArray addObject:app];
             dispatch_async(dispatch_get_main_queue(), ^{
+                [crackingArray removeObject:app];
+                [doneArray addObject:app];
                 [self.tableView reloadData];
             });
         }];

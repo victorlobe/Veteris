@@ -152,6 +152,7 @@
 "InstallFailureReason" = "סיבת הכשל: %@";
 "InstallFailureRecovery" = "הצעה לפתרון: %@";
 "InstallFailureUnderlying" = "השגיאה המקורית: %@";
+"InstallFailureInstallerUnavailable" = "מתקין המערכת אינו זמין במכשיר זה, ולכן Veteris אינו יכול להתקין כאן אפליקציות.";
 ShowErrorDetails = "הצגת פרטי השגיאה";
 ErrorDetails = "פרטי השגיאה";
 NoErrorDetailsAvailable = "לא נשמרו פרטי אבחון.";

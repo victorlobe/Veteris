@@ -53,6 +53,7 @@ InstallFailureCode = "Error code: %ld";
 InstallFailureReason = "Failure reason: %@";
 InstallFailureRecovery = "Recovery suggestion: %@";
 InstallFailureUnderlying = "Underlying error: %@";
+InstallFailureInstallerUnavailable = "The system installer is not available on this device, so Veteris cannot install apps here.";
 Oops = "Oops!";
 WelcomeToVeteris = "Welcome to Veteris!";
 SelectAVersion = "Select a version";

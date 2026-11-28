@@ -22,6 +22,8 @@
 
 - (void)awakeFromNib {
     // Initialization code
+    cellImage.layer.masksToBounds = YES;
+    cellImage.layer.cornerRadius = 13.0;
 }
 
 - (void)setSelected:(BOOL)selected animated:(BOOL)animated {

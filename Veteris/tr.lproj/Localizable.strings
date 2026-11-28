@@ -151,6 +151,7 @@
 "InstallFailureReason" = "Hata nedeni: %@";
 "InstallFailureRecovery" = "Çözüm önerisi: %@";
 "InstallFailureUnderlying" = "Asıl hata: %@";
+"InstallFailureInstallerUnavailable" = "Sistem yükleyicisi bu cihazda kullanılamıyor, bu yüzden Veteris burada uygulama yükleyemez.";
 ShowErrorDetails = "Hata ayrıntılarını göster";
 ErrorDetails = "Hata ayrıntıları";
 NoErrorDetailsAvailable = "Tanılama ayrıntısı kaydedilmedi.";

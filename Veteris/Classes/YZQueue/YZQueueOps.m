@@ -8,6 +8,7 @@
 #import "LSApplicationWorkspace.h"
 #import "YZArchiveTLSDownloader.h"
 #import "YZDownloadResumeStore.h"
+#import <dlfcn.h>
 #import <errno.h>
 #import <string.h>
 
@@ -63,6 +64,31 @@ static NSString *YZSanitizedURLString(NSString *urlString) {
         return urlString;
     }
     return [urlString stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding];
+}
+
+typedef int (*YZMobileInstallationInstallFunction)(CFStringRef path, CFDictionaryRef parameters, MobileInstallationCallback callback, void *unknown);
+
+static YZMobileInstallationInstallFunction YZMobileInstallationInstallFunctionPointer(void) {
+    static YZMobileInstallationInstallFunction function = NULL;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        void *handle = dlopen("/System/Library/PrivateFrameworks/MobileInstallation.framework/MobileInstallation", RTLD_LAZY);
+        if (handle != NULL) {
+            function = (YZMobileInstallationInstallFunction)dlsym(handle, "MobileInstallationInstall");
+        }
+        if (function == NULL) {
+            function = (YZMobileInstallationInstallFunction)dlsym(RTLD_DEFAULT, "MobileInstallationInstall");
+        }
+        if (function == NULL) {
+            YZDownloadLog(@"MobileInstallationInstall unavailable handle=%p", handle);
+        }
+    });
+    return function;
+}
+
+static BOOL YZWorkspaceCanInstallApplications(void) {
+    Class workspaceClass = NSClassFromString(@"LSApplicationWorkspace");
+    return workspaceClass != Nil && [workspaceClass instancesRespondToSelector:@selector(installApplication:withOptions:error:)];
 }
 
 static NSString *YZInstallErrorDetails(NSError *error, BOOL legacyInstaller, int result, int savedErrno) {
@@ -544,9 +570,22 @@ static void YZLogDownloadTelemetry(YZQueueRep *parent,
     int savedErrno = 0;
     BOOL legacyInstaller = SYSTEM_VERSION_LESS_THAN(@"8.0");
     NSError *installError = nil;
+    YZMobileInstallationInstallFunction mobileInstallationInstall = legacyInstaller ? YZMobileInstallationInstallFunctionPointer() : NULL;
+    if (legacyInstaller && mobileInstallationInstall == NULL) {
+        if (YZWorkspaceCanInstallApplications()) {
+            YZDownloadLog(@"MobileInstallationInstall unavailable, using LSApplicationWorkspace path=%@", filePath);
+            legacyInstaller = NO;
+        } else {
+            YZDownloadLog(@"no system installer available path=%@", filePath);
+            if (errorDetails != NULL) {
+                *errorDetails = NSLocalizedStringWithDefaultValue(@"InstallFailureInstallerUnavailable", nil, [NSBundle mainBundle], @"The system installer is not available on this device, so Veteris cannot install apps here.", nil);
+            }
+            return false;
+        }
+    }
     if (legacyInstaller) {
         errno = 0;
-        ret = MobileInstallationInstall((__bridge CFStringRef)filePath, (__bridge CFDictionaryRef)options, NULL, NULL);
+        ret = mobileInstallationInstall((__bridge CFStringRef)filePath, (__bridge CFDictionaryRef)options, NULL, NULL);
         savedErrno = errno;
         YZDownloadLog(@"mobile installation finished path=%@ ret=%d", filePath, ret);
         if (ret != 0) {

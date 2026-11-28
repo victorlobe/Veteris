@@ -152,6 +152,7 @@
 "InstallFailureReason" = "Przyczyna niepowodzenia: %@";
 "InstallFailureRecovery" = "Proponowane rozwiązanie: %@";
 "InstallFailureUnderlying" = "Błąd źródłowy: %@";
+"InstallFailureInstallerUnavailable" = "Instalator systemowy nie jest dostępny na tym urządzeniu, dlatego Veteris nie może tu instalować aplikacji.";
 ShowErrorDetails = "Pokaż szczegóły błędu";
 ErrorDetails = "Szczegóły błędu";
 NoErrorDetailsAvailable = "Nie zapisano żadnych informacji diagnostycznych.";

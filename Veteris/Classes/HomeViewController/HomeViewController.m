@@ -29,6 +29,7 @@
     IASKAppSettingsViewController *currentSettingsViewController;
     NSUInteger maintainerTapCount;
     NSString *currentBadgeName;
+    CGFloat newsTableNarrowWidth;
 }
 @synthesize backgroundImage;
 
@@ -39,10 +40,12 @@ static NSString *const VeterisDevSettingsTitleKey = @"dev_settings_title";
 static NSString *const VeterisDevSettingsMenuKey = @"dev_settings_menu";
 static NSString *const VeterisLanguageOverrideKey = @"veteris_language_override";
 static NSString *const VeterisHomeIconBadgeEnabledKey = @"veteris_home_icon_badge_enabled";
+static NSString *const VeterisHomeWideNewsKey = @"veteris_home_wide_news";
 static NSString *const VeterisResetSettingsKey = @"reset_veteris_all";
 static NSString *const VeterisDevSecretCode = @"VictorIsKing";
 static NSInteger const VeterisDevCodeAlertTag = 8001;
 
+static CGFloat const VeterisHomeDesignWidth = 320.0;
 static CGFloat const VeterisHomeDesignBackgroundHeight = 316.0;
 static CGFloat const VeterisHomeBadgeOffsetX = 157.0 - 60.0;
 static CGFloat const VeterisHomeBadgeOffsetY = 21.0 - 20.0;
@@ -102,6 +105,7 @@ static CGFloat const VeterisHomeBadgeOffsetY = 21.0 - 20.0;
 - (void)viewDidLoad
 {
     [super viewDidLoad];
+    newsTableNarrowWidth = CGRectGetWidth(self.tableView.frame);
     [self applySmallDeviceHomeFramesIfNeeded];
     self.navigationController.title = NSLocalizedString(@"Home", @"Home");
     self.navigationItem.title = NSLocalizedString(@"Home", @"Home");
@@ -132,7 +136,30 @@ static CGFloat const VeterisHomeBadgeOffsetY = 21.0 - 20.0;
 {
     [super viewDidLayoutSubviews];
     [self applySmallDeviceHomeFramesIfNeeded];
+    [self layoutNewsTable];
     [self layoutBackgroundGradients];
+}
+
+- (void)layoutNewsTable
+{
+    if (UI_USER_INTERFACE_IDIOM() != UIUserInterfaceIdiomPad) {
+        return;
+    }
+    CGFloat viewWidth = CGRectGetWidth(self.view.bounds);
+    CGRect frame = self.tableView.frame;
+    if ([[NSUserDefaults standardUserDefaults] boolForKey:VeterisHomeWideNewsKey]) {
+        CGFloat margin = (VeterisHomeDesignWidth - newsTableNarrowWidth) / 2.0;
+        frame.origin.x = margin;
+        frame.size.width = viewWidth - margin * 2.0;
+    } else {
+        frame.origin.x = floorf((viewWidth - newsTableNarrowWidth) / 2.0);
+        frame.size.width = newsTableNarrowWidth;
+    }
+    BOOL widthChanged = CGRectGetWidth(frame) != CGRectGetWidth(self.tableView.frame);
+    self.tableView.frame = frame;
+    if (widthChanged) {
+        [self.tableView reloadData];
+    }
 }
 
 - (void)applySmallDeviceHomeFramesIfNeeded
@@ -271,6 +298,9 @@ static CGFloat const VeterisHomeBadgeOffsetY = 21.0 - 20.0;
         [hiddenKeys addObject:@"theme_preference"];
         [hiddenKeys addObject:@"customization_title"];
     }
+    if (UI_USER_INTERFACE_IDIOM() != UIUserInterfaceIdiomPad) {
+        [hiddenKeys addObject:VeterisHomeWideNewsKey];
+    }
     if (![VAPIHelper isDevModeEnabled]) {
         [hiddenKeys addObject:VeterisDevSettingsTitleKey];
         [hiddenKeys addObject:VeterisDevSettingsMenuKey];
@@ -348,6 +378,10 @@ static CGFloat const VeterisHomeBadgeOffsetY = 21.0 - 20.0;
         } else {
             [self updateHomeIconBadgeVisibility];
         }
+        return;
+    }
+    if ([[notification object] isEqualToString:VeterisHomeWideNewsKey]) {
+        [self.view setNeedsLayout];
         return;
     }
     if ([[notification object] isEqualToString:VeterisLanguageOverrideKey]) {

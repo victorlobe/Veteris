@@ -25,6 +25,7 @@ static NSUInteger const VeterisSearchHistoryLimit = 10;
     NSMutableArray *_searchHistory;
     NSMutableSet *_loadingIconURLs;
     NSUInteger _iconLoadGeneration;
+    NSUInteger _searchGeneration;
 }
 
 - (void)viewDidLoad {
@@ -73,7 +74,15 @@ static NSUInteger const VeterisSearchHistoryLimit = 10;
         cell = [[SearchTableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:cellIdentifier];
         cell.accessoryType = UITableViewCellAccessoryDisclosureIndicator;
     }
-    Suggestion *suggestion = [searchResults objectAtIndex:indexPath.row];
+    Suggestion *suggestion = [self suggestionAtIndexPath:indexPath];
+    if (suggestion == nil) {
+        cell.appNameLabel.text = nil;
+        cell.developerNameLabel.text = nil;
+        cell.versionLabel.text = nil;
+        cell.appUIImage.image = nil;
+        [cell.activityIndicator stopAnimating];
+        return cell;
+    }
     cell.appNameLabel.text = suggestion.name;
     cell.getLabel.hidden = !VeterisShowGetLabels();
     cell.developerNameLabel.text = [self subtitleForSuggestion:suggestion];
@@ -83,6 +92,13 @@ static NSUInteger const VeterisSearchHistoryLimit = 10;
     [self configureIconForCell:cell suggestion:suggestion];
     [self loadIconForSuggestion:suggestion atIndexPath:indexPath tableView:tableView];
     return cell;
+}
+
+- (Suggestion *)suggestionAtIndexPath:(NSIndexPath *)indexPath {
+    if (indexPath == nil || indexPath.row < 0 || (NSUInteger)indexPath.row >= [searchResults count]) {
+        return nil;
+    }
+    return [searchResults objectAtIndex:indexPath.row];
 }
 
 - (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath {
@@ -126,6 +142,8 @@ static NSUInteger const VeterisSearchHistoryLimit = 10;
 - (void)searchBar:(UISearchBar *)searchBar textDidChange:(NSString *)searchText {
     [self updateHistoryTableVisibility];
 
+	
+    _searchGeneration++;
     // to limit network activity, reload half a second after last key press.
     [NSObject cancelPreviousPerformRequestsWithTarget:self selector:@selector(searchExecute) object:nil];
     if (searchText.length > 2)
@@ -153,15 +171,17 @@ static NSUInteger const VeterisSearchHistoryLimit = 10;
     }
     debugLog(@"Searching for %@", searchText);
     // begin new search
+    NSUInteger generation = ++_searchGeneration;
     [VAPISS getMessage:[NSString stringWithFormat:@"listing/suggest?query=%@", [searchText stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]] completion:^(NSData *data, NSError *error){
-        if (error == nil) {
-            searchResults = (NSMutableArray *)(CFBridgingRelease(decode([data bytes], [data length], SuggestionsResponse)));
-            dispatch_async(dispatch_get_main_queue(), ^{
-                _iconLoadGeneration++;
-                [_loadingIconURLs removeAllObjects];
-                [self.searchDisplayController.searchResultsTableView reloadData];
-            });
+	
+        if (error != nil || generation != _searchGeneration) {
+            return;
         }
+        NSMutableArray *decodedResults = (NSMutableArray *)(CFBridgingRelease(decode([data bytes], [data length], SuggestionsResponse)));
+        searchResults = decodedResults ?: [NSMutableArray array];
+        _iconLoadGeneration++;
+        [_loadingIconURLs removeAllObjects];
+        [self.searchDisplayController.searchResultsTableView reloadData];
     }];
 }
 
@@ -233,18 +253,21 @@ static NSUInteger const VeterisSearchHistoryLimit = 10;
         return;
     }
 
+    Suggestion *suggestion = [self suggestionAtIndexPath:indexPath];
+    if (suggestion == nil) {
+        [tableView deselectRowAtIndexPath:indexPath animated:YES];
+        return;
+    }
     [self addSearchHistoryEntry:self.searchDisplayController.searchBar.text];
-    [self performSegueWithIdentifier:@"SearchViewAppInfoPush" sender:indexPath];
+    [self performSegueWithIdentifier:@"SearchViewAppInfoPush" sender:suggestion];
 
     self.navigationController.navigationBarHidden = NO;
 }
 
 - (void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender {
-    if ([segue.identifier isEqual:@"SearchViewAppInfoPush"]) {
-        NSIndexPath *indexPath = (NSIndexPath *)sender;
+    if ([segue.identifier isEqual:@"SearchViewAppInfoPush"] && [sender isKindOfClass:[Suggestion class]]) {
         AppInfo *appinfo = segue.destinationViewController;
-        Suggestion *suggestion = [searchResults objectAtIndex:indexPath.row];
-        [appinfo initialize:suggestion.bundleid];
+        [appinfo initialize:((Suggestion *)sender).bundleid];
     }
 }
 

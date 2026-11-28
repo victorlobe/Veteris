@@ -214,6 +214,16 @@
             <true/>
         </dict>
         <dict>
+            <key>Type</key>
+            <string>PSToggleSwitchSpecifier</string>
+            <key>Title</key>
+            <string>Wide News (iPad)</string>
+            <key>Key</key>
+            <string>veteris_home_wide_news</string>
+            <key>DefaultValue</key>
+            <false/>
+        </dict>
+        <dict>
             <key>Title</key>
             <string>Performance</string>
             <key>Type</key>

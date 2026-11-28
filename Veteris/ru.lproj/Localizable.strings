@@ -145,6 +145,7 @@ Apps = "Приложения";
 "InstallFailureReason" = "Причина сбоя: %@";
 "InstallFailureRecovery" = "Рекомендация по устранению: %@";
 "InstallFailureUnderlying" = "Исходная ошибка: %@";
+"InstallFailureInstallerUnavailable" = "Системный установщик недоступен на этом устройстве, поэтому Veteris не может устанавливать здесь приложения.";
 "DownloadButtonGet" = "ЗАГРУЗИТЬ";
 "DownloadButtonInstallApp" = "УСТАНОВИТЬ";
 "DownloadButtonGetModern" = "Загрузить";

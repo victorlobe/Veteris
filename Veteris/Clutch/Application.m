@@ -31,6 +31,59 @@
 
 @implementation ApplicationC
 
+- (void)addIconFiles:(id)files toArray:(NSMutableArray *)iconNames {
+    if ([files isKindOfClass:[NSString class]]) {
+        [iconNames addObject:files];
+    } else if ([files isKindOfClass:[NSArray class]]) {
+        for (id file in [files reverseObjectEnumerator]) {
+            if ([file isKindOfClass:[NSString class]]) {
+                [iconNames addObject:file];
+            }
+        }
+    }
+}
+
+- (void)addPrimaryIconFilesFromIcons:(id)icons toArray:(NSMutableArray *)iconNames {
+    if (![icons isKindOfClass:[NSDictionary class]]) {
+        return;
+    }
+    id primaryIcon = [icons objectForKey:@"CFBundlePrimaryIcon"];
+    if ([primaryIcon isKindOfClass:[NSDictionary class]]) {
+        [self addIconFiles:[primaryIcon objectForKey:@"CFBundleIconFiles"] toArray:iconNames];
+    }
+}
+
+- (UIImage *)iconFromInfoPlistInDirectory:(NSString *)directory {
+    if (directory == nil) {
+        return nil;
+    }
+    NSDictionary *infoPlist = [NSDictionary dictionaryWithContentsOfFile:[directory stringByAppendingPathComponent:@"Info.plist"]];
+    NSMutableArray *iconNames = [NSMutableArray array];
+    if ([infoPlist isKindOfClass:[NSDictionary class]]) {
+        [self addPrimaryIconFilesFromIcons:[infoPlist objectForKey:@"CFBundleIcons"] toArray:iconNames];
+        [self addPrimaryIconFilesFromIcons:[infoPlist objectForKey:@"CFBundleIcons~ipad"] toArray:iconNames];
+        [self addIconFiles:[infoPlist objectForKey:@"CFBundleIconFiles"] toArray:iconNames];
+        [self addIconFiles:[infoPlist objectForKey:@"CFBundleIconFile"] toArray:iconNames];
+    }
+    [iconNames addObject:@"Icon@2x.png"];
+    [iconNames addObject:@"Icon-72.png"];
+
+    for (NSString *iconName in iconNames) {
+        NSString *baseName = iconName;
+        if ([[baseName pathExtension] length] > 0) {
+            baseName = [baseName stringByDeletingPathExtension];
+        }
+        NSArray *candidates = @[[baseName stringByAppendingString:@".png"], [baseName stringByAppendingString:@"@2x.png"]];
+        for (NSString *candidate in candidates) {
+            UIImage *icon = [UIImage imageWithContentsOfFile:[directory stringByAppendingPathComponent:candidate]];
+            if (icon != nil) {
+                return icon;
+            }
+        }
+    }
+    return nil;
+}
+
 - (id)initWithAppInfo:(NSDictionary *)info {
 
     if (self = [super init]) {
@@ -45,6 +98,9 @@
         applicationSINF = [info objectForKey:@"ApplicationSINF"];
         minimumOSVersion = [info objectForKey:@"MinimumOSVersion"];
         applicationIcon = [UIImage imageWithContentsOfFile:[NSString stringWithFormat:@"%@/Icon.png", [info objectForKey:@"ApplicationDirectory"]]];
+        if (applicationIcon == nil) {
+            applicationIcon = [self iconFromInfoPlistInDirectory:[info objectForKey:@"ApplicationDirectory"]];
+        }
         NSMutableDictionary *copy = [[NSMutableDictionary alloc] initWithDictionary:info];
         [copy removeObjectForKey:@"ApplicationSINF"]; // slow
         dictRep = copy;

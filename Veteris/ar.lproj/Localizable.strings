@@ -151,6 +151,7 @@
 "InstallFailureReason" = "سبب الفشل: %@";
 "InstallFailureRecovery" = "اقتراح للحل: %@";
 "InstallFailureUnderlying" = "الخطأ الأصلي: %@";
+"InstallFailureInstallerUnavailable" = "مثبّت النظام غير متاح على هذا الجهاز، لذلك لا يمكن لـ Veteris تثبيت التطبيقات هنا.";
 ShowErrorDetails = "عرض تفاصيل الخطأ";
 ErrorDetails = "تفاصيل الخطأ";
 NoErrorDetailsAvailable = "لم يتم تسجيل أي تفاصيل تشخيصية.";

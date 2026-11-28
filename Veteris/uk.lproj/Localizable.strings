@@ -142,6 +142,7 @@ Apps = "Додатки";
 "InstallFailureReason" = "Причина збою: %@";
 "InstallFailureRecovery" = "Порада щодо вирішення: %@";
 "InstallFailureUnderlying" = "Початкова помилка: %@";
+"InstallFailureInstallerUnavailable" = "Системний інсталятор недоступний на цьому пристрої, тому Veteris не може встановлювати тут програми.";
 ShowErrorDetails = "Показати відомості про помилку";
 ErrorDetails = "Відомості про помилку";
 NoErrorDetailsAvailable = "Діагностичні відомості не збережено.";

@@ -139,6 +139,7 @@
 "InstallFailureReason" = "Nguyên nhân lỗi: %@";
 "InstallFailureRecovery" = "Gợi ý khắc phục: %@";
 "InstallFailureUnderlying" = "Lỗi gốc: %@";
+"InstallFailureInstallerUnavailable" = "Trình cài đặt hệ thống không khả dụng trên thiết bị này, vì vậy Veteris không thể cài đặt ứng dụng tại đây.";
 ShowErrorDetails = "Hiển thị chi tiết lỗi";
 ErrorDetails = "Chi tiết lỗi";
 NoErrorDetailsAvailable = "Không có thông tin chẩn đoán nào được ghi lại.";
