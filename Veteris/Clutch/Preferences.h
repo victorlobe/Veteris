@@ -8,7 +8,7 @@
 
 #import <Foundation/Foundation.h>
 #import "out.h"
-#define prefsPath @"/etc/clutch.conf"
+#define prefsPath clutchPath() @"/clutch.conf"
 
 @interface Preferences : NSObject {
     NSMutableDictionary *_dict;

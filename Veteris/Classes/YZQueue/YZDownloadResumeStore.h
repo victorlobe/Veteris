@@ -37,6 +37,7 @@ extern NSString *const YZResumeInfoMergingKey;
 
 
 + (BOOL)migrateLegacyDownloadDirectoryIfNeeded;
++ (void)migrateRootDownloadsIfNeeded;
 
 + (NSString *)resumeInfoPathForTargetPath:(NSString *)targetPath;
 + (NSDictionary *)resumeInfoForTargetPath:(NSString *)targetPath;

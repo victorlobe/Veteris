@@ -128,7 +128,7 @@ NSString *preferences_location = prefsPath;
 - (NSString *)ipaDirectory {
     NSString *dir = [self objectForKey:@"IPADirectory"];
     if (dir == nil) {
-        dir = @"/User/Documents/Cracked";
+        dir = [clutchPath() stringByAppendingPathComponent:@"Cracked"];
     }
     return dir;
 }

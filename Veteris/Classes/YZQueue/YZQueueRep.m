@@ -38,7 +38,7 @@ static NSString *YZQueueStateLogName(YZRepState state) {
 }
 
 static void YZAppendQueueOperationLog(YZQueueRep *rep, YZRepState state) {
-    NSString *directory = downloadPath();
+    NSString *directory = downloadTempPath();
     if ([directory length] == 0) {
         return;
     }

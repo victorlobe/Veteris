@@ -15,7 +15,7 @@
 #import "LSApplicationWorkspace.h"
 #import <dlfcn.h>
 
-#define crackedAppPath @"/etc/cracked.clutch"
+#define crackedAppPath clutchPath() @"/cracked.plist"
 
 typedef NSDictionary *(*YZMobileInstallationLookupFunction)(NSDictionary *options);
 

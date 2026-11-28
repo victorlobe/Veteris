@@ -113,7 +113,7 @@ static NSString *genRandStringLength(int len) {
     _app = app;
 
     // Create working directory
-    _tempPath = [NSString stringWithFormat:@"%@%@", @"/tmp/clutch_", genRandStringLength(8)];
+    _tempPath = [NSString stringWithFormat:@"%@/clutch_%@", clutchWorkPath(), genRandStringLength(8)];
     _workingDir = [NSString stringWithFormat:@"%@/Payload/%@", _tempPath, app.appDirectory];
 
     DebugLog(@"Temporary Directory: %@", _workingDir);
@@ -271,6 +271,7 @@ static NSString *genRandStringLength(int len) {
     [queue addOperation:crackOperation];
     [queue addOperation:zipOriginalOperation];
     [queue waitUntilAllOperationsAreFinished];
+    [[NSFileManager defaultManager] removeItemAtPath:_tempPath error:NULL];
 
     //[queue release];
 

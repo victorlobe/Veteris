@@ -21,6 +21,7 @@
 #import "../ProtoStack.h"
 #import "../SettingsReset/VeterisResetController.h"
 #import "../AppInfo/VeterisAppInfoSegue.h"
+#import "../HomeBadges/VeterisHomeBadges.h"
 
 @implementation HomeViewController {
     NSDictionary *apiResponse;
@@ -69,37 +70,37 @@ static CGFloat const VeterisHomeBadgeOffsetY = 21.0 - 20.0;
     }
 }
 
-- (void)applyRandomBadgeImage
+- (void)showBadge:(NSString *)badgeName
+{
+    currentBadgeName = badgeName;
+    self.badgeImageView.image = [VeterisHomeBadges imageForBadge:badgeName];
+    self.badgeImageView.hidden = NO;
+}
+
+- (void)applyRandomBadgeImage:(BOOL)allowFirst
 {
     if (![self homeIconBadgeEnabled]) {
         [self updateHomeIconBadgeVisibility];
         return;
     }
-    NSArray *badgeNames = @[
-        @"honoringElectimonBadge",
-        @"thankYouElectimonBadge",
-        @"thankYouElectimonHeartBadge",
-        @"electimonIsTheBestBadge",
-        @"oneLoveBadge",
-        @"welcomeBackBadge",
-        @"youAreAwesomeBadge",
-    ];
-    NSString *badgeName = nil;
-    if ([badgeNames count] > 1) {
-        do {
-            badgeName = [badgeNames objectAtIndex:arc4random_uniform((uint32_t)[badgeNames count])];
-        } while ([badgeName isEqualToString:currentBadgeName]);
-    } else {
-        badgeName = [badgeNames lastObject];
-    }
-    currentBadgeName = badgeName;
-    self.badgeImageView.image = [UIImage imageNamed:badgeName];
-    self.badgeImageView.hidden = NO;
+    [self showBadge:[VeterisHomeBadges badgeAfter:currentBadgeName allowFirst:allowFirst]];
 }
 
 - (void)shuffleBadgeFromHomeIconTap:(UITapGestureRecognizer *)gestureRecognizer
 {
-    [self applyRandomBadgeImage];
+    [VeterisHomeBadges skipFirstBadge];
+    [self applyRandomBadgeImage:NO];
+}
+
+- (void)homeBadgesChanged:(NSNotification *)notification
+{
+    if (![self isViewLoaded] || self.view.window == nil || ![self homeIconBadgeEnabled]) {
+        return;
+    }
+    NSString *badgeName = [VeterisHomeBadges pendingFirstBadge];
+    if (badgeName != nil) {
+        [self showBadge:badgeName];
+    }
 }
 
 - (void)viewDidLoad
@@ -130,6 +131,7 @@ static CGFloat const VeterisHomeBadgeOffsetY = 21.0 - 20.0;
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(reconfigure:) name:kPleaseReloadThemes object:nil];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(loadNews:) name:UIApplicationWillEnterForegroundNotification object:nil];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(settingChanged:) name:kIASKAppSettingChanged object:nil];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(homeBadgesChanged:) name:VeterisHomeBadgesDidChangeNotification object:nil];
 }
 
 - (void)viewDidLayoutSubviews
@@ -199,7 +201,7 @@ static CGFloat const VeterisHomeBadgeOffsetY = 21.0 - 20.0;
 }
 
 - (void)viewWillAppear:(BOOL)animated {
-    [self applyRandomBadgeImage];
+    [self applyRandomBadgeImage:YES];
     // Warn user if no internet
     Reachability *reachability = [Reachability reachabilityForInternetConnection];
     NetworkStatus status = [reachability currentReachabilityStatus];
@@ -374,7 +376,7 @@ static CGFloat const VeterisHomeBadgeOffsetY = 21.0 - 20.0;
 - (void)settingChanged:(NSNotification *)notification {
     if ([[notification object] isEqualToString:VeterisHomeIconBadgeEnabledKey]) {
         if ([self homeIconBadgeEnabled]) {
-            [self applyRandomBadgeImage];
+            [self applyRandomBadgeImage:NO];
         } else {
             [self updateHomeIconBadgeVisibility];
         }

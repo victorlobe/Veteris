@@ -18,9 +18,12 @@
 #define getDelegate() ((AppDelegate*)[[UIApplication sharedApplication]delegate])
 #define legacyDownloadPath() @"/var/mobile/Media/Downloads/Veteris"
 #define downloadPath() @"/var/mobile/Library/Veteris"
-#define downloadPathFor(string) [NSString stringWithFormat:@"%@/%@.ipa", downloadPath(), [string MD5Hash]]
+#define downloadTempPath() @"/var/mobile/Library/Veteris/Temp"
+#define downloadPathFor(string) [NSString stringWithFormat:@"%@/%@.ipa", downloadTempPath(), [string MD5Hash]]
 #define downloadPathForVersion(bundleID, version) downloadPathFor(([NSString stringWithFormat:@"%@|%@", (bundleID) ?: @"", (version) ?: @""]))
 #define downloadOnlyPath() @"/var/mobile/Library/Veteris/Download"
+#define clutchPath() @"/var/mobile/Library/Veteris/Clutch"
+#define clutchWorkPath() @"/var/mobile/Library/Veteris/Clutch/Work"
 #define VAPISS [VAPIHelper sharedInstance]
 //#define alert(title,msg,target) [[[UIAlertView alloc] initWithTitle:title message:msg delegate:target cancelButtonTitle:@"OK" otherButtonTitles:nil, nil] show]
 #define alert(title,msg,typ) [YZAlert alert:title message:msg type:typ]

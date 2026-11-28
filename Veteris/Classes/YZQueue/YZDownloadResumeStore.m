@@ -260,6 +260,56 @@ NSString *const YZResumeInfoMergingKey = @"merging";
     }
 }
 
++ (void)migrateRootDownloadsIfNeeded {
+    NSString *rootDir = downloadPath();
+    NSString *tempDir = downloadTempPath();
+    NSFileManager *manager = [[NSFileManager alloc] init];
+    
+    @synchronized (self) {
+        for (NSString *entry in [manager contentsOfDirectoryAtPath:rootDir error:NULL]) {
+            NSString *source = [rootDir stringByAppendingPathComponent:entry];
+            BOOL isDirectory = NO;
+            if (![manager fileExistsAtPath:source isDirectory:&isDirectory] || isDirectory) {
+                continue;
+            }
+            if (![entry hasSuffix:@".ipa"] && ![entry isEqualToString:@"VeterisDownload.log"] && [self targetPathForArtifactPath:source] == nil) {
+                continue;
+            }
+            NSString *destination = [tempDir stringByAppendingPathComponent:entry];
+            NSError *error = nil;
+            if ([manager fileExistsAtPath:destination]) {
+                [manager removeItemAtPath:source error:NULL];
+            } else if (![manager moveItemAtPath:source toPath:destination error:&error]) {
+                debugLog(@"Could not move %@ to %@: %@", source, tempDir, [error localizedDescription]);
+            }
+        }
+
+        BOOL changed = NO;
+        NSMutableArray *records = [NSMutableArray array];
+        for (NSDictionary *record in [self normalizedRecordsFromManifest:[self manifest]]) {
+            NSString *targetPath = [record objectForKey:YZDownloadResumeTargetPathKey];
+            if (![[targetPath stringByDeletingLastPathComponent] isEqualToString:rootDir]) {
+                [records addObject:record];
+                continue;
+            }
+            
+            
+            NSMutableDictionary *moved = [record mutableCopy];
+            targetPath = [tempDir stringByAppendingPathComponent:[targetPath lastPathComponent]];
+            [moved setObject:targetPath forKey:YZDownloadResumeTargetPathKey];
+            NSString *key = [self recordKeyForBundleID:[moved objectForKey:YZDownloadResumeBundleIDKey] version:[moved objectForKey:YZDownloadResumeVersionKey] targetPath:targetPath];
+            if ([key length] > 0) {
+                [moved setObject:key forKey:YZDownloadResumeRecordKeyKey];
+            }
+            [records addObject:moved];
+            changed = YES;
+        }
+        if (changed) {
+            [self writeRecords:records];
+        }
+    }
+}
+
 + (NSArray *)migratedRecordsFromManifestAtPath:(NSString *)manifestPath legacyDirectory:(NSString *)legacyDir {
     NSDictionary *manifest = [NSDictionary dictionaryWithContentsOfFile:manifestPath];
     NSArray *rawRecords = [manifest isKindOfClass:[NSDictionary class]] ? [manifest objectForKey:YZDownloadResumeRecordsKey] : nil;

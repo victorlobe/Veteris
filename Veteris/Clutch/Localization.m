@@ -8,8 +8,8 @@
 #import <dispatch/dispatch.h>
 #import "out.h"
 
-#define langCache @"/etc/clutch-lang-cache.plist"
-#define langCacheTmp @"/tmp/clutch-lang-cache.plist"
+#define langCache clutchPath() @"/clutch-lang-cache.plist"
+#define langCacheTmp clutchWorkPath() @"/clutch-lang-cache.plist"
 
 NSString* msg(Message message) { return [[Localization sharedInstance] valueWithMessage:message]; }
 

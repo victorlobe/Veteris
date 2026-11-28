@@ -29,6 +29,7 @@
 #import "Classes/AppsTableViewController/AppsTableViewController.h"
 #import "Classes/AppInfo/AppInfo.h"
 #import "Classes/AppInfo/VeterisAppInfoSegue.h"
+#import "Classes/HomeBadges/VeterisHomeBadges.h"
 #import <objc/runtime.h>
 #import <objc/message.h>
 
@@ -491,53 +492,52 @@ static UIImage *VeterisTintedImage(UIImage *image, UIColor *color) {
         debugLog(@"Skipping download cleanup and resume until folder migration completes");
         return NO;
     }
-    NSString *downloadDir = downloadPath();
+    NSString *tempDir = downloadTempPath();
     NSFileManager *manager = [[NSFileManager alloc] init];
-    if (![manager fileExistsAtPath:downloadDir]) {
-        NSError *createDirError = nil;
-        if (![manager createDirectoryAtPath:downloadDir withIntermediateDirectories:YES attributes:nil error:&createDirError]) {
-            debugLog(@"Failed to create download directory: %@, error: %@", downloadDir, createDirError.localizedDescription);
-            return NO;
-        } else {
-            debugLog(@"Created download directory: %@", downloadDir);
-        }
+    NSError *createDirError = nil;
+    if (![manager createDirectoryAtPath:tempDir withIntermediateDirectories:YES attributes:nil error:&createDirError]) {
+        debugLog(@"Failed to create download directory: %@, error: %@", tempDir, createDirError.localizedDescription);
+        return NO;
     }
+    [YZDownloadResumeStore migrateRootDownloadsIfNeeded];
     NSSet *pendingResumePaths = [NSSet setWithArray:[YZQueueManager pendingResumeTargetPaths]];
-    NSString *resumeManifestPath = [YZDownloadResumeStore manifestPath];
     NSString *savedDownloadDir = downloadOnlyPath();
-    NSString *savedDownloadPrefix = [savedDownloadDir stringByAppendingString:@"/"];
-    NSDirectoryEnumerator *fileEnumerator = [manager enumeratorAtPath:downloadDir];
-    for (NSString *filename in fileEnumerator) {
-        NSString *filePath = [downloadDir stringByAppendingPathComponent:filename];
-        if ([filePath isEqualToString:resumeManifestPath] || [filePath isEqualToString:savedDownloadDir]) {
-            continue;
-        }
-        NSString *artifactOwner = [YZDownloadResumeStore targetPathForArtifactPath:filePath];
-        NSString *ownerPath = artifactOwner ?: filePath;
-        if ([pendingResumePaths containsObject:ownerPath] || [YZQueueManager isTargetPathInUse:ownerPath]) {
-            continue;
-        }
-        NSError *error = nil;
-        NSDictionary *attributes = [manager attributesOfItemAtPath:filePath error:&error];
-        if (!attributes) {
-            debugLog(@"Failed to get attributes for file: %@, error: %@", filename, error.localizedDescription);
-            continue;
-        }
-        if (![[attributes objectForKey:NSFileType] isEqualToString:NSFileTypeRegular]) {
-            continue;
-        }
-        if ([filePath hasPrefix:savedDownloadPrefix]) {
-            // Kill unfinished downloads
-            BOOL unfinishedIPA = (artifactOwner == nil && [manager fileExistsAtPath:[YZDownloadResumeStore resumeInfoPathForTargetPath:filePath]]);
-            if (artifactOwner == nil && !unfinishedIPA) {
+    for (NSString *directory in @[tempDir, savedDownloadDir]) {
+        BOOL savedDownloads = [directory isEqualToString:savedDownloadDir];
+        NSDirectoryEnumerator *fileEnumerator = [manager enumeratorAtPath:directory];
+        for (NSString *filename in fileEnumerator) {
+            NSString *filePath = [directory stringByAppendingPathComponent:filename];
+            NSString *artifactOwner = [YZDownloadResumeStore targetPathForArtifactPath:filePath];
+            NSString *ownerPath = artifactOwner ?: filePath;
+            if ([pendingResumePaths containsObject:ownerPath] || [YZQueueManager isTargetPathInUse:ownerPath]) {
                 continue;
             }
+            NSError *error = nil;
+            NSDictionary *attributes = [manager attributesOfItemAtPath:filePath error:&error];
+            if (!attributes) {
+                debugLog(@"Failed to get attributes for file: %@, error: %@", filename, error.localizedDescription);
+                continue;
+            }
+            if (![[attributes objectForKey:NSFileType] isEqualToString:NSFileTypeRegular]) {
+                continue;
+            }
+            if (savedDownloads) {
+                // Kill unfinished downloads
+                BOOL unfinishedIPA = (artifactOwner == nil && [manager fileExistsAtPath:[YZDownloadResumeStore resumeInfoPathForTargetPath:filePath]]);
+                if (artifactOwner == nil && !unfinishedIPA) {
+                    continue;
+                }
+            }
+            if (![manager removeItemAtPath:filePath error:&error]) {
+                debugLog(@"Failed to delete file: %@, error: %@", filename, error.localizedDescription);
+            } else {
+                debugLog(@"Deleted file: %@", filename);
+            }
         }
-        if (![manager removeItemAtPath:filePath error:&error]) {
-            debugLog(@"Failed to delete file: %@, error: %@", filename, error.localizedDescription);
-        } else {
-            debugLog(@"Deleted file: %@", filename);
-        }
+    }
+    NSString *clutchWorkDir = clutchWorkPath();
+    for (NSString *entry in [manager contentsOfDirectoryAtPath:clutchWorkDir error:NULL]) {
+        [manager removeItemAtPath:[clutchWorkDir stringByAppendingPathComponent:entry] error:NULL];
     }
     return YES;
 }
@@ -675,6 +675,11 @@ void myExceptionHandler(NSException *exception)
     [AppInfo refreshInstalledApplicationCache];
     [VAPIHelper checkForRemoteAlert];
     [VAPIHelper refreshClientConfig];
+    [VeterisHomeBadges refresh];
+}
+
+- (void)applicationWillEnterForeground:(UIApplication *)application {
+    [VeterisHomeBadges noteAppOpen];
 }
 
 -(void)emptySandbox {

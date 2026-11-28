@@ -28,6 +28,7 @@
     NSMutableArray *crackingArray;
     NSMutableArray *doneArray;
     NSMutableArray *queueArray;
+    NSMutableDictionary *ipaPaths;
     __unsafe_unretained IBOutlet UIBarButtonItem *crackBtn;
     UILabel *noAppLabel;
 }
@@ -47,6 +48,7 @@
     crackingArray = [NSMutableArray new];
     doneArray = [NSMutableArray new];
     queueArray = [NSMutableArray new];
+    ipaPaths = [NSMutableDictionary new];
     queueEmpty = YES;
     selectedIndex = 0;
     selectedRows = [NSMutableArray new];
@@ -249,7 +251,9 @@
         ApplicationC *app = [doneArray objectAtIndex:indexPath.row];
         if ([doneArray containsObject:app]) {
             if (app->finishedSuccessfully) {
-                UIActionSheet *actionSheet = [[UIActionSheet alloc] initWithTitle:app.applicationDisplayName delegate:self cancelButtonTitle:@"Cancel!" destructiveButtonTitle:nil otherButtonTitles:nil, nil];
+                NSString *ipaPath = app.applicationBundleID ? [ipaPaths objectForKey:app.applicationBundleID] : nil;
+                NSString *title = ipaPath.length > 0 ? ipaPath : app.applicationDisplayName;
+                UIActionSheet *actionSheet = [[UIActionSheet alloc] initWithTitle:title delegate:self cancelButtonTitle:NSLocalizedString(@"Cancel", nil) destructiveButtonTitle:nil otherButtonTitles:nil, nil];
                 [actionSheet showInView:self.view.window ?: self.view];
             }
         }
@@ -297,6 +301,7 @@
 }
 
 - (IBAction)crackButtonPressed:(id)sender {
+    BOOL queuedAnyApp = NO;
     for (NSIndexPath *path in selectedRows) {
         CrackTableViewCell *cell = (CrackTableViewCell *)[self.tableView cellForRowAtIndexPath:path];
         cell.contentView.backgroundColor = [UIColor grayColor];
@@ -325,6 +330,9 @@
             if ([cracker execute]) {
                 dispatch_async(dispatch_get_main_queue(), ^{
                     app->finishedSuccessfully = true;
+                    if (ipapath.length > 0 && app.applicationBundleID.length > 0) {
+                        [ipaPaths setObject:ipapath forKey:app.applicationBundleID];
+                    }
                 });
             }
             dispatch_async(dispatch_get_main_queue(), ^{
@@ -336,6 +344,14 @@
         if (![[queue operations] containsObject:op]) {
             [queueArray addObject:app];
             [queue addOperation:op];
+            queuedAnyApp = YES;
+        }
+    }
+    if (queuedAnyApp) {
+        UISegmentedControl *segmentedControl = (UISegmentedControl *)self.navigationItem.titleView;
+        if ([segmentedControl isKindOfClass:[UISegmentedControl class]] && segmentedControl.selectedSegmentIndex != 1) {
+            segmentedControl.selectedSegmentIndex = 1;
+            [self segControlValueChanged:segmentedControl];
         }
     }
     crackBtn.enabled = NO;

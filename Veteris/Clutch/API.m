@@ -8,7 +8,7 @@
 #import "Application.h"
 #import "out.h"
 
-#define sourcePath @"/tmp/clutch.source"
+#define sourcePath clutchPath() @"/clutch.source"
 
 void run_getenv(const char* name) {
     char* value;
